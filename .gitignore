@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+*.egg-info/
+dist/
+build/
+
+# Development
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# System
+*.log
+*.iso
+*.img
+*.buildinfo
+*.changes
+*.enc
+
+# User data
+Backups/
+ExamMode/results/
+ExamMode/exams/*.json
+ExamMode/data/
+LearnHub/*.db
+*.sqlite
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Secrets
+**/config.json
+**/*key*
+**/*secret*
+**/*credential*
+
+# Build artifacts
+build/live-build/work/
+*.deb

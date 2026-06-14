@@ -1,0 +1,1 @@
+/usr/bin/python3 /home/jainam/EduOS/ExamMode/exam_app.py
