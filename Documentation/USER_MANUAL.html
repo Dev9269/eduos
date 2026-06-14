@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EduOS User Manual</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Inter, system-ui, sans-serif; background: #f1f5f9; color: #1e293b; line-height: 1.6; }
+.topbar { background: linear-gradient(135deg, #0f172a, #1e3a5f); padding: 24px 40px; color: white; }
+.topbar h1 { font-size: 32px; }
+.topbar p { opacity: 0.7; margin-top: 4px; }
+.container { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+h2 { font-size: 24px; margin: 32px 0 16px; color: #0f172a; border-bottom: 3px solid #2563eb; padding-bottom: 8px; }
+h3 { font-size: 18px; margin: 24px 0 12px; color: #1e293b; }
+p { margin: 8px 0; }
+.card { background: white; border-radius: 12px; padding: 20px; margin: 12px 0; border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+code { background: #f1f5f9; padding: 2px 8px; border-radius: 4px; font-family: 'Fira Code', monospace; font-size: 14px; color: #2563eb; }
+pre { background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; margin: 12px 0; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+th { background: #f8fafc; font-weight: 600; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 16px 0; }
+.module-card { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; border-left: 4px solid #2563eb; }
+.module-card h3 { margin-top: 0; }
+.module-card .cmd { font-family: monospace; background: #f1f5f9; padding: 6px 12px; border-radius: 6px; display: inline-block; margin: 6px 0; font-size: 13px; }
+.warn { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 6px; margin: 12px 0; }
+.hint { background: #e0f2fe; border-left: 4px solid #0ea5e9; padding: 12px 16px; border-radius: 6px; margin: 12px 0; }
+footer { text-align: center; padding: 32px; color: #94a3b8; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <h1>📖 EduOS User Manual</h1>
+    <p>Version 1.0.0 | Educational Operating System for Engineering Institutions</p>
+</div>
+
+<div class="container">
+
+<h2>1. Getting Started</h2>
+
+<div class="card">
+    <h3>Logging In</h3>
+    <p>EduOS boots to the SDDM login screen. Select your user and enter the password:</p>
+    <table>
+        <tr><th>Username</th><th>Password</th><th>Purpose</th></tr>
+        <tr><td><code>student</code></td><td><code>student123</code></td><td>Daily learning and coursework</td></tr>
+        <tr><td><code>exam</code></td><td><code>exam123</code></td><td>Restricted examination environment</td></tr>
+        <tr><td><code>admin</code></td><td><code>admin123</code></td><td>Lab administration and management</td></tr>
+    </table>
+</div>
+
+<div class="card">
+    <h3>Desktop Overview</h3>
+    <p>EduOS uses KDE Plasma configured with a Windows 11-like layout:</p>
+    <ul>
+        <li><strong>Floating centered taskbar</strong> at the bottom</li>
+        <li><strong>Application Menu</strong> in the bottom-left corner</li>
+        <li><strong>System Tray</strong> on the bottom-right (network, sound, clock)</li>
+        <li><strong>Desktop</strong> is clean — no icons by default</li>
+        <li><strong>Right-click</strong> on desktop for context menu</li>
+    </ul>
+</div>
+
+<div class="hint">
+    <strong>💡 Tip:</strong> Press <code>Alt+Space</code> to open KRunner (application launcher/search).
+    Press <code>Alt+F2</code> for a command runner.
+</div>
+
+<h2>2. System Commands</h2>
+
+<p>Open a terminal (<code>Konsole</code>) and type any of these commands:</p>
+
+<table>
+    <tr><th>Command</th><th>Description</th></tr>
+    <tr><td><code>eduos-info</code></td><td>Display EduOS system information</td></tr>
+    <tr><td><code>eduos-exam</code></td><td>Launch the secure examination environment</td></tr>
+    <tr><td><code>eduos-admin</code></td><td>Open the administration management console</td></tr>
+    <tr><td><code>eduos-learnhub</code></td><td>Open the learning portal (or visit http://localhost:5050)</td></tr>
+    <tr><td><code>eduos-devsuite</code></td><td>Launch the development environment manager</td></tr>
+    <tr><td><code>eduos-cyberlab</code></td><td>Open the cybersecurity lab manager</td></tr>
+    <tr><td><code>eduos-juiceshop</code></td><td>Start OWASP Juice Shop (Docker) at http://localhost:3000</td></tr>
+    <tr><td><code>burpsuite</code></td><td>Launch Burp Suite Community Edition</td></tr>
+    <tr><td><code>eduos-hardening</code></td><td>Apply system security hardening</td></tr>
+</table>
+
+<h2>3. EduOS Modules</h2>
+
+<div class="grid">
+
+<div class="module-card">
+    <h3>📚 Learn Hub</h3>
+    <p>Student learning portal with study materials, assignments, schedule, notes, and announcements.</p>
+    <span class="cmd">eduos-learnhub</span> or <span class="cmd">http://localhost:5050</span>
+    <p style="margin-top:8px;font-size:13px;color:#64748b;">Auto-starts with your user session</p>
+</div>
+
+<div class="module-card">
+    <h3>📝 Exam Mode</h3>
+    <p>Full-screen secure examination with timer, auto-save, encrypted storage, and result PDFs.</p>
+    <span class="cmd">eduos-exam</span>
+    <p style="margin-top:8px;font-size:13px;color:#64748b;">Requires security key at startup</p>
+</div>
+
+<div class="module-card">
+    <h3>⚙ Admin Center</h3>
+    <p>System monitoring, lab management, software control, exam orchestration, and reports.</p>
+    <span class="cmd">eduos-admin</span>
+</div>
+
+<div class="module-card">
+    <h3>🔧 Dev Suite</h3>
+    <p>12-tool development environment with VS Code, Python, Java, GCC, Node.js, Docker, and more.</p>
+    <span class="cmd">eduos-devsuite</span>
+</div>
+
+<div class="module-card">
+    <h3>🛡️ Cyber Lab</h3>
+    <p>5 pre-configured Docker-based cybersecurity labs with isolated practice environments.</p>
+    <span class="cmd">eduos-cyberlab</span>
+</div>
+
+<div class="module-card">
+    <h3>🍭 Juice Shop</h3>
+    <p>OWASP Juice Shop web application security training tool (runs in Docker).</p>
+    <span class="cmd">eduos-juiceshop</span>
+</div>
+
+</div>
+
+<h2>4. Using Exam Mode</h2>
+
+<div class="card">
+    <h3>Starting an Exam</h3>
+    <ol>
+        <li>Log in as <code>student</code> or <code>exam</code></li>
+        <li>Run <code>eduos-exam</code> or click the Exam Mode icon on the desktop</li>
+        <li>Enter your <strong>Security Key</strong> (provided by invigilator)</li>
+        <li>Enter your <strong>Name</strong> and <strong>Student ID</strong></li>
+        <li>Click <strong>Authenticate & Start Exam</strong></li>
+    </ol>
+</div>
+
+<div class="card">
+    <h3>During the Exam</h3>
+    <ul>
+        <li>The exam runs in <strong>full-screen mode</strong> with no window decorations</li>
+        <li>A <strong>timer</strong> shows remaining time in the top-right corner</li>
+        <li>Answers are <strong>auto-saved</strong> every 30 seconds</li>
+        <li>Use the <strong>question list</strong> on the left to navigate</li>
+        <li>Answered questions are tracked in the progress indicator</li>
+        <li><strong>Print Screen, Alt+Tab, and Super keys are blocked</strong></li>
+        <li><strong>Internet is blocked</strong> during the exam (restored on exit)</li>
+    </ul>
+</div>
+
+<div class="card">
+    <h3>Submitting</h3>
+    <ul>
+        <li>Click <strong>Submit Exam</strong> when finished</li>
+        <li>If the timer expires, the exam <strong>auto-submits</strong></li>
+        <li>Answers are <strong>encrypted</strong> and saved locally</li>
+        <li>A <strong>PDF result</strong> is generated automatically</li>
+    </ul>
+</div>
+
+<div class="warn">
+    <strong>⚠ Important:</strong> The <code>exam</code> user has a restricted shell that only launches the exam application. Regular terminal access is not available for this user.
+</div>
+
+<h2>5. Development Tools</h2>
+
+<table>
+    <tr><th>Tool</th><th>Command</th><th>Purpose</th></tr>
+    <tr><td>VS Code</td><td><code>code</code></td><td>Primary IDE</td></tr>
+    <tr><td>Python 3</td><td><code>python3</code></td><td>Python development</td></tr>
+    <tr><td>Java</td><td><code>java</code>, <code>javac</code></td><td>Java development (JDK 21)</td></tr>
+    <tr><td>GCC/G++</td><td><code>gcc</code>, <code>g++</code></td><td>C/C++ compilation</td></tr>
+    <tr><td>Node.js</td><td><code>node</code>, <code>npm</code></td><td>JavaScript/TypeScript</td></tr>
+    <tr><td>.NET</td><td><code>dotnet</code></td><td>C# development (SDK 8.0)</td></tr>
+    <tr><td>Git</td><td><code>git</code></td><td>Version control</td></tr>
+    <tr><td>Docker</td><td><code>docker</code></td><td>Container management</td></tr>
+    <tr><td>PostgreSQL</td><td><code>psql</code></td><td>Relational database</td></tr>
+    <tr><td>SQLite</td><td><code>sqlite3</code></td><td>Embedded database</td></tr>
+    <tr><td>CMake</td><td><code>cmake</code></td><td>Build system</td></tr>
+    <tr><td>GDB</td><td><code>gdb</code></td><td>Debugger</td></tr>
+</table>
+
+<h2>6. Cybersecurity Tools</h2>
+
+<table>
+    <tr><th>Tool</th><th>Command</th><th>Purpose</th></tr>
+    <tr><td>Wireshark</td><td><code>wireshark</code></td><td>Network packet analysis</td></tr>
+    <tr><td>Nmap</td><td><code>nmap</code></td><td>Network scanning</td></tr>
+    <tr><td>Burp Suite</td><td><code>burpsuite</code></td><td>Web application security testing</td></tr>
+    <tr><td>OWASP Juice Shop</td><td><code>eduos-juiceshop</code></td><td>Web security training (Docker)</td></tr>
+    <tr><td>SQLmap</td><td><code>sqlmap</code></td><td>SQL injection automation</td></tr>
+    <tr><td>John the Ripper</td><td><code>john</code></td><td>Password cracking</td></tr>
+    <tr><td>Hydra</td><td><code>hydra</code></td><td>Network authentication brute force</td></tr>
+    <tr><td>nikto</td><td><code>nikto</code></td><td>Web server scanner</td></tr>
+    <tr><td>Aircrack-ng</td><td><code>aircrack-ng</code></td><td>Wireless security assessment</td></tr>
+</table>
+
+<h2>7. System Administration</h2>
+
+<div class="card">
+    <h3>Lab Management</h3>
+    <p>Open the Admin Center (<code>eduos-admin</code>) to:</p>
+    <ul>
+        <li>View system resource usage (CPU, memory, disk, network)</li>
+        <li>Manage lab machines</li>
+        <li>Install/remove software</li>
+        <li>Start and stop examination sessions</li>
+        <li>Send announcements to lab machines</li>
+        <li>Generate reports</li>
+    </ul>
+</div>
+
+<div class="card">
+    <h3>Security Hardening</h3>
+    <p>Run <code>sudo eduos-hardening</code> to apply all security measures:</p>
+    <ul>
+        <li>Enable firewall (UFW)</li>
+        <li>Lock root account</li>
+        <li>Disable SSH root login</li>
+        <li>Set secure home directory permissions</li>
+        <li>Enable process accounting for audit trails</li>
+        <li>Disable unnecessary services</li>
+    </ul>
+</div>
+
+<h2>8. Networking</h2>
+
+<div class="card">
+    <p>The firewall (UFW) is active with the following rules:</p>
+    <table>
+        <tr><th>Port</th><th>Service</th><th>Direction</th></tr>
+        <tr><td>22/tcp</td><td>SSH</td><td>Incoming</td></tr>
+        <tr><td>5050/tcp</td><td>EduOS Learn Hub</td><td>Incoming</td></tr>
+        <tr><td>All</td><td>Outgoing traffic</td><td>Allowed</td></tr>
+    </table>
+</div>
+
+<h2>9. Troubleshooting</h2>
+
+<div class="card">
+    <h3>Learn Hub not loading</h3>
+    <p>Run: <code>systemctl --user restart eduos-learnhub</code></p>
+    <p>Check if it's listening: <code>ss -tlnp | grep 5050</code></p>
+</div>
+
+<div class="card">
+    <h3>Docker not working</h3>
+    <p>Ensure Docker is running: <code>sudo systemctl status docker</code></p>
+    <p>Add your user: <code>sudo usermod -aG docker $USER</code> (log out and back in)</p>
+</div>
+
+<div class="card">
+    <h3>VM feels slow</h3>
+    <p>Disable compositing: <code>systemsettings</code> → Display → Compositor → Disable</p>
+    <p>Check memory: <code>free -h</code> | Disk: <code>df -h</code></p>
+</div>
+
+<div class="card">
+    <h3>Reset user password</h3>
+    <p><code>sudo passwd student</code> (or exam, admin)</p>
+</div>
+
+<h2>10. Backup & Restore</h2>
+
+<div class="card">
+    <h3>Create Backup</h3>
+    <p>Run: <code>bash ~/EduOS/Scripts/create-backup.sh</code></p>
+    <p>This saves system configurations and package lists to <code>~/EduOS/Backups/</code></p>
+</div>
+
+<div class="card">
+    <h3>Create System Image</h3>
+    <p>Run: <code>sudo bash ~/EduOS/Scripts/create-system-image.sh</code></p>
+    <p>Creates a compressed full-system image for deployment to other machines.</p>
+</div>
+
+<div class="warn">
+    <strong>⚠ Important:</strong> Always take a VM snapshot before making major system changes. EduOS keeps a complete changelog at <code>~/EduOS/CHANGELOG.md</code>.
+</div>
+
+<h2>11. Project Structure</h2>
+
+<pre>
+~/EduOS/
+├── AdminCenter/       # Administration management console
+├── Branding/          # Logo, wallpaper, login/boot themes
+├── CyberLab/          # Cybersecurity lab manager
+├── DevSuite/          # Development environment launcher
+├── Documentation/     # Whitepaper, proposals, manuals
+├── ExamMode/          # Exam application and admin tool
+├── LearnHub/          # Flask-based learning portal
+├── Scripts/           # Launchers, installers, backup tools
+├── Packages/          # (future) Debian packages & ISO images
+├── CHANGELOG.md       # Complete modification history
+├── LICENSE            # MIT License
+└── README.md          # Project overview
+</pre>
+
+<footer>
+    EduOS v1.0.0 — Built on Debian 13 Trixie with KDE Plasma 6<br>
+    A Personal Project by Jainam &copy; 2026
+</footer>
+
+</div>
+</body>
+</html>
