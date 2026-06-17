@@ -9,7 +9,7 @@ plasma-workspace
 plasma-pa
 plasma-nm
 plasma-systemmonitor
-kde-systemsettings
+systemsettings
 kde-config-gtk-style
 kde-config-gtk-style-preview
 kde-config-screenlocker
@@ -23,20 +23,16 @@ konsole
 kate
 kwrite
 gwenview
-okular
 spectacle
 kcalc
 ark
 khelpcenter
 kinfocenter
 kcharselect
-plasma-browser-integration
 webext-plasma-browser-integration
 kde-spectacle
 
 # --- Window Manager / Compositor ---
-kwin-x11
-kwin-addons
 
 # --- Fonts ---
 fonts-inter
@@ -113,7 +109,7 @@ maven
 gradle
 nodejs
 npm
-dotnet8
+dotnet-sdk-8.0
 ruby
 ruby-dev
 php
@@ -151,7 +147,6 @@ tcpdump
 wireshark
 netcat-openbsd
 socat
-openbsd-inetd
 proxychains4
 macchanger
 
@@ -163,7 +158,6 @@ gobuster
 dirb
 aircrack-ng
 ettercap-text-only
-slowhttptest
 hping3
 
 # --- Multimedia / Graphics ---
@@ -215,7 +209,6 @@ unzip
 zip
 dirmngr
 software-properties-common
-apt-transport-https
 ca-certificates
 
 # --- EduOS Applications ---

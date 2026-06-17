@@ -59,7 +59,9 @@ lb config \
     --firmware-binary true \
     --firmware-chroot true \
     --apt-recommends false \
-    --apt-indices false
+    --apt-indices false \
+    --cache-packages false \
+    --cache-stages false
 
 echo "✅ Build configured"
 
@@ -187,7 +189,7 @@ hping3
 ufw
 EOF
 
-# Virtualization & Docker
+# Virtualization (Docker removed — requires non-Debian repo)
 cat > config/package-lists/eduos-virt.list.chroot << 'EOF'
 qemu-system-x86
 qemu-system-gui
@@ -196,10 +198,6 @@ libvirt-daemon-system
 libvirt-clients
 virt-manager
 virt-viewer
-docker-ce
-docker-ce-cli
-docker-compose-plugin
-containerd.io
 EOF
 
 echo "✅ Package lists created"
@@ -362,7 +360,7 @@ echo "│ Building EduOS ISO (this will take time...) │"
 echo "└─────────────────────────────────────────────┘"
 echo ""
 
-lb build 2>&1 | tee "$OUTPUT_DIR/build.log"
+lb build 2>&1 | tee "$OUTPUT_DIR/build.log" || true
 
 # Copy result
 if [ -f "live-image-amd64.hybrid.iso" ]; then
