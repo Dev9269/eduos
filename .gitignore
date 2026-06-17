@@ -45,4 +45,6 @@ Desktop.ini
 
 # Build artifacts
 build/live-build/work/
+Packages/live-build/work/
+Packages/live-build/output/*.iso
 *.deb

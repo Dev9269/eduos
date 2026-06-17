@@ -48,7 +48,6 @@ lb config \
     --distribution trixie \
     --archive-areas "main contrib non-free-firmware" \
     --binary-images iso-hybrid \
-    --debian-installer live \
     --bootappend-live "boot=live components username=student hostname=eduos locales=en_US.UTF-8 keyboard-layouts=us" \
     --bootappend-install "username=student hostname=eduos" \
     --iso-application "EduOS Educational Operating System" \
@@ -60,8 +59,8 @@ lb config \
     --firmware-chroot true \
     --apt-recommends false \
     --apt-indices false \
-    --cache-packages false \
-    --cache-stages false
+    --debian-installer false \
+    --cache-packages false
 
 echo "✅ Build configured"
 
