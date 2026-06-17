@@ -1,0 +1,234 @@
+# EduOS Package Manifest
+# Auto-generated from installed packages
+# Used by live-build to create the EduOS ISO
+# Category: desktop
+
+# --- KDE Plasma Desktop ---
+plasma-desktop
+plasma-workspace
+plasma-pa
+plasma-nm
+plasma-systemmonitor
+kde-systemsettings
+kde-config-gtk-style
+kde-config-gtk-style-preview
+kde-config-screenlocker
+kde-config-sddm
+kwin-x11
+kwin-addons
+sddm
+sddm-theme-breeze
+dolphin
+konsole
+kate
+kwrite
+gwenview
+okular
+spectacle
+kcalc
+ark
+khelpcenter
+kinfocenter
+kcharselect
+plasma-browser-integration
+webext-plasma-browser-integration
+kde-spectacle
+
+# --- Window Manager / Compositor ---
+kwin-x11
+kwin-addons
+
+# --- Fonts ---
+fonts-inter
+fonts-firacode
+fonts-noto
+fonts-noto-cjk
+fonts-noto-color-emoji
+fonts-liberation
+fonts-dejavu-core
+
+# --- Icons ---
+papirus-icon-theme
+breeze-icon-theme
+
+# --- GTK Theme ---
+breeze-gtk-theme
+gtk3-engines-breeze
+
+# --- Browser ---
+firefox-esr
+plasma-browser-integration
+
+# --- Office Suite ---
+libreoffice-writer
+libreoffice-calc
+libreoffice-impress
+libreoffice-draw
+libreoffice-base
+libreoffice-math
+libreoffice-kf6
+libreoffice-plasma
+libreoffice-qt6
+libreoffice-style-breeze
+mythes-en-us
+
+# --- PDF Tools ---
+okular
+poppler-utils
+poppler-data
+pdfarranger
+ghostscript
+
+# --- Development Tools ---
+build-essential
+gcc
+g++
+gdb
+cmake
+make
+git
+gitk
+python3
+python3-pip
+python3-venv
+python3-dev
+python3-pyqt6
+python3-flask
+python3-cryptography
+python3-bcrypt
+python3-reportlab
+python3-pil
+python3-bs4
+python3-requests
+python3-numpy
+python3-scipy
+python3-matplotlib
+python3-pandas
+python3-impacket
+python3-libvirt
+jupyter-notebook
+default-jdk
+default-jdk-headless
+maven
+gradle
+nodejs
+npm
+dotnet8
+ruby
+ruby-dev
+php
+php-cli
+php-xml
+perl
+sqlite3
+sqlitebrowser
+postgresql
+postgresql-client
+redis
+valgrind
+
+# --- VS Code ---
+code
+
+# --- Docker ---
+docker-ce
+docker-ce-cli
+docker-compose-plugin
+containerd.io
+
+# --- Virtualization ---
+qemu-system-x86
+qemu-system-gui
+qemu-utils
+libvirt-daemon-system
+libvirt-clients
+virt-manager
+virt-viewer
+
+# --- Networking Tools ---
+nmap
+tcpdump
+wireshark
+netcat-openbsd
+socat
+openbsd-inetd
+proxychains4
+macchanger
+
+# --- Security / Pentest ---
+hydra
+john
+sqlmap
+gobuster
+dirb
+aircrack-ng
+ettercap-text-only
+slowhttptest
+hping3
+
+# --- Multimedia / Graphics ---
+vlc
+vlc-plugin-base
+gimp
+gimp-data
+inkscape
+krita
+audacity
+obs-studio
+kdenlive
+ffmpeg
+
+# --- Printing / Scanning ---
+cups
+cups-client
+cups-filters
+simple-scan
+hplip
+
+# --- Educational / Scientific ---
+texlive-latex-base
+texlive-latex-extra
+texlive-fonts-recommended
+texlive-science
+r-base
+octave
+gnuplot
+geogebra
+
+# --- System Utilities ---
+cryptsetup
+cryptsetup-bin
+gnutls-bin
+parted
+ufw
+systemd-timesyncd
+htop
+iotop
+neofetch
+screenfetch
+tree
+tmux
+rsync
+curl
+wget
+unzip
+zip
+dirmngr
+software-properties-common
+apt-transport-https
+ca-certificates
+
+# --- EduOS Applications ---
+# Installed from ~/EduOS/ source packages:
+# ExamMode, AdminCenter, LearnHub, DevSuite, CyberLab
+
+# --- Docker Images (pre-pulled) ---
+# kalilinux/kali-rolling
+# bkimminich/juice-shop
+
+# --- EduOS Branding ---
+# /usr/share/backgrounds/eduos/
+# /usr/share/sddm/themes/eduos/
+# /usr/share/plymouth/themes/eduos/
+# /etc/eduos-release
+# plymouth-theme-eduos
