@@ -459,130 +459,106 @@ class MCQSectionWidget(QWidget):
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(24, 16, 24, 16)
+        main_layout.setContentsMargins(32, 20, 32, 20)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # Top bar: timer + progress
-        top_bar = QHBoxLayout()
+        # Card container
+        card = QFrame()
+        card.setStyleSheet("background: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 32px; max-width: 720px;")
+        card_layout = QVBoxLayout(card)
+        card_layout.setSpacing(20)
 
-        timer_widget = QFrame()
-        timer_widget.setStyleSheet("background: #1e293b; border-radius: 10px; padding: 8px 16px;")
-        timer_layout = QHBoxLayout(timer_widget)
-        timer_layout.setContentsMargins(12, 4, 12, 4)
-        timer_icon = QLabel("⏱")
-        timer_icon.setStyleSheet("font-size: 20px;")
-        timer_layout.addWidget(timer_icon)
+        # Timer + progress row
+        info_row = QHBoxLayout()
+        timer_label = QLabel("⏱")
+        timer_label.setStyleSheet("font-size: 18px;")
+        info_row.addWidget(timer_label)
         self.timer_label = QLabel(self._format_time(self.time_remaining))
-        self.timer_label.setStyleSheet("font-size: 22px; font-weight: bold; color: #fbbf24;")
-        timer_layout.addWidget(self.timer_label)
-        top_bar.addWidget(timer_widget)
+        self.timer_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #fbbf24;")
+        info_row.addWidget(self.timer_label)
+        info_row.addStretch()
+        self.progress_label = QLabel(f"Q 1 / {len(MCQ_QUESTIONS)}")
+        self.progress_label.setStyleSheet("font-size: 15px; color: #94a3b8;")
+        info_row.addWidget(self.progress_label)
+        card_layout.addLayout(info_row)
 
-        top_bar.addStretch()
+        # Separator
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet("background: #334155; max-height: 1px;")
+        card_layout.addWidget(sep)
 
-        progress_widget = QFrame()
-        progress_widget.setStyleSheet("background: #1e293b; border-radius: 10px; padding: 8px 16px;")
-        progress_layout = QVBoxLayout(progress_widget)
-        progress_layout.setContentsMargins(12, 4, 12, 4)
-        self.progress_label = QLabel(f"Question 1 of {len(MCQ_QUESTIONS)}")
-        self.progress_label.setStyleSheet("font-size: 14px; color: #94a3b8;")
-        progress_layout.addWidget(self.progress_label)
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setRange(0, len(MCQ_QUESTIONS))
-        self.progress_bar.setValue(0)
-        progress_layout.addWidget(self.progress_bar)
-        top_bar.addWidget(progress_widget)
-
-        main_layout.addLayout(top_bar)
-
-        # Main content: question + navigation palette
-        content = QHBoxLayout()
-
-        palette_frame = QFrame()
-        palette_frame.setStyleSheet("background: #1e293b; border-radius: 12px; padding: 16px;")
-        palette_frame.setFixedWidth(220)
-        palette_layout = QVBoxLayout(palette_frame)
-
-        palette_title = QLabel("Question Palette")
-        palette_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #94a3b8; margin-bottom: 8px;")
-        palette_layout.addWidget(palette_title)
-
-        palette_grid = QGridLayout()
-        palette_grid.setSpacing(6)
-        self.palette_buttons = []
-        for i in range(len(MCQ_QUESTIONS)):
-            btn = QPushButton(str(i + 1))
-            btn.setObjectName("nav")
-            btn.setCheckable(True)
-            btn.setFixedSize(44, 44)
-            btn.clicked.connect(lambda checked, idx=i: self._go_to_question(idx))
-            palette_grid.addWidget(btn, i // 5, i % 5)
-            self.palette_buttons.append(btn)
-
-        palette_scroll = QScrollArea()
-        palette_scroll.setWidgetResizable(True)
-        palette_scroll.setStyleSheet("border: none;")
-        palette_content = QWidget()
-        palette_content.setLayout(palette_grid)
-        palette_scroll.setWidget(palette_content)
-        palette_layout.addWidget(palette_scroll)
-
-        palette_layout.addStretch()
-
-        # Summary
-        self.summary_label = QLabel("Answered: 0 / 10")
-        self.summary_label.setStyleSheet("font-size: 12px; color: #16a34a; padding: 8px 0;")
-        palette_layout.addWidget(self.summary_label)
-
-        content.addWidget(palette_frame)
-
-        # Question area
-        question_frame = QFrame()
-        question_frame.setStyleSheet("background: #1e293b; border-radius: 12px; padding: 24px;")
-        question_layout = QVBoxLayout(question_frame)
-
+        # Question
         self.topic_label = QLabel("Topic")
-        self.topic_label.setStyleSheet("font-size: 12px; color: #60a5fa; padding: 4px 12px; background: #1e3a5f; border-radius: 12px;")
-        self.topic_label.setFixedHeight(28)
-        question_layout.addWidget(self.topic_label)
+        self.topic_label.setStyleSheet("font-size: 11px; color: #60a5fa; padding: 4px 12px; background: #1e3a5f; border-radius: 10px; max-width: 200px;")
+        self.topic_label.setFixedHeight(26)
+        card_layout.addWidget(self.topic_label)
 
         self.question_label = QLabel("Question text")
-        self.question_label.setStyleSheet("font-size: 17px; color: #f1f5f9; padding: 16px 0; line-height: 1.5;")
+        self.question_label.setStyleSheet("font-size: 18px; color: #f1f5f9; padding: 8px 0; line-height: 1.5;")
         self.question_label.setWordWrap(True)
-        question_layout.addWidget(self.question_label)
+        card_layout.addWidget(self.question_label)
 
+        card_layout.addSpacing(8)
+
+        # Options
         self.option_group = QButtonGroup(self)
         self.option_widgets = []
-
         for i in range(4):
             radio = QRadioButton(f"Option {i + 1}")
+            radio.setStyleSheet("""
+                QRadioButton {
+                    font-size: 16px; color: #cbd5e1; padding: 10px 16px;
+                    background: #0f172a; border-radius: 8px; border: 1px solid #334155;
+                    spacing: 12px;
+                }
+                QRadioButton:hover { border-color: #60a5fa; background: #1a2744; }
+                QRadioButton:checked { border-color: #2563eb; background: #1e3a5f; color: white; }
+                QRadioButton::indicator { width: 18px; height: 18px; border-radius: 9px; border: 2px solid #475569; background: transparent; }
+                QRadioButton::indicator:checked { border-color: #2563eb; background: #2563eb; }
+            """)
             radio.toggled.connect(self._on_option_toggled)
-            question_layout.addWidget(radio)
+            card_layout.addWidget(radio)
             self.option_widgets.append(radio)
             self.option_group.addButton(radio, i)
 
-        question_layout.addStretch()
+        card_layout.addStretch()
 
         # Navigation buttons
-        nav_btns = QHBoxLayout()
-        self.prev_btn = QPushButton("◀ Previous")
+        nav_row = QHBoxLayout()
+        self.prev_btn = QPushButton("◀ Back")
+        self.prev_btn.setStyleSheet("""
+            QPushButton { background: #334155; color: white; border: none;
+            border-radius: 8px; padding: 10px 24px; font-size: 14px; font-weight: 600; }
+            QPushButton:hover { background: #475569; }
+            QPushButton:disabled { background: #1e293b; color: #475569; }
+        """)
         self.prev_btn.clicked.connect(self._go_prev)
-        nav_btns.addWidget(self.prev_btn)
+        nav_row.addWidget(self.prev_btn)
 
-        nav_btns.addStretch()
+        nav_row.addStretch()
 
         self.next_btn = QPushButton("Next ▶")
+        self.next_btn.setStyleSheet("""
+            QPushButton { background: #2563eb; color: white; border: none;
+            border-radius: 8px; padding: 10px 24px; font-size: 14px; font-weight: 600; }
+            QPushButton:hover { background: #1d4ed8; }
+        """)
         self.next_btn.clicked.connect(self._go_next)
-        nav_btns.addWidget(self.next_btn)
+        nav_row.addWidget(self.next_btn)
+        card_layout.addLayout(nav_row)
 
-        question_layout.addLayout(nav_btns)
-
-        # Submit to coding
-        self.submit_mcq_btn = QPushButton("✅ Submit MCQ & Proceed to Coding")
-        self.submit_mcq_btn.setObjectName("success")
+        # Submit button
+        self.submit_mcq_btn = QPushButton("✅ Submit & Continue")
+        self.submit_mcq_btn.setStyleSheet("""
+            QPushButton { background: #16a34a; color: white; border: none;
+            border-radius: 10px; padding: 14px; font-size: 16px; font-weight: bold; }
+            QPushButton:hover { background: #15803d; }
+        """)
         self.submit_mcq_btn.clicked.connect(self._submit_mcq)
-        question_layout.addWidget(self.submit_mcq_btn)
+        card_layout.addWidget(self.submit_mcq_btn)
 
-        content.addWidget(question_frame)
-        main_layout.addLayout(content)
+        main_layout.addWidget(card)
 
         # Timer
         self.timer = QTimer()
@@ -627,36 +603,13 @@ class MCQSectionWidget(QWidget):
         if index in self.answers:
             self.option_widgets[self.answers[index]].setChecked(True)
 
-        # Update palette
-        self._update_palette()
         self._update_progress()
-
-    def _update_palette(self):
-        for i, btn in enumerate(self.palette_buttons):
-            if i == self.current_question:
-                btn.setProperty("current", "true")
-            else:
-                btn.setProperty("current", "false")
-            if i in self.answers:
-                btn.setStyleSheet("""
-                    QPushButton { background: #16a34a; color: white; border: none;
-                    border-radius: 6px; font-size: 13px; min-width: 40px; }
-                    QPushButton:hover { background: #15803d; }
-                """)
-            else:
-                btn.setStyleSheet("""
-                    QPushButton { background: #1e293b; color: #94a3b8; border: 1px solid #334155;
-                    border-radius: 6px; font-size: 13px; min-width: 40px; }
-                    QPushButton:hover { background: #334155; }
-                """)
-            self.palette_buttons[i].style().unpolish(self.palette_buttons[i])
-            self.palette_buttons[i].style().polish(self.palette_buttons[i])
 
     def _update_progress(self):
         answered = len(self.answers)
-        self.progress_label.setText(f"Question {self.current_question + 1} of {len(MCQ_QUESTIONS)}")
-        self.progress_bar.setValue(answered)
-        self.summary_label.setText(f"Answered: {answered} / {len(MCQ_QUESTIONS)}")
+        self.progress_label.setText(f"Q {self.current_question + 1} / {len(MCQ_QUESTIONS)}  •  Answered {answered} / {len(MCQ_QUESTIONS)}")
+        self.prev_btn.setEnabled(self.current_question > 0)
+        self.next_btn.setEnabled(self.current_question < len(MCQ_QUESTIONS) - 1)
 
     def _on_option_toggled(self):
         radio = self.sender()
@@ -664,11 +617,7 @@ class MCQSectionWidget(QWidget):
             idx = self.option_group.id(radio)
             if idx >= 0:
                 self.answers[self.current_question] = idx
-                self._update_palette()
                 self._update_progress()
-
-    def _go_to_question(self, index):
-        self._load_question(index)
 
     def _go_prev(self):
         if self.current_question > 0:
@@ -679,7 +628,6 @@ class MCQSectionWidget(QWidget):
             self._load_question(self.current_question + 1)
 
     def _auto_save(self):
-        self._update_palette()
         self._update_progress()
 
     def _submit_mcq(self):
@@ -721,41 +669,37 @@ class CodingSectionWidget(QWidget):
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(24, 16, 24, 16)
+        main_layout.setContentsMargins(32, 20, 32, 20)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        card = QFrame()
+        card.setStyleSheet("background: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 28px; max-width: 800px;")
+        card_layout = QVBoxLayout(card)
+        card_layout.setSpacing(16)
 
         # Top bar
         top_bar = QHBoxLayout()
-
-        timer_widget = QFrame()
-        timer_widget.setStyleSheet("background: #1e293b; border-radius: 10px; padding: 8px 16px;")
-        timer_layout = QHBoxLayout(timer_widget)
-        timer_layout.setContentsMargins(12, 4, 12, 4)
-        timer_layout.addWidget(QLabel("⏱"))
+        top_bar.addWidget(QLabel("⏱"))
         self.coding_timer_label = QLabel(self._format_time(self.time_remaining))
-        self.coding_timer_label.setStyleSheet("font-size: 22px; font-weight: bold; color: #fbbf24;")
-        timer_layout.addWidget(self.coding_timer_label)
-        top_bar.addWidget(timer_widget)
-
+        self.coding_timer_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #fbbf24;")
+        top_bar.addWidget(self.coding_timer_label)
         top_bar.addStretch()
-
-        # Language selector
-        lang_frame = QFrame()
-        lang_frame.setStyleSheet("background: #1e293b; border-radius: 10px; padding: 8px 16px;")
-        lang_layout = QHBoxLayout(lang_frame)
-        lang_layout.setContentsMargins(12, 4, 12, 4)
-        lang_layout.addWidget(QLabel("Language:"))
+        top_bar.addWidget(QLabel("Language:"))
         self.lang_combo = QComboBox()
         self.lang_combo.addItems(["Python", "C", "C++", "Java"])
+        self.lang_combo.setStyleSheet("background: #0f172a; color: white; border: 1px solid #334155; border-radius: 6px; padding: 4px 8px; font-size: 13px; min-width: 100px;")
         self.lang_combo.currentTextChanged.connect(self._change_language)
-        lang_layout.addWidget(self.lang_combo)
-        top_bar.addWidget(lang_frame)
+        top_bar.addWidget(self.lang_combo)
+        card_layout.addLayout(top_bar)
 
-        main_layout.addLayout(top_bar)
+        # Separator
+        sep = QFrame()
+        sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet("background: #334155; max-height: 1px;")
+        card_layout.addWidget(sep)
 
         # Description
-        desc_frame = QFrame()
-        desc_frame.setStyleSheet("background: #1e293b; border-radius: 12px; padding: 20px;")
-        desc_layout = QVBoxLayout(desc_frame)
+        desc_layout = QVBoxLayout()
         challenge_title = QLabel(f"📝 {CODING_CHALLENGE['title']}")
         challenge_title.setStyleSheet("font-size: 18px; font-weight: bold; color: white;")
         desc_layout.addWidget(challenge_title)
@@ -763,7 +707,7 @@ class CodingSectionWidget(QWidget):
         desc_text.setStyleSheet("font-size: 14px; color: #cbd5e1; line-height: 1.6;")
         desc_text.setWordWrap(True)
         desc_layout.addWidget(desc_text)
-        main_layout.addWidget(desc_frame)
+        card_layout.addLayout(desc_layout)
 
         # Code editor
         self.code_editor = QTextEdit()
@@ -774,43 +718,54 @@ class CodingSectionWidget(QWidget):
                 font-family: 'Fira Code', monospace; line-height: 1.5;
             }
         """)
+        self.code_editor.setMinimumHeight(180)
         self._change_language("Python")
-        main_layout.addWidget(self.code_editor)
+        card_layout.addWidget(self.code_editor)
 
         # Action buttons
         action_bar = QHBoxLayout()
         run_btn = QPushButton("▶ Run Code")
-        run_btn.setObjectName("success")
+        run_btn.setStyleSheet("""
+            QPushButton { background: #2563eb; color: white; border: none;
+            border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; }
+            QPushButton:hover { background: #1d4ed8; }
+        """)
         run_btn.clicked.connect(self._run_code)
         action_bar.addWidget(run_btn)
 
         save_draft_btn = QPushButton("💾 Save Draft")
+        save_draft_btn.setStyleSheet("""
+            QPushButton { background: #334155; color: white; border: none;
+            border-radius: 8px; padding: 10px 20px; font-size: 14px; }
+            QPushButton:hover { background: #475569; }
+        """)
         save_draft_btn.clicked.connect(self._save_draft)
         action_bar.addWidget(save_draft_btn)
 
         action_bar.addStretch()
 
         self.submit_coding_btn = QPushButton("✅ Submit & Finish Exam")
-        self.submit_coding_btn.setObjectName("success")
+        self.submit_coding_btn.setStyleSheet("""
+            QPushButton { background: #16a34a; color: white; border: none;
+            border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: bold; }
+            QPushButton:hover { background: #15803d; }
+        """)
         self.submit_coding_btn.clicked.connect(self._submit_coding)
         action_bar.addWidget(self.submit_coding_btn)
 
-        main_layout.addLayout(action_bar)
+        card_layout.addLayout(action_bar)
 
         # Output area
-        output_frame = QFrame()
-        output_frame.setStyleSheet("background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px;")
-        output_layout = QVBoxLayout(output_frame)
-        output_layout.setContentsMargins(0, 0, 0, 0)
         output_header = QLabel("Output")
-        output_header.setStyleSheet("font-size: 12px; color: #64748b; padding: 4px 8px;")
-        output_layout.addWidget(output_header)
+        output_header.setStyleSheet("font-size: 12px; color: #64748b; padding: 2px 4px;")
+        card_layout.addWidget(output_header)
         self.output_area = QTextEdit()
         self.output_area.setReadOnly(True)
-        self.output_area.setStyleSheet("background: transparent; color: #a5f3fc; border: none; font-family: 'Fira Code', monospace; font-size: 13px;")
-        self.output_area.setMaximumHeight(150)
-        output_layout.addWidget(self.output_area)
-        main_layout.addWidget(output_frame)
+        self.output_area.setStyleSheet("background: #0f172a; color: #a5f3fc; border: 1px solid #334155; border-radius: 8px; padding: 12px; font-family: 'Fira Code', monospace; font-size: 13px;")
+        self.output_area.setMaximumHeight(140)
+        card_layout.addWidget(self.output_area)
+
+        main_layout.addWidget(card)
 
         # Timer
         self.timer = QTimer()

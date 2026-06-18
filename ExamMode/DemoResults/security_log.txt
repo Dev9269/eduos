@@ -13,3 +13,19 @@
 [2026-06-18 10:07:51] LOGIN | Student DEMO001 (Test User) logged in
 [2026-06-18 10:10:11] LOGIN | Student DEMO001 (Test) logged in
 [2026-06-18 10:10:11] CLOSE_ATTEMPT | Window close attempted
+[2026-06-18 10:12:54] CLOSE_ATTEMPT | Window close attempted
+[2026-06-18 10:12:56] EXIT_ATTEMPT | User confirmed exit
+[2026-06-18 10:16:47] BLOCKED_SHORTCUT | Ctrl+V
+[2026-06-18 10:17:05] LOGIN | Student DEMO001 (JAINAM MARU) logged in
+[2026-06-18 10:17:08] SECTION_START | MCQ section started
+[2026-06-18 10:23:09] LOGIN | Student DEMO001 (Test) logged in
+[2026-06-18 10:23:09] SECTION_START | MCQ section started
+[2026-06-18 10:23:17] CLOSE_ATTEMPT | Window close attempted
+[2026-06-18 10:23:29] LOGIN | Student DEMO001 (Test) logged in
+[2026-06-18 10:23:29] SECTION_START | MCQ section started
+[2026-06-18 10:23:29] SECTION_COMPLETE | MCQ: 0/10
+[2026-06-18 10:23:30] SECTION_START | Coding section started
+[2026-06-18 10:23:48] CLOSE_ATTEMPT | Window close attempted
+[2026-06-18 10:24:03] LOGIN | Student DEMO001 (Test) logged in
+[2026-06-18 10:24:03] SECTION_START | MCQ section started
+[2026-06-18 10:24:04] CLOSE_ATTEMPT | Window close attempted
