@@ -221,7 +221,7 @@ class CyberLabWindow(QMainWindow):
             if result.returncode != 0:
                 self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] ⚠ Exit code: {result.returncode}")
         except subprocess.TimeoutExpired:
-            self.console.append("[{datetime.now().strftime('%H:%M:%S')}] ⚠ Command timed out")
+            self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] ⚠ Command timed out")
         except Exception as e:
             self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Error: {e}")
 

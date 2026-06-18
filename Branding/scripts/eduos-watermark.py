@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 EduOS Desktop Watermark
-Displays a semi-transparent branding overlay at bottom-right of the screen.
+Displays a semi-transparent branding overlay at top-right of the screen.
 Auto-starts with Plasma session via autostart.
 """
 
@@ -18,7 +18,7 @@ class WatermarkWidget(QWidget):
         self.setWindowTitle("EduOS Watermark")
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.WindowStaysOnBottomHint
+            | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.Tool
             | Qt.WindowType.X11BypassWindowManagerHint
         )
@@ -45,7 +45,7 @@ class WatermarkWidget(QWidget):
         screen_w = self.screen_geometry.width()
         screen_h = self.screen_geometry.height()
 
-        # Draw watermark text at bottom-right
+        # Draw watermark text at top-right
         painter.setPen(QColor(255, 255, 255, 55))
 
         title_font = QFont("Inter", 11)
@@ -58,12 +58,12 @@ class WatermarkWidget(QWidget):
         painter.setFont(subtitle_font)
         subtitle_rect = painter.fontMetrics().boundingRect(self.subtitle_text)
 
-        margin = 18
+        margin = 20
         block_w = max(title_rect.width(), subtitle_rect.width()) + 24
         block_h = title_rect.height() + subtitle_rect.height() + 24
 
         x = screen_w - block_w - margin
-        y = screen_h - block_h - margin
+        y = margin
 
         # Background pill
         painter.setPen(Qt.PenStyle.NoPen)

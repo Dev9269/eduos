@@ -352,7 +352,7 @@ class ExamWindow(QMainWindow):
             for key in ["Print", "Alt+Print", "Shift+Print"]:
                 shortcut = QShortcut(QKeySequence(key), self)
                 shortcut.activated.connect(lambda: None)
-        except:
+        except Exception:
             pass
 
         self.setWindowFlags(
@@ -514,7 +514,7 @@ class ExamWindow(QMainWindow):
                 with open(backup_path, "w") as f:
                     json.dump(backup, f)
                 self.save_status.setText("💾 Auto-saved")
-            except:
+            except Exception:
                 self.save_status.setText("⚠ Save failed")
 
     def _collect_answers(self) -> dict:
