@@ -328,12 +328,14 @@ class LoginScreen(QWidget):
         self.id_input.setPlaceholderText("Student ID")
         self.id_input.setFixedHeight(44)
         self.id_input.setStyleSheet("background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-size: 16px; color: white;")
+        self.id_input.returnPressed.connect(lambda: self.name_input.setFocus())
         card_layout.addWidget(self.id_input)
 
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("Full Name")
         self.name_input.setFixedHeight(44)
         self.name_input.setStyleSheet("background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-size: 16px; color: white;")
+        self.name_input.returnPressed.connect(lambda: self.key_input.setFocus())
         card_layout.addWidget(self.name_input)
 
         self.key_input = QLineEdit()
@@ -341,6 +343,7 @@ class LoginScreen(QWidget):
         self.key_input.setFixedHeight(44)
         self.key_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.key_input.setStyleSheet("background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-size: 16px; color: white;")
+        self.key_input.returnPressed.connect(self._handle_login)
         card_layout.addWidget(self.key_input)
 
         demo_hint = QLabel("Demo Credentials: DEMO001 / EDUOS2026")
@@ -422,16 +425,21 @@ class InstructionsScreen(QWidget):
 
         card_layout.addSpacing(16)
 
-        start_btn = QPushButton("▶ Begin Examination")
-        start_btn.setStyleSheet("""
+        self.start_btn = QPushButton("▶ Begin Examination")
+        self.start_btn.setStyleSheet("""
             QPushButton {
                 background: #16a34a; color: white; border: none; border-radius: 10px;
                 padding: 14px; font-size: 16px; font-weight: bold;
             }
             QPushButton:hover { background: #15803d; }
         """)
-        start_btn.clicked.connect(self.proceed.emit)
-        card_layout.addWidget(start_btn)
+        self.start_btn.clicked.connect(self.proceed.emit)
+        self.start_btn.setDefault(True)
+        card_layout.addWidget(self.start_btn)
+
+        # Allow Enter from anywhere on this screen to trigger start
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.start_btn.setFocus()
 
         layout.addWidget(card)
 
@@ -1190,8 +1198,6 @@ class DemoExamWindow(QMainWindow):
         self.setWindowTitle("EduOS Demo Examination")
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.WindowStaysOnTopHint
-            | Qt.WindowType.CustomizeWindowHint
         )
         self.setStyleSheet(STYLESHEET)
 

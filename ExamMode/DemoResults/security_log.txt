@@ -1,2 +1,15 @@
 [2026-06-18 10:00:28] BLOCKED_SHORTCUT | Ctrl+X
 [2026-06-18 10:00:32] BLOCKED_SHORTCUT | Ctrl+V
+[2026-06-18 10:06:14] CLOSE_ATTEMPT | Window close attempted
+[2026-06-18 10:06:45] LOGIN | Student DEMO001 (Test User) logged in
+[2026-06-18 10:06:45] SECTION_START | MCQ section started
+[2026-06-18 10:06:47] CLOSE_ATTEMPT | Window close attempted
+[2026-06-18 10:07:03] CLOSE_ATTEMPT | Window close attempted
+[2026-06-18 10:07:15] LOGIN | Student DEMO001 (Test User) logged in
+[2026-06-18 10:07:16] CLOSE_ATTEMPT | Window close attempted
+[2026-06-18 10:07:30] LOGIN | Student DEMO001 (Test User) logged in
+[2026-06-18 10:07:30] SECTION_START | MCQ section started
+[2026-06-18 10:07:30] CLOSE_ATTEMPT | Window close attempted
+[2026-06-18 10:07:51] LOGIN | Student DEMO001 (Test User) logged in
+[2026-06-18 10:10:11] LOGIN | Student DEMO001 (Test) logged in
+[2026-06-18 10:10:11] CLOSE_ATTEMPT | Window close attempted
