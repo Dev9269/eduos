@@ -24,7 +24,7 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QRadioButton, QButtonGroup, QTextEdit,
+    QLabel, QLineEdit, QPushButton, QRadioButton, QButtonGroup, QTextEdit,
     QListWidget, QListWidgetItem, QStackedWidget, QFrame,
     QMessageBox, QDialog, QProgressBar, QScrollArea, QGridLayout,
     QComboBox, QSplitter, QFileDialog, QSizePolicy
@@ -324,22 +324,22 @@ class LoginScreen(QWidget):
 
         card_layout.addSpacing(20)
 
-        self.id_input = QTextEdit()
+        self.id_input = QLineEdit()
         self.id_input.setPlaceholderText("Student ID")
-        self.id_input.setMaximumHeight(44)
+        self.id_input.setFixedHeight(44)
         self.id_input.setStyleSheet("background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-size: 16px; color: white;")
         card_layout.addWidget(self.id_input)
 
-        self.name_input = QTextEdit()
+        self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("Full Name")
-        self.name_input.setMaximumHeight(44)
+        self.name_input.setFixedHeight(44)
         self.name_input.setStyleSheet("background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-size: 16px; color: white;")
         card_layout.addWidget(self.name_input)
 
-        self.key_input = QTextEdit()
+        self.key_input = QLineEdit()
         self.key_input.setPlaceholderText("Exam Key")
-        self.key_input.setMaximumHeight(44)
-        self.key_input.setEchoMode(QTextEdit.EchoMode.Password)
+        self.key_input.setFixedHeight(44)
+        self.key_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.key_input.setStyleSheet("background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; font-size: 16px; color: white;")
         card_layout.addWidget(self.key_input)
 
@@ -370,9 +370,9 @@ class LoginScreen(QWidget):
         layout.addWidget(card)
 
     def _handle_login(self):
-        sid = self.id_input.toPlainText().strip()
-        name = self.name_input.toPlainText().strip()
-        key = self.key_input.toPlainText().strip()
+        sid = self.id_input.text().strip()
+        name = self.name_input.text().strip()
+        key = self.key_input.text().strip()
 
         if not sid or not name or not key:
             self.error_label.setText("⚠ Please fill in all fields.")
@@ -1201,8 +1201,6 @@ class DemoExamWindow(QMainWindow):
         else:
             self.setGeometry(0, 0, 1280, 800)
 
-        self.showFullScreen()
-
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
 
@@ -1211,6 +1209,8 @@ class DemoExamWindow(QMainWindow):
         self.stack.addWidget(self.login_screen)
 
         self._install_anti_cheat()
+
+        self.showFullScreen()
 
     def _install_anti_cheat(self):
         # Install global event filter to block restricted keys

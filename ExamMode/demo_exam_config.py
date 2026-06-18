@@ -29,83 +29,84 @@ EXAM_CONFIG = {
 MCQ_QUESTIONS = [
     {
         "id": 1,
-        "question": "Which data structure operates on the LIFO (Last In, First Out) principle?",
-        "options": ["Queue", "Stack", "Linked List", "Tree"],
-        "correct": 1,
-        "topic": "Data Structures",
+        "question": "What does CPU stand for?",
+        "options": ["Central Processing Unit", "Computer Processing Unit",
+                    "Central Program Utility", "Core Processing Unit"],
+        "correct": 0,
+        "topic": "Computer Basics",
         "difficulty": "Easy"
     },
     {
         "id": 2,
-        "question": "What is the time complexity of binary search on a sorted array of n elements?",
-        "options": ["O(n)", "O(log n)", "O(n²)", "O(n log n)"],
-        "correct": 1,
-        "topic": "Algorithms",
+        "question": "Which programming language is commonly used for web development?",
+        "options": ["HTML", "Python", "JavaScript", "All of the Above"],
+        "correct": 3,
+        "topic": "Web Technologies",
         "difficulty": "Easy"
     },
     {
         "id": 3,
-        "question": "Which SQL clause is used to filter records based on a condition?",
-        "options": ["WHERE", "HAVING", "FILTER", "MATCH"],
-        "correct": 0,
-        "topic": "Databases",
+        "question": "Which of the following is an operating system?",
+        "options": ["Windows", "Linux", "macOS", "All of the Above"],
+        "correct": 3,
+        "topic": "Operating Systems",
         "difficulty": "Easy"
     },
     {
         "id": 4,
-        "question": "Which protocol is used to reliably deliver web pages over the internet?",
-        "options": ["FTP", "UDP", "HTTP/HTTPS", "SMTP"],
+        "question": "What is the full form of RAM?",
+        "options": ["Random Access Memory", "Rapid Access Memory",
+                    "Read Access Memory", "Run Access Memory"],
+        "correct": 0,
+        "topic": "Computer Basics",
+        "difficulty": "Easy"
+    },
+    {
+        "id": 5,
+        "question": "Which command is used to list files in Linux?",
+        "options": ["dir", "ls", "list", "show"],
+        "correct": 1,
+        "topic": "Linux",
+        "difficulty": "Easy"
+    },
+    {
+        "id": 6,
+        "question": "Which protocol is commonly used for secure web browsing?",
+        "options": ["HTTP", "FTP", "HTTPS", "SMTP"],
         "correct": 2,
         "topic": "Networking",
         "difficulty": "Easy"
     },
     {
-        "id": 5,
-        "question": "Which of the following is NOT an operating system?",
-        "options": ["Linux", "Windows", "Python", "macOS"],
+        "id": 7,
+        "question": "Which company developed Git?",
+        "options": ["Microsoft", "Google", "Linus Torvalds", "Apple"],
         "correct": 2,
-        "topic": "Operating Systems",
+        "topic": "Version Control",
         "difficulty": "Easy"
     },
     {
-        "id": 6,
-        "question": "What is the correct way to declare a variable in Python?",
-        "options": ["int x = 10;", "x = 10", "var x = 10;", "let x = 10;"],
+        "id": 8,
+        "question": "What is the extension of a Python file?",
+        "options": [".java", ".py", ".cpp", ".html"],
         "correct": 1,
         "topic": "Programming",
         "difficulty": "Easy"
     },
     {
-        "id": 7,
-        "question": "Which software development methodology follows an iterative, incremental approach?",
-        "options": ["Waterfall", "Agile", "Spiral", "V-Model"],
-        "correct": 1,
-        "topic": "Software Engineering",
-        "difficulty": "Medium"
-    },
-    {
-        "id": 8,
-        "question": "What does CPU stand for?",
-        "options": ["Central Processing Unit", "Computer Personal Unit",
-                    "Central Program Utility", "Core Processing Unit"],
+        "id": 9,
+        "question": "Which database language is used to query databases?",
+        "options": ["SQL", "CSS", "XML", "JSON"],
         "correct": 0,
-        "topic": "Computer Architecture",
+        "topic": "Databases",
         "difficulty": "Easy"
     },
     {
-        "id": 9,
-        "question": "Which of the following is a common cybersecurity attack where the attacker intercepts communication between two parties?",
-        "options": ["Phishing", "Man-in-the-Middle", "Ransomware", "DDoS"],
-        "correct": 1,
-        "topic": "Cybersecurity",
-        "difficulty": "Medium"
-    },
-    {
         "id": 10,
-        "question": "Which HTML tag is used to create a hyperlink?",
-        "options": ["<link>", "<a>", "<href>", "<url>"],
-        "correct": 1,
-        "topic": "Web Technologies",
+        "question": "Which of the following is a cybersecurity tool?",
+        "options": ["Wireshark", "Nmap", "Burp Suite", "All of the Above"],
+        "correct": 3,
+        "topic": "Cybersecurity",
         "difficulty": "Easy"
     }
 ]
@@ -113,26 +114,27 @@ MCQ_QUESTIONS = [
 CODING_CHALLENGE = {
     "title": "Palindrome Checker",
     "description": (
-        "Write a function that checks whether a given string is a palindrome. "
-        "A palindrome is a string that reads the same forwards and backwards, "
-        "ignoring case, spaces, and punctuation.\n\n"
+        "Write a program that checks whether a given word is a palindrome.\n\n"
+        "A palindrome is a word that reads the same forwards and backwards.\n\n"
         "Examples:\n"
-        "  Input: \"racecar\" → Output: True\n"
-        "  Input: \"A man, a plan, a canal: Panama\" → Output: True\n"
-        "  Input: \"hello\" → Output: False\n\n"
-        "Your function should return True if the input is a palindrome, False otherwise."
+        "  Input: madam\n"
+        "  Output: Palindrome\n\n"
+        "  Input: hello\n"
+        "  Output: Not Palindrome\n\n"
+        "Your program should read the input string and print "
+        "\"Palindrome\" or \"Not Palindrome\" accordingly."
     ),
     "test_cases": [
-        {"input": "racecar", "expected": True},
-        {"input": "hello", "expected": False},
-        {"input": "A man, a plan, a canal: Panama", "expected": True},
-        {"input": "12321", "expected": True},
-        {"input": "not a palindrome", "expected": False},
+        {"input": "madam", "expected": "Palindrome"},
+        {"input": "racecar", "expected": "Palindrome"},
+        {"input": "hello", "expected": "Not Palindrome"},
+        {"input": "level", "expected": "Palindrome"},
+        {"input": "world", "expected": "Not Palindrome"},
     ],
     "starter_code": {
-        "Python": 'def is_palindrome(s: str) -> bool:\n    # Your code here\n    pass\n\n# Test cases\nprint(is_palindrome("racecar"))\nprint(is_palindrome("hello"))',
-        "C": '#include <stdio.h>\n#include <stdbool.h>\n#include <string.h>\n#include <ctype.h>\n\nbool is_palindrome(char *s) {\n    // Your code here\n    return false;\n}\n\nint main() {\n    printf("%d\\n", is_palindrome("racecar"));\n    printf("%d\\n", is_palindrome("hello"));\n    return 0;\n}',
-        "C++": '#include <iostream>\n#include <string>\n#include <algorithm>\n#include <cctype>\n\nbool is_palindrome(const std::string& s) {\n    // Your code here\n    return false;\n}\n\nint main() {\n    std::cout << is_palindrome("racecar") << std::endl;\n    std::cout << is_palindrome("hello") << std::endl;\n    return 0;\n}',
-        "Java": 'public class Solution {\n    public static boolean isPalindrome(String s) {\n        // Your code here\n        return false;\n    }\n\n    public static void main(String[] args) {\n        System.out.println(isPalindrome("racecar"));\n        System.out.println(isPalindrome("hello"));\n    }\n}'
+        "Python": 'word = input()\n# Your code here\n',
+        "C": '#include <stdio.h>\n#include <string.h>\n\nint main() {\n    char word[100];\n    scanf("%s", word);\n    // Your code here\n    return 0;\n}',
+        "C++": '#include <iostream>\n#include <string>\nusing namespace std;\n\nint main() {\n    string word;\n    cin >> word;\n    // Your code here\n    return 0;\n}',
+        "Java": 'import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        String word = sc.next();\n        // Your code here\n    }\n}'
     }
 }
