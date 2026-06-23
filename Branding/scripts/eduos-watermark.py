@@ -31,6 +31,7 @@ class WatermarkWidget(QWidget):
 
         self.watermark_text = "EduOS \u2013 Engineering Education Edition"
         self.subtitle_text = "Developed by Jainam H. Maru"
+        self.engine_text = "KDE Plasma Desktop"
 
         self.setGeometry(0, 0, self.screen_geometry.width(), self.screen_geometry.height())
         self.raise_()
@@ -58,9 +59,13 @@ class WatermarkWidget(QWidget):
         painter.setFont(subtitle_font)
         subtitle_rect = painter.fontMetrics().boundingRect(self.subtitle_text)
 
+        engine_font = QFont("Inter", 8)
+        painter.setFont(engine_font)
+        engine_rect = painter.fontMetrics().boundingRect(self.engine_text)
+
         margin = 20
-        block_w = max(title_rect.width(), subtitle_rect.width()) + 24
-        block_h = title_rect.height() + subtitle_rect.height() + 24
+        block_w = max(title_rect.width(), subtitle_rect.width(), engine_rect.width()) + 24
+        block_h = title_rect.height() + subtitle_rect.height() + engine_rect.height() + 30
 
         x = screen_w - block_w - margin
         y = margin
@@ -79,7 +84,7 @@ class WatermarkWidget(QWidget):
         title_font.setWeight(QFont.Weight.Medium)
         painter.setFont(title_font)
         painter.drawText(
-            x + 14, y + 12,
+            x + 14, y + 10,
             block_w - 14, title_rect.height() + 4,
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             self.watermark_text
@@ -94,6 +99,16 @@ class WatermarkWidget(QWidget):
             block_w - 14, subtitle_rect.height() + 4,
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             self.subtitle_text
+        )
+
+        # Engine credit
+        painter.setPen(QColor(255, 255, 255, 60))
+        painter.setFont(engine_font)
+        painter.drawText(
+            x + 14, y + 14 + title_rect.height() + subtitle_rect.height() + 2,
+            block_w - 14, engine_rect.height() + 4,
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            self.engine_text
         )
 
         painter.end()

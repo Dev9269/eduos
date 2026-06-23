@@ -29,7 +29,7 @@ class WelcomePage(QWizardPage):
         layout.addWidget(subtitle)
         
         desc = QLabel(
-            "EduOS is a Debian-based operating system designed for engineering\n"
+            "EduOS is an educational operating system designed for engineering\n"
             "colleges and universities. It provides a complete campus computing\n"
             "ecosystem for learning, examinations, development, cybersecurity, and administration."
         )
@@ -37,6 +37,12 @@ class WelcomePage(QWizardPage):
         desc.setStyleSheet("font-size: 14px; color: #475569; padding: 20px;")
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(desc)
+
+        # Engine attribution
+        credit = QLabel("Desktop environment powered by KDE Plasma 6")
+        credit.setStyleSheet("font-size: 11px; color: #adb5bd; padding: 4px;")
+        credit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(credit)
 
 
 class ModulesPage(QWizardPage):

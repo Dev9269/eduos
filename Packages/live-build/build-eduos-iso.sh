@@ -243,16 +243,16 @@ fi
 
 # EduOS System Info
 cat > config/includes.chroot/etc/eduos-release << 'EOF'
-EduOS 1.0.0 (Trixie)
+EduOS 1.0.0
 Educational Operating System
-Built from Debian 13
+Built by Jainam H. Maru & Team
 EOF
 
 # MOTD
 cat > config/includes.chroot/etc/motd << 'EOF'
 ╔═══════════════════════════════════════════════╗
 ║              EduOS - Educational OS           ║
-║     Debian-based | KDE Plasma | Secure Campus  ║
+║     Engineering Education Edition v1.0.0      ║
 ╚═══════════════════════════════════════════════╝
 EOF
 

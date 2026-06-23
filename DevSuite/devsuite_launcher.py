@@ -17,7 +17,7 @@ from PyQt6.QtGui import QFont, QPixmap
 
 TOOLS = [
     {"name": "VS Code", "icon": "💻", "cmd": "code", "desc": "Visual Studio Code IDE"},
-    {"name": "Terminal", "icon": "🖥️", "cmd": "konsole", "desc": "KDE Terminal"},
+    {"name": "Terminal", "icon": "🖥️", "cmd": "konsole", "desc": "System Terminal"},
     {"name": "Python", "icon": "🐍", "cmd": "python3", "desc": "Python 3 Interpreter"},
     {"name": "Java", "icon": "☕", "cmd": "bash -c 'java -version; read'", "desc": "Java Runtime"},
     {"name": "Node.js", "icon": "🟢", "cmd": "bash -c 'node --version; read'", "desc": "Node.js Runtime"},
