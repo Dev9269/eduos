@@ -7,362 +7,364 @@ Rectangle {
     id: root
     width: 1920
     height: 1080
-    color: "#080e1a"
+    color: "#1a1a2e"
 
     TextConstants { id: textConstants }
 
-    // ─── Background Layers ─────────────────────────────────────────
+    // ─── Background ────────────────────────────────────────────
     Item {
-        id: backgroundLayer
         anchors.fill: parent
 
-        // Base gradient
+        Image {
+            id: bgImage
+            anchors.fill: parent
+            source: "file:///usr/share/wallpapers/eduos-wallpaper.png"
+            fillMode: Image.PreserveAspectCrop
+            asynchronous: true
+            cache: true
+        }
+
         Rectangle {
             anchors.fill: parent
             gradient: Gradient {
-                GradientStop { position: 0.0; color: "#0a1628" }
-                GradientStop { position: 0.3; color: "#0d1b2a" }
-                GradientStop { position: 0.6; color: "#111827" }
-                GradientStop { position: 1.0; color: "#080e1a" }
+                GradientStop { position: 0.0; color: "#cc1a1a2e" }
+                GradientStop { position: 0.4; color: "#bb1a1a2e" }
+                GradientStop { position: 0.7; color: "#991a1a2e" }
+                GradientStop { position: 1.0; color: "#dd0d0d1a" }
+            }
+        }
+    }
+
+    // ─── Top Bar ───────────────────────────────────────────────
+    Item {
+        anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: 20 }
+        height: 56
+
+        Row {
+            anchors { left: parent.left; leftMargin: 28; verticalCenter: parent.verticalCenter }
+            spacing: 10
+            Rectangle {
+                width: 30; height: 30; radius: 6
+                color: "#c8913e"
+                Text { anchors.centerIn: parent; text: "E"; font { pixelSize: 16; bold: true }; color: "white" }
+            }
+            Column {
+                spacing: 0
+                anchors.verticalCenter: parent.verticalCenter
+                Text { text: "EduOS"; font { pixelSize: 16; bold: true }; color: "white"; opacity: 0.9 }
+                Text { text: "Engineering Education Edition"; font.pixelSize: 9; color: "white"; opacity: 0.35 }
             }
         }
 
-        // Subtle dot grid pattern
-        Row {
-            anchors.fill: parent
-            spacing: 48
-            Repeater {
-                model: Math.ceil(root.width / 48) + 1
-                Column {
-                    spacing: 48
-                    Repeater {
-                        model: Math.ceil(root.height / 48) + 1
+        Column {
+            anchors { right: parent.right; rightMargin: 28; verticalCenter: parent.verticalCenter }
+            horizontalAlignment: Text.AlignRight
+            spacing: 0
+            Text {
+                id: timeLabel
+                text: Qt.formatTime(new Date(), "hh:mm")
+                font { pixelSize: 26; weight: Font.Light }
+                color: "white"; opacity: 0.85
+            }
+            Timer { interval: 1000; running: true; repeat: true; onTriggered: timeLabel.text = Qt.formatTime(new Date(), "hh:mm") }
+            Text {
+                text: Qt.formatDate(new Date(), "dddd, MMMM d")
+                font.pixelSize: 10; color: "white"; opacity: 0.4
+            }
+        }
+    }
+
+    // ─── Main Content ──────────────────────────────────────────
+    Column {
+        id: mainContent
+        anchors.centerIn: parent
+        width: 360
+        spacing: 0
+
+        NumberAnimation on opacity { from: 0; to: 1; duration: 500; easing.type: Easing.OutCubic }
+
+        // Welcome text
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "Welcome"
+            font { pixelSize: 22; weight: Font.Light }
+            color: "white"; opacity: 0.7
+            bottomPadding: 24
+        }
+
+        // ─── User Selection Row ────────────────────────────────
+        Item {
+            id: userRow
+            width: parent.width
+            height: 100
+
+            ListView {
+                id: userList
+                anchors.fill: parent
+                orientation: ListView.Horizontal
+                spacing: 16
+                clip: true
+                model: userModel
+                currentIndex: userModel.lastIndex
+                focus: true
+
+                delegate: Item {
+                    width: 76; height: 100
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 8
+
                         Rectangle {
-                            width: 2; height: 2; radius: 1
-                            color: "#55688b"; opacity: 0.08
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            width: 56; height: 56; radius: 28
+                            color: (userList.currentIndex === index) ? "#c8913e" : "#2a2a4e"
+                            border {
+                                color: (userList.currentIndex === index) ? "#e8b84b" : "#4a4a6e"
+                                width: (userList.currentIndex === index) ? 3 : 1
+                            }
+
+                            Image {
+                                id: userIcon
+                                anchors.fill: parent
+                                anchors.margins: 4
+                                source: model.icon
+                                sourceSize { width: 48; height: 48 }
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                layer.enabled: true
+                                layer.effect: OpacityMask {
+                                    maskSource: Rectangle {
+                                        width: 48; height: 48; radius: 24
+                                    }
+                                }
+                                onStatusChanged: {
+                                    if (status === Image.Error) {
+                                        source = ""
+                                    }
+                                }
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: model.icon && model.icon.length > 0 ? "" : model.name.charAt(0).toUpperCase()
+                                font { pixelSize: 22; weight: Font.Bold }
+                                color: "white"
+                                visible: userIcon.status !== Image.Ready
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    userList.currentIndex = index
+                                    userList.focus = true
+                                    selectedUser = model.name
+                                    showOther = false
+                                    errorMessage.text = ""
+                                    passwordInput.focus = true
+                                    passwordInput.text = ""
+                                }
+                            }
+                        }
+
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: model.realName !== "" ? model.realName : model.name
+                            font.pixelSize: 11
+                            color: (userList.currentIndex === index) ? "#e8b84b" : "white"
+                            opacity: (userList.currentIndex === index) ? 1.0 : 0.5
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
                         }
                     }
                 }
             }
         }
 
-        // Decorative curves — top right
-        Canvas {
-            x: parent.width - 400; y: -100
-            width: 500; height: 500
-            contextType: "2d"
-            onPaint: {
-                context.strokeStyle = Qt.rgba(37/255, 99/255, 235/255, 0.06)
-                context.lineWidth = 2
-                for (let i = 0; i < 5; i++) {
-                    context.beginPath()
-                    context.arc(250, 250, 60 + i * 40, 0, Math.PI * 2)
-                    context.stroke()
-                }
-            }
-        }
-
-        // Decorative curves — bottom left
-        Canvas {
-            x: -200; y: parent.height - 400
-            width: 500; height: 500
-            contextType: "2d"
-            onPaint: {
-                context.strokeStyle = Qt.rgba(124/255, 58/255, 237/255, 0.06)
-                context.lineWidth = 2
-                for (let i = 0; i < 5; i++) {
-                    context.beginPath()
-                    context.arc(250, 250, 60 + i * 40, 0, Math.PI * 2)
-                    context.stroke()
-                }
-            }
-        }
-
-        // Accent glow behind login card
-        Rectangle {
-            x: parent.width / 2 - 250
-            y: parent.height / 2 - 200
-            width: 500; height: 400
-            radius: 250
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: Qt.rgba(37/255, 99/255, 235/255, 0.08) }
-                GradientStop { position: 0.5; color: Qt.rgba(124/255, 58/255, 237/255, 0.04) }
-                GradientStop { position: 1.0; color: "transparent" }
-            }
-            opacity: 0
-            NumberAnimation on opacity { from: 0; to: 1; duration: 2000; easing.type: Easing.InQuad }
-        }
-    }
-
-    // ─── Top Bar ───────────────────────────────────────────────────
-    Item {
-        anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: 24 }
-        height: 60
-
-        // Branding — top left
-        Column {
-            anchors { left: parent.left; leftMargin: 36; verticalCenter: parent.verticalCenter }
-            spacing: 2
-            Row {
-                spacing: 10
-                Rectangle {
-                    width: 32; height: 32; radius: 6
-                    color: "#2563eb"
-                    Text { anchors.centerIn: parent; text: "E"; font { pixelSize: 18; bold: true }; color: "white" }
-                }
-                Column {
-                    spacing: 1
-                    anchors.verticalCenter: parent.verticalCenter
-                    Text { text: "EduOS"; font { pixelSize: 18; bold: true }; color: "white"; opacity: 0.9 }
-                    Text { text: "Engineering Education Edition"; font.pixelSize: 10; color: "white"; opacity: 0.4 }
-                }
-            }
-        }
-
-        // Clock — top right
-        Column {
-            anchors { right: parent.right; rightMargin: 36; verticalCenter: parent.verticalCenter }
-            horizontalAlignment: Text.AlignRight
-            spacing: 0
-            Text {
-                id: timeLabel
-                text: Qt.formatTime(new Date(), "hh:mm")
-                font { pixelSize: 28; weight: Font.Light }
-                color: "white"; opacity: 0.85
-            }
-            Timer { interval: 1000; running: true; repeat: true; onTriggered: timeLabel.text = Qt.formatTime(new Date(), "hh:mm") }
-            Text {
-                text: Qt.formatDate(new Date(), "dddd, MMMM d")
-                font.pixelSize: 11
-                color: "white"; opacity: 0.45
-            }
-            Text {
-                text: sddm.hostName
-                font.pixelSize: 10
-                color: "white"; opacity: 0.3
-            }
-        }
-    }
-
-    // ─── Login Card Container (glassmorphism) ──────────────────────
-    Item {
-        anchors.centerIn: parent
-        width: 380; height: cardContent.height + 80
-
-        // Drop shadow
-        RectangularGlow {
-            anchors.fill: cardBackground
-            anchors.topMargin: 4
-            glowRadius: 40
-            spread: 0.2
-            color: "#1a000000"
-        }
-
-        // Glass background
-        Rectangle {
-            id: cardBackground
-            anchors.fill: parent
-            radius: 20
-            color: "#1a152842"
-            border { color: "#30ffffff"; width: 1 }
-
-            // Inner gradient overlay for glass depth
-            Rectangle {
-                anchors.fill: parent; radius: parent.radius
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: Qt.rgba(255/255, 255/255, 255/255, 0.05) }
-                    GradientStop { position: 1.0; color: Qt.rgba(0/255, 0/255, 0/255, 0.1) }
-                }
-            }
-        }
-
-        // Fade-in entrance animation
-        NumberAnimation on opacity { from: 0; to: 1; duration: 600; easing.type: Easing.OutCubic }
-        NumberAnimation on y { from: parent ? parent.height * 0.05 : 0; to: 0; duration: 600; easing.type: Easing.OutCubic }
-    }
-
-    // ─── Card Content ──────────────────────────────────────────────
-    Column {
-        id: cardContent
-        anchors.centerIn: parent
-        width: 320
-        spacing: 20
-
-        // Spacer
-        Item { width: 1; height: 8 }
-
-        // Avatar circle
-        Rectangle {
+        // ─── Other User Button ────────────────────────────────
+        Item {
             anchors.horizontalCenter: parent.horizontalCenter
-            width: 72; height: 72; radius: 36
-            color: "#1a2744"
-            border { color: "#40ffffff"; width: 2 }
+            width: 100; height: 80
 
-            Text {
-                anchors.centerIn: parent; text: "👤"; font.pixelSize: 32
-            }
-
-            // Subtle ring glow
-            Rectangle {
+            Column {
                 anchors.centerIn: parent
-                width: 80; height: 80; radius: 40
-                color: "transparent"
-                border { color: Qt.rgba(37/255, 99/255, 235/255, 0.25); width: 1 }
-            }
-        }
+                spacing: 6
 
-        // Welcome text
-        Text {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: "Welcome back"
-            font { pixelSize: 20; weight: Font.Light }
-            color: "white"; opacity: 0.8
-        }
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 52; height: 52; radius: 26
+                    color: showOther ? "#c8913e" : "#2a2a4e"
+                    border {
+                        color: showOther ? "#e8b84b" : "#4a4a6e"
+                        width: showOther ? 3 : 1
+                    }
 
-        // Username field
-        TextBox {
-            id: userNameInput
-            width: parent.width; height: 44
-            font.pixelSize: 14
-            textColor: "white"
-            color: "#1a1a32"
-            borderColor: "#2a2a4e"
-            focusColor: "#2563eb"
-            hoverColor: "#3a7bc8"
-            radius: 10
-            text: sddm.lastUser || ""
+                    Text {
+                        anchors.centerIn: parent
+                        text: "…"
+                        font { pixelSize: 24; weight: Font.Bold }
+                        color: "white"; opacity: 0.8
+                    }
 
-            Keys.onPressed: function(event) {
-                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    passwordInput.focus = true; event.accepted = true
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            showOther = true
+                            selectedUser = ""
+                            userList.currentIndex = -1
+                            errorMessage.text = ""
+                            userNameInput.focus = true
+                            userNameInput.text = ""
+                            passwordInput.text = ""
+                        }
+                    }
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "Other"
+                    font.pixelSize: 10
+                    color: showOther ? "#e8b84b" : "white"
+                    opacity: showOther ? 1.0 : 0.4
                 }
             }
-        }
-
-        // Password field
-        PasswordBox {
-            id: passwordInput
-            width: parent.width; height: 44
-            font.pixelSize: 14
-            textColor: "white"
-            radius: 10
-            focus: true
-
-            Keys.onPressed: function(event) {
-                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    doLogin(); event.accepted = true
-                }
-            }
-        }
-
-        // Sign In button
-        Button {
-            id: loginButton
-            width: parent.width; height: 46
-            text: "Sign In →"
-            color: "#2563eb"
-            activeColor: "#3b82f6"
-            pressedColor: "#1d4ed8"
-            font.pixelSize: 15
-
-            radius: 10
-
-            onClicked: doLogin()
-            Keys.onReturnPressed: doLogin()
-        }
-
-        // Error message
-        Text {
-            id: errorMessage
-            width: parent.width
-            wrapMode: Text.WordWrap
-            color: "#ef4444"
-            font.pixelSize: 12
-            horizontalAlignment: Text.AlignHCenter
-            visible: text.length > 0
-            height: visible ? implicitHeight : 0
         }
 
         // Spacer
-        Item { width: 1; height: 4 }
+        Item { width: 1; height: 20 }
+
+        // ─── Login Fields ─────────────────────────────────────
+        Column {
+            id: loginFields
+            width: parent.width
+            spacing: 10
+
+            TextBox {
+                id: userNameInput
+                width: parent.width; height: 44
+                font.pixelSize: 14
+                textColor: "white"
+                color: "#2a2a4e"
+                borderColor: showOther ? "#c8913e" : "#3a3a5e"
+                focusColor: "#c8913e"
+                hoverColor: "#3a3a5e"
+                radius: 8
+                placeholderText: "Username"
+                visible: showOther
+                text: ""
+
+                Keys.onPressed: function(event) {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        passwordInput.focus = true; event.accepted = true
+                    }
+                }
+            }
+
+            PasswordBox {
+                id: passwordInput
+                width: parent.width; height: 44
+                font.pixelSize: 14
+                textColor: "white"
+                radius: 8
+                focus: true
+                placeholderText: "Password"
+
+                Keys.onPressed: function(event) {
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        doLogin(); event.accepted = true
+                    }
+                }
+            }
+
+            Button {
+                id: loginButton
+                width: parent.width; height: 46
+                text: "Sign In"
+                color: "#c8913e"
+                activeColor: "#d4a04a"
+                pressedColor: "#b07a2e"
+                font.pixelSize: 15
+                radius: 8
+
+                onClicked: doLogin()
+                Keys.onReturnPressed: doLogin()
+            }
+
+            Text {
+                id: errorMessage
+                width: parent.width
+                wrapMode: Text.WordWrap
+                color: "#ef4444"
+                font.pixelSize: 12
+                horizontalAlignment: Text.AlignHCenter
+                visible: text.length > 0
+                height: visible ? implicitHeight : 0
+            }
+        }
     }
 
-    // ─── Bottom Bar ────────────────────────────────────────────────
+    // ─── Bottom Bar ────────────────────────────────────────────
     Rectangle {
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-        height: 44
-        color: "#080e1a"
-        opacity: 0.8
+        height: 42
+        color: "#0d0d1a"
+        opacity: 0.85
 
         RowLayout {
             anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
-            anchors.leftMargin: 24; anchors.rightMargin: 24
-            spacing: 8
+            anchors.leftMargin: 20; anchors.rightMargin: 20
+            spacing: 6
 
-            // System version
             Text {
                 text: "EduOS v1.0 Prototype"
-                font.pixelSize: 11
-                color: "white"; opacity: 0.35
+                font.pixelSize: 10; color: "white"; opacity: 0.3
             }
 
             Item { Layout.fillWidth: true }
 
-            // Accessibility/VKB indicator (hidden unless keyboard is available)
-            Text {
-                text: "⌨"
-                font.pixelSize: 14
-                color: "white"; opacity: 0.3
-                visible: false  // Could be used as keyboard toggle in future
-            }
-
-            // Session selector
             ComboBox {
                 id: sessionCombo
-                Layout.preferredWidth: 120; Layout.preferredHeight: 26
-                font.pixelSize: 11
-                color: "#1a1a32"
+                Layout.preferredWidth: 110; Layout.preferredHeight: 24
+                font.pixelSize: 10
+                color: "#2a2a4e"
                 textColor: "white"
-                borderColor: "#2a2a4e"
-                focusColor: "#2563eb"
-                hoverColor: "#3b82f6"
+                borderColor: "#3a3a5e"
+                focusColor: "#c8913e"
+                hoverColor: "#c8913e"
                 model: sessionModel
                 index: sessionModel.lastIndex
             }
 
-            // Keyboard layout
             LayoutBox {
-                Layout.preferredWidth: 60; Layout.preferredHeight: 26
-                font.pixelSize: 11
+                Layout.preferredWidth: 50; Layout.preferredHeight: 24
+                font.pixelSize: 10
             }
 
-            // Separator
             Rectangle {
-                Layout.preferredWidth: 1; Layout.preferredHeight: 18
-                color: "#2a2a4e"
+                Layout.preferredWidth: 1; Layout.preferredHeight: 16
+                color: "#3a3a5e"
             }
 
-            // Power buttons
             Button {
-                Layout.preferredWidth: 30; Layout.preferredHeight: 26
-                text: "⏾"; font.pixelSize: 12
-                color: "#1a1a32"; activeColor: "#3b82f6"; pressedColor: "#1d4ed8"
+                Layout.preferredWidth: 28; Layout.preferredHeight: 24
+                text: "⏾"; font.pixelSize: 11
+                color: "#2a2a4e"; activeColor: "#c8913e"; pressedColor: "#b07a2e"
                 radius: 4
                 enabled: sddm.canSuspend
                 onClicked: sddm.suspend()
             }
             Button {
-                Layout.preferredWidth: 30; Layout.preferredHeight: 26
-                text: "⟳"; font.pixelSize: 12
-                color: "#1a1a32"; activeColor: "#3b82f6"; pressedColor: "#1d4ed8"
+                Layout.preferredWidth: 28; Layout.preferredHeight: 24
+                text: "⟳"; font.pixelSize: 11
+                color: "#2a2a4e"; activeColor: "#c8913e"; pressedColor: "#b07a2e"
                 radius: 4
                 enabled: sddm.canReboot
                 onClicked: sddm.reboot()
             }
             Button {
-                Layout.preferredWidth: 30; Layout.preferredHeight: 26
-                text: "⏻"; font.pixelSize: 13
-                color: "#1a1a32"; activeColor: "#ef4444"; pressedColor: "#dc2626"
+                Layout.preferredWidth: 28; Layout.preferredHeight: 24
+                text: "⏻"; font.pixelSize: 12
+                color: "#4a2a2a"; activeColor: "#c8913e"; pressedColor: "#b07a2e"
                 radius: 4
                 enabled: sddm.canPowerOff
                 onClicked: sddm.powerOff()
@@ -370,13 +372,17 @@ Rectangle {
         }
     }
 
-    // ─── Functions ─────────────────────────────────────────────────
+    // ─── State ─────────────────────────────────────────────────
+    property string selectedUser: ""
+    property bool showOther: false
+
     function doLogin() {
-        var username = userNameInput.text
+        var username = showOther ? userNameInput.text : selectedUser
         var password = passwordInput.text
+
         if (username === "") {
             errorMessage.text = textConstants.promptUser
-            userNameInput.focus = true
+            if (showOther) userNameInput.focus = true
             return
         }
         if (password === "") {
@@ -403,14 +409,13 @@ Rectangle {
         }
     }
 
-    // ─── Shake animation on login failure ──────────────────────────
     SequentialAnimation {
         id: shakeAnimation
-        property Item target: cardContent
-        NumberAnimation { target: shakeAnimation.target; property: "x"; to: -8; duration: 40 }
-        NumberAnimation { target: shakeAnimation.target; property: "x"; to: 8; duration: 40 }
-        NumberAnimation { target: shakeAnimation.target; property: "x"; to: -5; duration: 40 }
-        NumberAnimation { target: shakeAnimation.target; property: "x"; to: 5; duration: 40 }
+        property Item target: loginFields
+        NumberAnimation { target: shakeAnimation.target; property: "x"; to: -6; duration: 40 }
+        NumberAnimation { target: shakeAnimation.target; property: "x"; to: 6; duration: 40 }
+        NumberAnimation { target: shakeAnimation.target; property: "x"; to: -4; duration: 40 }
+        NumberAnimation { target: shakeAnimation.target; property: "x"; to: 4; duration: 40 }
         NumberAnimation { target: shakeAnimation.target; property: "x"; to: 0; duration: 40 }
     }
 }

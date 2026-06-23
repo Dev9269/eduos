@@ -29,6 +29,8 @@ venv/
 # ── User data & runtime ─────────────────────────────────
 Backups/
 ExamMode/results/
+ExamMode/DemoResults/
+!ExamMode/DemoResults/.gitkeep
 ExamMode/config/
 ExamMode/data/
 ExamMode/exams/*.json
