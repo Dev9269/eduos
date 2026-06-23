@@ -70,13 +70,19 @@ class WatermarkWidget(QWidget):
         x = screen_w - block_w - margin
         y = margin
 
-        # Background pill
+        # Background pill (glass)
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(15, 23, 42, 120))
-        painter.drawRoundedRect(x, y, block_w, block_h, 10, 10)
+        painter.setBrush(QColor(10, 10, 20, 130))
+        painter.drawRoundedRect(x, y, block_w, block_h, 12, 12)
 
-        # Accent line on left
-        painter.setBrush(QColor(37, 99, 235, 160))
+        # Glass border
+        painter.setPen(QPen(QColor(255, 255, 255, 25), 1))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRoundedRect(x, y, block_w, block_h, 12, 12)
+
+        # Accent line on left (amber)
+        painter.setBrush(QColor(200, 145, 62, 160))
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.drawRoundedRect(x, y + 4, 3, block_h - 8, 2, 2)
 
         # Title
