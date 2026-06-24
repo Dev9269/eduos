@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtSignal
 from PyQt6.QtGui import QFont, QPalette, QColor, QIcon, QAction, QKeySequence, QPixmap, QShortcut
+from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -61,55 +62,45 @@ class SecurityKeyDialog(QDialog):
 
         title = QLabel("🔐 Exam Security Authentication")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("font-size: 18px; font-weight: bold; color: #2563eb;")
+        title.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {C.ACCENT_PRIMARY};")
         layout.addWidget(title)
 
         desc = QLabel("Enter your exam security key to begin the examination.\nContact your invigilator if you don't have a key.")
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc.setWordWrap(True)
-        desc.setStyleSheet("font-size: 13px; color: #666;")
+        desc.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY};")
         layout.addWidget(desc)
 
         self.key_input = QLineEdit()
         self.key_input.setPlaceholderText("Enter security key (e.g. EXAM-XXXX-XXXX)")
         self.key_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.key_input.setStyleSheet("""
-            QLineEdit {
-                padding: 12px; font-size: 16px; border: 2px solid #2563eb;
+        self.key_input.setStyleSheet(f"""
+            QLineEdit {{
+                padding: 12px; font-size: 16px; border: 2px solid {C.ACCENT_PRIMARY};
                 border-radius: 8px; letter-spacing: 3px;
-            }
+                background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};
+            }}
         """)
         layout.addWidget(self.key_input)
 
         self.student_name = QLineEdit()
         self.student_name.setPlaceholderText("Your Full Name")
-        self.student_name.setStyleSheet("padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;")
+        self.student_name.setStyleSheet(f"padding: 10px; font-size: 14px; border: 1px solid {C.GLASS_BORDER}; border-radius: 6px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};")
         layout.addWidget(self.student_name)
 
         self.student_id = QLineEdit()
         self.student_id.setPlaceholderText("Student ID / Roll Number")
-        self.student_id.setStyleSheet("padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px;")
+        self.student_id.setStyleSheet(f"padding: 10px; font-size: 14px; border: 1px solid {C.GLASS_BORDER}; border-radius: 6px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};")
         layout.addWidget(self.student_id)
 
         btn_layout = QHBoxLayout()
         self.auth_btn = QPushButton("🔑 Authenticate & Start Exam")
-        self.auth_btn.setStyleSheet("""
-            QPushButton {
-                background: #2563eb; color: white; padding: 12px 24px;
-                font-size: 15px; border: none; border-radius: 8px; font-weight: bold;
-            }
-            QPushButton:hover { background: #1d4ed8; }
-            QPushButton:pressed { background: #1e40af; padding: 13px 23px 11px 25px; }
-        """)
+        self.auth_btn.setStyleSheet(accent_glow_style())
         self.auth_btn.clicked.connect(self.accept)
         btn_layout.addWidget(self.auth_btn)
 
         cancel_btn = QPushButton("Cancel")
-        cancel_btn.setStyleSheet("""
-            QPushButton { padding: 12px 24px; font-size: 14px; border: 1px solid #ccc; border-radius: 8px; }
-            QPushButton:hover { background: #f3f4f6; }
-            QPushButton:pressed { padding: 13px 23px 11px 25px; }
-        """)
+        cancel_btn.setStyleSheet(glass_button_style())
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(cancel_btn)
         layout.addLayout(btn_layout)
@@ -140,7 +131,7 @@ class QuestionWidget(QWidget):
 
         q_label = QLabel(f"Q{self.question_number}. {self.question_data['question']}")
         q_label.setWordWrap(True)
-        q_label.setStyleSheet("font-size: 16px; font-weight: bold; padding: 10px; background: #f8f9fa; border-radius: 8px;")
+        q_label.setStyleSheet(f"font-size: 16px; font-weight: bold; padding: 10px; background: {C.GLASS_CARD}; border-radius: 8px; color: {C.TEXT_PRIMARY};")
         layout.addWidget(q_label)
 
         qtype = self.question_data.get("type", "mcq")
@@ -150,13 +141,14 @@ class QuestionWidget(QWidget):
             options = self.question_data.get("options", [])
             for i, opt in enumerate(options):
                 rb = QRadioButton(opt)
-                rb.setStyleSheet("""
-                    QRadioButton {
-                        padding: 10px 15px; font-size: 14px; border: 1px solid #e0e0e0;
-                        border-radius: 6px; margin: 4px 0;
-                    }
-                    QRadioButton:hover { background: #f0f4ff; border-color: #2563eb; }
-                    QRadioButton::indicator { width: 18px; height: 18px; }
+                rb.setStyleSheet(f"""
+                    QRadioButton {{
+                        padding: 10px 15px; font-size: 14px; border: 1px solid {C.GLASS_BORDER};
+                        border-radius: 6px; margin: 4px 0; color: {C.TEXT_PRIMARY};
+                        background: {C.GLASS_CARD};
+                    }}
+                    QRadioButton:hover {{ background: rgba(108, 99, 255, 0.1); border-color: {C.ACCENT_PRIMARY}; }}
+                    QRadioButton::indicator {{ width: 18px; height: 18px; }}
                 """)
                 self.answer_group.addButton(rb, i)
                 self.answer_group.buttonClicked.connect(lambda: self.answer_changed.emit())
@@ -165,13 +157,14 @@ class QuestionWidget(QWidget):
             self.checkboxes = []
             for i, opt in enumerate(self.question_data.get("options", [])):
                 cb = QCheckBox(opt)
-                cb.setStyleSheet("""
-                    QCheckBox {
-                        padding: 10px 15px; font-size: 14px; border: 1px solid #e0e0e0;
-                        border-radius: 6px; margin: 4px 0;
-                    }
-                    QCheckBox:hover { background: #f0f4ff; border-color: #2563eb; }
-                    QCheckBox::indicator { width: 18px; height: 18px; }
+                cb.setStyleSheet(f"""
+                    QCheckBox {{
+                        padding: 10px 15px; font-size: 14px; border: 1px solid {C.GLASS_BORDER};
+                        border-radius: 6px; margin: 4px 0; color: {C.TEXT_PRIMARY};
+                        background: {C.GLASS_CARD};
+                    }}
+                    QCheckBox:hover {{ background: rgba(108, 99, 255, 0.1); border-color: {C.ACCENT_PRIMARY}; }}
+                    QCheckBox::indicator {{ width: 18px; height: 18px; }}
                 """)
                 cb.stateChanged.connect(lambda: self.answer_changed.emit())
                 self.checkboxes.append(cb)
@@ -179,13 +172,13 @@ class QuestionWidget(QWidget):
         elif qtype == "programming":
             self.code_edit = QTextEdit()
             self.code_edit.setPlaceholderText("Write your code here...")
-            self.code_edit.setStyleSheet("""
-                QTextEdit {
+            self.code_edit.setStyleSheet(f"""
+                QTextEdit {{
                     font-family: 'Fira Code', 'Consolas', monospace;
                     font-size: 13px; padding: 10px;
-                    border: 1px solid #ccc; border-radius: 6px;
+                    border: 1px solid {C.GLASS_BORDER}; border-radius: 6px;
                     background: #1e1e2e; color: #cdd6f4;
-                }
+                }}
             """)
             self.code_edit.setMinimumHeight(250)
             self.code_edit.textChanged.connect(lambda: self.answer_changed.emit())
@@ -193,7 +186,7 @@ class QuestionWidget(QWidget):
 
             if self.question_data.get("language"):
                 lang_label = QLabel(f"Language: {self.question_data['language']}")
-                lang_label.setStyleSheet("font-size: 12px; color: #666; padding: 4px 0;")
+                lang_label.setStyleSheet(f"font-size: 12px; color: {C.TEXT_SECONDARY}; padding: 4px 0;")
                 layout.addWidget(lang_label)
 
             if self.question_data.get("starter_code"):
@@ -204,16 +197,17 @@ class QuestionWidget(QWidget):
                 starter_edit.setPlainText(self.question_data["starter_code"])
                 starter_edit.setReadOnly(True)
                 starter_edit.setMaximumHeight(150)
-                starter_edit.setStyleSheet("font-family: monospace; font-size: 12px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 8px;")
+                starter_edit.setStyleSheet(f"font-family: monospace; font-size: 12px; background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 4px; padding: 8px; color: {C.TEXT_PRIMARY};")
                 layout.addWidget(starter_edit)
         elif qtype == "practical":
             self.practical_edit = QTextEdit()
             self.practical_edit.setPlaceholderText("Describe your approach and solution...")
-            self.practical_edit.setStyleSheet("""
-                QTextEdit {
+            self.practical_edit.setStyleSheet(f"""
+                QTextEdit {{
                     font-size: 14px; padding: 10px;
-                    border: 1px solid #ccc; border-radius: 6px;
-                }
+                    border: 1px solid {C.GLASS_BORDER}; border-radius: 6px;
+                    background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};
+                }}
             """)
             self.practical_edit.setMinimumHeight(200)
             self.practical_edit.textChanged.connect(lambda: self.answer_changed.emit())
@@ -222,12 +216,12 @@ class QuestionWidget(QWidget):
             self.short_answer = QTextEdit()
             self.short_answer.setPlaceholderText("Type your answer here...")
             self.short_answer.setMaximumHeight(120)
-            self.short_answer.setStyleSheet("font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 6px;")
+            self.short_answer.setStyleSheet(f"font-size: 14px; padding: 10px; border: 1px solid {C.GLASS_BORDER}; border-radius: 6px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};")
             self.short_answer.textChanged.connect(lambda: self.answer_changed.emit())
             layout.addWidget(self.short_answer)
 
         layout.addStretch()
-        self.setStyleSheet("background: white; border-radius: 10px; padding: 10px;")
+        self.setStyleSheet(f"background: {C.GLASS_CARD}; border-radius: 10px; padding: 10px;")
 
     def get_answer(self):
         qtype = self.question_data.get("type", "mcq")
@@ -280,10 +274,10 @@ class ExamTimer(QWidget):
 
         self.time_label = QLabel(self._format_time())
         self.time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.time_label.setStyleSheet("""
+        self.time_label.setStyleSheet(f"""
             font-size: 28px; font-weight: bold; font-family: monospace;
             padding: 8px 16px; border-radius: 8px;
-            background: #1e293b; color: #38bdf8;
+            background: {C.BG_MID}; color: {C.ACCENT_SECONDARY};
         """)
         layout.addWidget(self.time_label)
 
@@ -292,9 +286,9 @@ class ExamTimer(QWidget):
         self.progress.setValue(self.total_seconds)
         self.progress.setTextVisible(False)
         self.progress.setFixedHeight(6)
-        self.progress.setStyleSheet("""
-            QProgressBar { background: #e2e8f0; border: none; border-radius: 3px; }
-            QProgressBar::chunk { background: #2563eb; border-radius: 3px; }
+        self.progress.setStyleSheet(f"""
+            QProgressBar {{ background: rgba(255,255,255,0.06); border: none; border-radius: 3px; }}
+            QProgressBar::chunk {{ background: {C.ACCENT_PRIMARY}; border-radius: 3px; }}
         """)
         layout.addWidget(self.progress)
 
@@ -315,10 +309,10 @@ class ExamTimer(QWidget):
         self.tick.emit(self.remaining_seconds)
 
         if self.remaining_seconds <= 300:
-            self.time_label.setStyleSheet("""
+            self.time_label.setStyleSheet(f"""
                 font-size: 28px; font-weight: bold; font-family: monospace;
                 padding: 8px 16px; border-radius: 8px;
-                background: #7f1d1d; color: #fca5a5;
+                background: {C.BG_MID}; color: {C.ACCENT_RED};
             """)
 
         if self.remaining_seconds <= 0:
@@ -371,7 +365,7 @@ class ExamWindow(QMainWindow):
 
     def _setup_ui(self):
         self.setWindowTitle("EduOS Exam Mode - Secure Assessment")
-        self.setStyleSheet("background: #0f172a;")
+        self.setStyleSheet(f"background: {C.BG_DARK};")
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -380,17 +374,17 @@ class ExamWindow(QMainWindow):
         main_layout.setSpacing(10)
 
         header = QWidget()
-        header.setStyleSheet("background: #1e293b; border-radius: 12px; padding: 8px;")
+        header.setStyleSheet(f"background: {C.BG_MID}; border-radius: 12px; padding: 8px;")
         header_layout = QHBoxLayout(header)
 
         info = QLabel(f"📝 {self.exam_config.get('title', 'Examination')}")
-        info.setStyleSheet("font-size: 18px; font-weight: bold; color: white;")
+        info.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         header_layout.addWidget(info)
 
         header_layout.addStretch()
 
         student_info = QLabel(f"{self.credentials.get('name', 'Student')} | {self.credentials.get('student_id', '')}")
-        student_info.setStyleSheet("font-size: 13px; color: #94a3b8;")
+        student_info.setStyleSheet(f"font-size: 13px; color: {C.TEXT_MUTED};")
         header_layout.addWidget(student_info)
 
         header_layout.addSpacing(20)
@@ -410,20 +404,20 @@ class ExamWindow(QMainWindow):
 
         self.question_list = QListWidget()
         self.question_list.setFixedWidth(200)
-        self.question_list.setStyleSheet("""
-            QListWidget {
-                background: #1e293b; border: none; border-radius: 8px;
-                padding: 8px; font-size: 13px; color: white;
-            }
-            QListWidget::item {
+        self.question_list.setStyleSheet(f"""
+            QListWidget {{
+                background: {C.BG_MID}; border: none; border-radius: 8px;
+                padding: 8px; font-size: 13px; color: {C.TEXT_PRIMARY};
+            }}
+            QListWidget::item {{
                 padding: 10px; border-radius: 6px; margin: 2px 0;
-            }
-            QListWidget::item:selected {
-                background: #2563eb; color: white;
-            }
-            QListWidget::item:hover {
-                background: #334155;
-            }
+            }}
+            QListWidget::item:selected {{
+                background: {C.ACCENT_PRIMARY}; color: white;
+            }}
+            QListWidget::item:hover {{
+                background: {C.BG_LIGHT};
+            }}
         """)
         self.question_list.currentRowChanged.connect(self._show_question)
         content_layout.addWidget(self.question_list)
@@ -435,31 +429,24 @@ class ExamWindow(QMainWindow):
         main_layout.addWidget(content, 1)
 
         footer = QWidget()
-        footer.setStyleSheet("background: #1e293b; border-radius: 12px; padding: 8px;")
+        footer.setStyleSheet(f"background: {C.BG_MID}; border-radius: 12px; padding: 8px;")
         footer_layout = QHBoxLayout(footer)
 
         self.save_status = QLabel("💾 Auto-save enabled")
-        self.save_status.setStyleSheet("font-size: 13px; color: #94a3b8;")
+        self.save_status.setStyleSheet(f"font-size: 13px; color: {C.TEXT_MUTED};")
         footer_layout.addWidget(self.save_status)
 
         footer_layout.addStretch()
 
         questions_count = len(self.exam_config.get("questions", []))
         self.progress_label = QLabel(f"Progress: 0 / {questions_count}")
-        self.progress_label.setStyleSheet("font-size: 13px; color: #94a3b8;")
+        self.progress_label.setStyleSheet(f"font-size: 13px; color: {C.TEXT_MUTED};")
         footer_layout.addWidget(self.progress_label)
 
         footer_layout.addSpacing(20)
 
         self.submit_btn = QPushButton("📤 Submit Exam")
-        self.submit_btn.setStyleSheet("""
-            QPushButton {
-                background: #dc2626; color: white; padding: 10px 24px;
-                font-size: 14px; font-weight: bold; border: none; border-radius: 8px;
-            }
-            QPushButton:hover { background: #b91c1c; }
-            QPushButton:pressed { background: #991b1b; }
-        """)
+        self.submit_btn.setStyleSheet(glass_danger_button_style())
         self.submit_btn.clicked.connect(self.confirm_submit)
         footer_layout.addWidget(self.submit_btn)
 
@@ -718,15 +705,16 @@ def create_sample_exam():
 def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    apply_glass_theme(app)
 
     palette = QPalette()
-    palette.setColor(QPalette.ColorRole.Window, QColor("#0f172a"))
-    palette.setColor(QPalette.ColorRole.WindowText, QColor("#f8fafc"))
-    palette.setColor(QPalette.ColorRole.Base, QColor("#1e293b"))
-    palette.setColor(QPalette.ColorRole.Text, QColor("#f8fafc"))
-    palette.setColor(QPalette.ColorRole.Button, QColor("#1e293b"))
-    palette.setColor(QPalette.ColorRole.ButtonText, QColor("#f8fafc"))
-    palette.setColor(QPalette.ColorRole.Highlight, QColor("#2563eb"))
+    palette.setColor(QPalette.ColorRole.Window, QColor(C.BG_DARK))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(C.TEXT_PRIMARY))
+    palette.setColor(QPalette.ColorRole.Base, QColor(C.BG_MID))
+    palette.setColor(QPalette.ColorRole.Text, QColor(C.TEXT_PRIMARY))
+    palette.setColor(QPalette.ColorRole.Button, QColor(C.BG_MID))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor(C.TEXT_PRIMARY))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(C.ACCENT_PRIMARY))
     palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#ffffff"))
     app.setPalette(palette)
 

@@ -33,6 +33,7 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QEvent, QObject
 from PyQt6.QtGui import (
     QColor, QFont, QTextCharFormat, QSyntaxHighlighter
 )
+from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
 
 from demo_exam_config import (
     DEMO_CREDENTIALS, EXAM_CONFIG, MCQ_QUESTIONS, CODING_CHALLENGE
@@ -44,87 +45,87 @@ SECURITY_LOG = RESULTS_DIR / "security_log.txt"
 AUTO_SAVE_INTERVAL_MS = 30000
 
 
-STYLESHEET = """
-QMainWindow, QDialog { background: #111827; }
-QLabel {
-    color: #f1f5f9; font-family: 'Inter', 'Segoe UI', 'Noto Sans', sans-serif;
+STYLESHEET = f"""
+QMainWindow, QDialog {{ background: {C.BG_DEEP}; }}
+QLabel {{
+    color: {C.TEXT_PRIMARY}; font-family: 'Inter', 'Segoe UI', 'Noto Sans', sans-serif;
     font-size: 14px;
-}
-QPushButton {
+}}
+QPushButton {{
     background: rgba(255, 255, 255, 0.12); color: white; border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px; padding: 10px 24px; font-size: 14px; font-weight: 600;
     font-family: 'Inter', 'Segoe UI', sans-serif;
-}
-QPushButton:hover { background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.25); }
-QPushButton:pressed { background: rgba(255, 255, 255, 0.06); padding: 11px 23px 9px 25px; }
-QPushButton:disabled { background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.05); }
-QPushButton#secondary {
+}}
+QPushButton:hover {{ background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.25); }}
+QPushButton:pressed {{ background: rgba(255, 255, 255, 0.06); padding: 11px 23px 9px 25px; }}
+QPushButton:disabled {{ background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.05); }}
+QPushButton#secondary {{
     background: transparent; border: 2px solid rgba(255, 255, 255, 0.3); color: rgba(255, 255, 255, 0.9);
-}
-QPushButton#secondary:hover { background: rgba(255, 255, 255, 0.08); }
-QPushButton#secondary:pressed { background: rgba(255, 255, 255, 0.03); padding: 11px 23px 9px 25px; }
-QPushButton#danger {
+}}
+QPushButton#secondary:hover {{ background: rgba(255, 255, 255, 0.08); }}
+QPushButton#secondary:pressed {{ background: rgba(255, 255, 255, 0.03); padding: 11px 23px 9px 25px; }}
+QPushButton#danger {{
     background: rgba(220, 53, 69, 0.3); border-color: rgba(220, 53, 69, 0.4);
-}
-QPushButton#danger:hover { background: rgba(220, 53, 69, 0.5); }
-QPushButton#danger:pressed { background: rgba(220, 53, 69, 0.2); padding: 11px 23px 9px 25px; }
-QPushButton#success {
+}}
+QPushButton#danger:hover {{ background: rgba(220, 53, 69, 0.5); }}
+QPushButton#danger:pressed {{ background: rgba(220, 53, 69, 0.2); padding: 11px 23px 9px 25px; }}
+QPushButton#success {{
     background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.2);
-}
-QPushButton#success:hover { background: rgba(255, 255, 255, 0.25); }
-QPushButton#success:pressed { background: rgba(255, 255, 255, 0.08); padding: 11px 23px 9px 25px; }
-QPushButton#nav {
+}}
+QPushButton#success:hover {{ background: rgba(255, 255, 255, 0.25); }}
+QPushButton#success:pressed {{ background: rgba(255, 255, 255, 0.08); padding: 11px 23px 9px 25px; }}
+QPushButton#nav {{
     background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 8px 12px; font-size: 13px; min-width: 40px; color: rgba(255, 255, 255, 0.8);
-}
-QPushButton#nav:hover { background: rgba(255, 255, 255, 0.12); }
-QPushButton#nav:pressed { background: rgba(255, 255, 255, 0.03); padding: 9px 11px 7px 13px; }
-QPushButton#nav:checked, QPushButton#nav[current="true"] {
+}}
+QPushButton#nav:hover {{ background: rgba(255, 255, 255, 0.12); }}
+QPushButton#nav:pressed {{ background: rgba(255, 255, 255, 0.03); padding: 9px 11px 7px 13px; }}
+QPushButton#nav:checked, QPushButton#nav[current="true"] {{
     background: rgba(200, 145, 62, 0.5); border-color: rgba(200, 145, 62, 0.6); color: white;
-}
-QRadioButton {
-    color: #f1f5f9; font-size: 15px; padding: 10px 14px;
+}}
+QRadioButton {{
+    color: {C.TEXT_PRIMARY}; font-size: 15px; padding: 10px 14px;
     background: rgba(255, 255, 255, 0.06); border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     font-family: 'Inter', 'Segoe UI', sans-serif;
-}
-QRadioButton:hover { border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); }
-QRadioButton:checked { border-color: rgba(200, 145, 62, 0.6); background: rgba(200, 145, 62, 0.12); }
-QRadioButton::indicator {
+}}
+QRadioButton:hover {{ border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); }}
+QRadioButton:checked {{ border-color: rgba(200, 145, 62, 0.6); background: rgba(200, 145, 62, 0.12); }}
+QRadioButton::indicator {{
     width: 18px; height: 18px; border-radius: 9px;
     border: 2px solid rgba(255, 255, 255, 0.3); margin-right: 10px;
-}
-QRadioButton::indicator:checked {
+}}
+QRadioButton::indicator:checked {{
     background: #c8913e; border-color: #c8913e;
-}
-QTextEdit, QPlainTextEdit {
+}}
+QTextEdit, QPlainTextEdit {{
     background: rgba(0, 0, 0, 0.25); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px; padding: 12px; font-size: 14px;
     font-family: 'Fira Code', 'Cascadia Code', monospace;
-}
-QComboBox {
+}}
+QComboBox {{
     background: rgba(255, 255, 255, 0.08); color: white; border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 6px; padding: 6px 12px; font-size: 13px;
     font-family: 'Inter', 'Segoe UI', sans-serif;
-}
-QComboBox:hover { border-color: rgba(255, 255, 255, 0.25); }
-QComboBox::drop-down { border: none; }
-QComboBox QAbstractItemView {
-    background: #1e1e2e; color: white; selection-background-color: rgba(200, 145, 62, 0.5);
+}}
+QComboBox:hover {{ border-color: rgba(255, 255, 255, 0.25); }}
+QComboBox::drop-down {{ border: none; }}
+QComboBox QAbstractItemView {{
+    background: {C.BG_MID}; color: white; selection-background-color: rgba(200, 145, 62, 0.5);
     selection-color: white;
-}
-QProgressBar {
+}}
+QProgressBar {{
     background: rgba(255, 255, 255, 0.08); border: none; border-radius: 4px; height: 8px;
     text-align: center; font-size: 11px; color: rgba(255, 255, 255, 0.4);
-}
-QProgressBar::chunk { background: #c8913e; border-radius: 4px; }
-QScrollBar:vertical {
+}}
+QProgressBar::chunk {{ background: #c8913e; border-radius: 4px; }}
+QScrollBar:vertical {{
     background: transparent; width: 8px; margin: 0;
-}
-QScrollBar::handle:vertical {
+}}
+QScrollBar::handle:vertical {{
     background: rgba(255, 255, 255, 0.15); border-radius: 4px; min-height: 30px;
-}
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+}}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
 """
 
 class PythonHighlighter(QSyntaxHighlighter):
@@ -315,12 +316,12 @@ class LoginScreen(QWidget):
         card_layout.setSpacing(16)
 
         title = QLabel("EduOS")
-        title.setStyleSheet("font-size: 36px; font-weight: bold; color: rgba(255, 255, 255, 0.9); letter-spacing: -0.5px;")
+        title.setStyleSheet(f"font-size: 36px; font-weight: bold; color: {C.TEXT_PRIMARY}; letter-spacing: -0.5px;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(title)
 
         subtitle = QLabel("Demo Examination Portal")
-        subtitle.setStyleSheet("font-size: 15px; color: rgba(255, 255, 255, 0.5);")
+        subtitle.setStyleSheet(f"font-size: 15px; color: {C.TEXT_SECONDARY};")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(subtitle)
 
@@ -330,8 +331,8 @@ class LoginScreen(QWidget):
         self.id_input.setPlaceholderText("Student ID")
         self.id_input.setFixedHeight(42)
         self.id_input.setStyleSheet(
-            "background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; "
-            "padding: 10px; font-size: 15px; color: white; selection-background-color: rgba(200, 145, 62, 0.4);"
+            f"background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 8px; "
+            f"padding: 10px; font-size: 15px; color: {C.TEXT_PRIMARY}; selection-background-color: rgba(200, 145, 62, 0.4);"
         )
         self.id_input.returnPressed.connect(lambda: self.name_input.setFocus())
         card_layout.addWidget(self.id_input)
@@ -340,8 +341,8 @@ class LoginScreen(QWidget):
         self.name_input.setPlaceholderText("Full Name")
         self.name_input.setFixedHeight(42)
         self.name_input.setStyleSheet(
-            "background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; "
-            "padding: 10px; font-size: 15px; color: white; selection-background-color: rgba(200, 145, 62, 0.4);"
+            f"background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 8px; "
+            f"padding: 10px; font-size: 15px; color: {C.TEXT_PRIMARY}; selection-background-color: rgba(200, 145, 62, 0.4);"
         )
         self.name_input.returnPressed.connect(lambda: self.key_input.setFocus())
         card_layout.addWidget(self.name_input)
@@ -351,14 +352,14 @@ class LoginScreen(QWidget):
         self.key_input.setFixedHeight(42)
         self.key_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.key_input.setStyleSheet(
-            "background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; "
-            "padding: 10px; font-size: 15px; color: white; selection-background-color: rgba(200, 145, 62, 0.4);"
+            f"background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 8px; "
+            f"padding: 10px; font-size: 15px; color: {C.TEXT_PRIMARY}; selection-background-color: rgba(200, 145, 62, 0.4);"
         )
         self.key_input.returnPressed.connect(self._handle_login)
         card_layout.addWidget(self.key_input)
 
         demo_hint = QLabel("Demo: DEMO001 / EDUOS2026")
-        demo_hint.setStyleSheet("font-size: 12px; color: rgba(255, 255, 255, 0.35);")
+        demo_hint.setStyleSheet(f"font-size: 12px; color: {C.TEXT_MUTED};")
         demo_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(demo_hint)
 
@@ -379,7 +380,7 @@ class LoginScreen(QWidget):
         card_layout.addWidget(self.login_btn)
 
         self.error_label = QLabel("")
-        self.error_label.setStyleSheet("color: #ef4444; font-size: 13px;")
+        self.error_label.setStyleSheet(f"color: {C.ACCENT_RED}; font-size: 13px;")
         self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(self.error_label)
 
@@ -417,13 +418,13 @@ class InstructionsScreen(QWidget):
         card_layout.setSpacing(12)
 
         title = QLabel("Examination Instructions")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: rgba(255, 255, 255, 0.9);")
+        title.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(title)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("background: #dee2e6; max-height: 1px;")
+        sep.setStyleSheet(f"background: {C.GLASS_BORDER}; max-height: 1px;")
         card_layout.addWidget(sep)
 
         duration = QLabel(
@@ -431,13 +432,13 @@ class InstructionsScreen(QWidget):
             f"(MCQ: {EXAM_CONFIG['mcq_duration_minutes']} min, "
             f"Coding: {EXAM_CONFIG['coding_duration_minutes']} min)"
         )
-        duration.setStyleSheet("font-size: 14px; font-weight: 600; color: rgba(255, 255, 255, 0.7); padding: 10px 14px; background: rgba(255, 255, 255, 0.06); border-radius: 8px;")
+        duration.setStyleSheet(f"font-size: 14px; font-weight: 600; color: {C.TEXT_PRIMARY}; padding: 10px 14px; background: {C.GLASS_CARD}; border-radius: 8px;")
         duration.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(duration)
 
         for instr in EXAM_CONFIG["instructions"]:
             item = QLabel(instr)
-            item.setStyleSheet("font-size: 14px; color: rgba(255, 255, 255, 0.65); padding: 3px 0; line-height: 1.5;")
+            item.setStyleSheet(f"font-size: 14px; color: {C.TEXT_SECONDARY}; padding: 3px 0; line-height: 1.5;")
             item.setWordWrap(True)
             card_layout.addWidget(item)
 
@@ -490,27 +491,27 @@ class MCQSectionWidget(QWidget):
         # Timer + progress row
         info_row = QHBoxLayout()
         self.timer_label = QLabel(self._format_time(self.time_remaining))
-        self.timer_label.setStyleSheet("font-size: 20px; font-weight: bold; color: rgba(255, 255, 255, 0.9);")
+        self.timer_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         info_row.addWidget(self.timer_label)
         info_row.addStretch()
         self.progress_label = QLabel(f"Q 1 / {len(MCQ_QUESTIONS)}")
-        self.progress_label.setStyleSheet("font-size: 14px; color: rgba(255, 255, 255, 0.5);")
+        self.progress_label.setStyleSheet(f"font-size: 14px; color: {C.TEXT_SECONDARY};")
         info_row.addWidget(self.progress_label)
         card_layout.addLayout(info_row)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("background: #dee2e6; max-height: 1px;")
+        sep.setStyleSheet(f"background: {C.GLASS_BORDER}; max-height: 1px;")
         card_layout.addWidget(sep)
 
         # Question
         self.topic_label = QLabel("Topic")
-        self.topic_label.setStyleSheet("font-size: 11px; color: rgba(255, 255, 255, 0.5); padding: 3px 10px; background: rgba(255, 255, 255, 0.06); border-radius: 4px; max-width: 200px;")
+        self.topic_label.setStyleSheet(f"font-size: 11px; color: {C.TEXT_SECONDARY}; padding: 3px 10px; background: {C.GLASS_CARD}; border-radius: 4px; max-width: 200px;")
         self.topic_label.setFixedHeight(24)
         card_layout.addWidget(self.topic_label)
 
         self.question_label = QLabel("Question text")
-        self.question_label.setStyleSheet("font-size: 17px; color: rgba(255, 255, 255, 0.9); padding: 6px 0; line-height: 1.6;")
+        self.question_label.setStyleSheet(f"font-size: 17px; color: {C.TEXT_PRIMARY}; padding: 6px 0; line-height: 1.6;")
         self.question_label.setWordWrap(True)
         card_layout.addWidget(self.question_label)
 
@@ -596,7 +597,7 @@ class MCQSectionWidget(QWidget):
         self.time_remaining -= 1
         self.timer_label.setText(self._format_time(self.time_remaining))
         if self.time_remaining <= 120:
-            self.timer_label.setStyleSheet("font-size: 22px; font-weight: bold; color: #dc3545;")
+            self.timer_label.setStyleSheet(f"font-size: 22px; font-weight: bold; color: {C.ACCENT_RED};")
         if self.time_remaining <= 0:
             self._submit_mcq()
 
@@ -699,7 +700,7 @@ class CodingSectionWidget(QWidget):
         # Top bar
         top_bar = QHBoxLayout()
         self.coding_timer_label = QLabel(self._format_time(self.time_remaining))
-        self.coding_timer_label.setStyleSheet("font-size: 20px; font-weight: bold; color: rgba(255, 255, 255, 0.9);")
+        self.coding_timer_label.setStyleSheet(f"font-size: 20px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         top_bar.addWidget(self.coding_timer_label)
         top_bar.addStretch()
         top_bar.addWidget(QLabel("Language:"))
@@ -711,16 +712,16 @@ class CodingSectionWidget(QWidget):
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("background: #dee2e6; max-height: 1px;")
+        sep.setStyleSheet(f"background: {C.GLASS_BORDER}; max-height: 1px;")
         card_layout.addWidget(sep)
 
         # Description
         desc_layout = QVBoxLayout()
         challenge_title = QLabel(CODING_CHALLENGE['title'])
-        challenge_title.setStyleSheet("font-size: 17px; font-weight: bold; color: rgba(255, 255, 255, 0.9);")
+        challenge_title.setStyleSheet(f"font-size: 17px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         desc_layout.addWidget(challenge_title)
         desc_text = QLabel(CODING_CHALLENGE["description"])
-        desc_text.setStyleSheet("font-size: 14px; color: rgba(255, 255, 255, 0.65); line-height: 1.6;")
+        desc_text.setStyleSheet(f"font-size: 14px; color: {C.TEXT_SECONDARY}; line-height: 1.6;")
         desc_text.setWordWrap(True)
         desc_layout.addWidget(desc_text)
         card_layout.addLayout(desc_layout)
@@ -776,7 +777,7 @@ class CodingSectionWidget(QWidget):
 
         # Output area
         output_header = QLabel("Output")
-        output_header.setStyleSheet("font-size: 12px; color: rgba(255, 255, 255, 0.4); padding: 2px 4px;")
+        output_header.setStyleSheet(f"font-size: 12px; color: {C.TEXT_MUTED}; padding: 2px 4px;")
         card_layout.addWidget(output_header)
         self.output_area = QTextEdit()
         self.output_area.setReadOnly(True)
@@ -799,7 +800,7 @@ class CodingSectionWidget(QWidget):
         self.time_remaining -= 1
         self.coding_timer_label.setText(self._format_time(self.time_remaining))
         if self.time_remaining <= 120:
-            self.coding_timer_label.setStyleSheet("font-size: 22px; font-weight: bold; color: #dc3545;")
+            self.coding_timer_label.setStyleSheet(f"font-size: 22px; font-weight: bold; color: {C.ACCENT_RED};")
         if self.time_remaining <= 0:
             self._submit_coding()
 
@@ -947,18 +948,18 @@ class ReviewScreen(QWidget):
         card_layout.setSpacing(14)
 
         title = QLabel("Review Before Submission")
-        title.setStyleSheet("font-size: 22px; font-weight: bold; color: rgba(255, 255, 255, 0.9);")
+        title.setStyleSheet(f"font-size: 22px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(title)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("background: #dee2e6; max-height: 1px;")
+        sep.setStyleSheet(f"background: {C.GLASS_BORDER}; max-height: 1px;")
         card_layout.addWidget(sep)
 
         # MCQ Summary
         mcq_frame = QFrame()
-        mcq_frame.setStyleSheet("background: rgba(255, 255, 255, 0.04); border-radius: 10px; padding: 16px;")
+        mcq_frame.setStyleSheet(f"background: {C.GLASS_CARD}; border-radius: 10px; padding: 16px;")
         mcq_l = QVBoxLayout(mcq_frame)
         mcq_l.setSpacing(4)
         mcq_l.addWidget(QLabel("MCQ Section"))
@@ -968,7 +969,7 @@ class ReviewScreen(QWidget):
 
         # Coding Summary
         coding_frame = QFrame()
-        coding_frame.setStyleSheet("background: rgba(255, 255, 255, 0.04); border-radius: 10px; padding: 16px;")
+        coding_frame.setStyleSheet(f"background: {C.GLASS_CARD}; border-radius: 10px; padding: 16px;")
         coding_l = QVBoxLayout(coding_frame)
         coding_l.setSpacing(4)
         status_text = "Submitted" if self.coding_result.get('status') == 'submitted' else 'Draft'
@@ -1023,23 +1024,23 @@ class ResultsScreen(QWidget):
         status_text = "Passed" if passed else "Completed"
 
         title = QLabel(status_text)
-        title.setStyleSheet(f"font-size: 26px; font-weight: bold; color: rgba(255, 255, 255, 0.9);")
+        title.setStyleSheet(f"font-size: 26px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(title)
 
         sep = QFrame()
         sep.setFrameShape(QFrame.Shape.HLine)
-        sep.setStyleSheet("background: #dee2e6; max-height: 1px;")
+        sep.setStyleSheet(f"background: {C.GLASS_BORDER}; max-height: 1px;")
         card_layout.addWidget(sep)
 
         # Student info
         info = QLabel(f"{self.student_name} ({self.student_id})")
-        info.setStyleSheet("font-size: 15px; color: rgba(255, 255, 255, 0.6);")
+        info.setStyleSheet(f"font-size: 15px; color: {C.TEXT_SECONDARY};")
         info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(info)
 
         ts = QLabel(f"Submitted: {self.exam_data['timestamp']}")
-        ts.setStyleSheet("font-size: 12px; color: rgba(255, 255, 255, 0.35);")
+        ts.setStyleSheet(f"font-size: 12px; color: {C.TEXT_MUTED};")
         ts.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(ts)
 
@@ -1047,17 +1048,17 @@ class ResultsScreen(QWidget):
 
         # Score
         score_frame = QFrame()
-        score_frame.setStyleSheet("background: rgba(255, 255, 255, 0.04); border-radius: 10px; padding: 20px;")
+        score_frame.setStyleSheet(f"background: {C.GLASS_CARD}; border-radius: 10px; padding: 20px;")
         score_layout = QVBoxLayout(score_frame)
 
         score_pct = self.mcq_result["percentage"]
         score_label = QLabel(f"{score_pct}%")
-        score_label.setStyleSheet(f"font-size: 44px; font-weight: bold; color: rgba(255, 255, 255, 0.9);")
+        score_label.setStyleSheet(f"font-size: 44px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         score_layout.addWidget(score_label)
 
         detail = QLabel(f"MCQ: {self.mcq_result['correct']}/{self.mcq_result['total']} correct  |  Coding: {self.coding_result['language']} submitted")
-        detail.setStyleSheet("font-size: 14px; color: rgba(255, 255, 255, 0.5);")
+        detail.setStyleSheet(f"font-size: 14px; color: {C.TEXT_SECONDARY};")
         detail.setAlignment(Qt.AlignmentFlag.AlignCenter)
         score_layout.addWidget(detail)
 
@@ -1400,6 +1401,8 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("EduOS Demo Exam")
     app.setOrganizationName("EduOS")
+    app.setStyle("Fusion")
+    apply_glass_theme(app)
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 

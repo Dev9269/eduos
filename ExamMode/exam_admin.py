@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QColor, QPalette
+from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
 
 
 EXAM_DATA_DIR = Path.home() / ".eduos" / "exam"
@@ -104,14 +105,14 @@ class ExamAdminWindow(QMainWindow):
         layout = QVBoxLayout(central)
 
         header = QLabel("📋 EduOS Examination Management Console")
-        header.setStyleSheet("font-size: 24px; font-weight: bold; padding: 16px; color: #2563eb;")
+        header.setStyleSheet(f"font-size: 24px; font-weight: bold; padding: 16px; color: {C.ACCENT_PRIMARY};")
         layout.addWidget(header)
 
         tabs = QTabWidget()
-        tabs.setStyleSheet("""
-            QTabWidget::pane { border: 1px solid #ddd; border-radius: 8px; padding: 16px; background: white; }
-            QTabBar::tab { padding: 10px 20px; font-size: 14px; }
-            QTabBar::tab:selected { background: #2563eb; color: white; border-radius: 6px 6px 0 0; }
+        tabs.setStyleSheet(f"""
+            QTabWidget::pane {{ border: 1px solid {C.GLASS_BORDER}; border-radius: 8px; padding: 16px; background: {C.GLASS_CARD}; }}
+            QTabBar::tab {{ padding: 10px 20px; font-size: 14px; color: {C.TEXT_MUTED}; }}
+            QTabBar::tab:selected {{ background: {C.ACCENT_PRIMARY}; color: white; border-radius: 6px 6px 0 0; }}
         """)
 
         self.results_tab = self._build_results_tab()
@@ -125,7 +126,7 @@ class ExamAdminWindow(QMainWindow):
         layout.addWidget(tabs)
 
         status = QLabel("⚡ System Ready | All modules operational")
-        status.setStyleSheet("padding: 8px; color: #666; font-size: 12px;")
+        status.setStyleSheet(f"padding: 8px; color: {C.TEXT_MUTED}; font-size: 12px;")
         layout.addWidget(status)
 
     def _build_results_tab(self):
@@ -134,12 +135,12 @@ class ExamAdminWindow(QMainWindow):
 
         controls = QHBoxLayout()
         refresh_btn = QPushButton("🔄 Refresh")
-        refresh_btn.setStyleSheet("QPushButton { padding: 8px 16px; font-size: 13px; background: #2563eb; color: white; border: none; border-radius: 6px; } QPushButton:hover { background: #1d4ed8; } QPushButton:pressed { background: #1e40af; padding: 9px 15px 7px 17px; }")
+        refresh_btn.setStyleSheet(accent_glow_style())
         refresh_btn.clicked.connect(self._load_results)
         controls.addWidget(refresh_btn)
 
         export_btn = QPushButton("📤 Export Selected")
-        export_btn.setStyleSheet("QPushButton { padding: 8px 16px; font-size: 13px; background: #16a34a; color: white; border: none; border-radius: 6px; } QPushButton:hover { background: #15803d; } QPushButton:pressed { background: #166534; padding: 9px 15px 7px 17px; }")
+        export_btn.setStyleSheet(glass_success_button_style())
         export_btn.clicked.connect(self._export_results)
         controls.addWidget(export_btn)
 
@@ -151,13 +152,15 @@ class ExamAdminWindow(QMainWindow):
         self.results_table.setHorizontalHeaderLabels(["Student ID", "Name", "Exam", "Date", "Status", "Actions"])
         self.results_table.horizontalHeader().setStretchLastSection(True)
         self.results_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.results_table.setStyleSheet("""
-            QTableWidget {
-                border: 1px solid #e0e0e0; border-radius: 8px;
-                gridline-color: #f0f0f0; font-size: 13px;
-            }
-            QTableWidget::item { padding: 8px; }
-            QHeaderView::section { background: #f8f9fa; padding: 8px; font-weight: bold; border: none; }
+        self.results_table.setStyleSheet(f"""
+            QTableWidget {{
+                border: 1px solid {C.GLASS_BORDER}; border-radius: 8px;
+                gridline-color: rgba(255,255,255,0.04); font-size: 13px;
+                background: transparent; color: {C.TEXT_PRIMARY};
+            }}
+            QTableWidget::item {{ padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.04); }}
+            QTableWidget::item:selected {{ background: rgba(108, 99, 255, 0.15); color: white; }}
+            QHeaderView::section {{ background: rgba(255,255,255,0.03); padding: 8px; font-weight: bold; border: none; color: {C.TEXT_SECONDARY}; }}
         """)
         layout.addWidget(self.results_table)
 
@@ -169,7 +172,7 @@ class ExamAdminWindow(QMainWindow):
 
         info = QLabel("Create a new examination configuration. Questions will be auto-generated with placeholders.")
         info.setWordWrap(True)
-        info.setStyleSheet("font-size: 13px; color: #666; padding: 8px; background: #f0f4ff; border-radius: 6px;")
+        info.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY}; padding: 8px; background: {C.GLASS_CARD}; border-radius: 6px;")
         layout.addWidget(info)
 
         form = QFormLayout()
@@ -201,14 +204,7 @@ class ExamAdminWindow(QMainWindow):
         layout.addLayout(form)
 
         create_btn = QPushButton("📝 Generate Exam Configuration")
-        create_btn.setStyleSheet("""
-            QPushButton {
-                background: #2563eb; color: white; padding: 12px;
-                font-size: 16px; border: none; border-radius: 8px;
-            }
-            QPushButton:hover { background: #1d4ed8; }
-            QPushButton:pressed { background: #1e40af; padding: 13px 11px 11px 13px; }
-        """)
+        create_btn.setStyleSheet(accent_glow_style())
         create_btn.clicked.connect(self._create_exam)
         layout.addWidget(create_btn)
 
@@ -221,11 +217,11 @@ class ExamAdminWindow(QMainWindow):
 
         info = QLabel("Control examination sessions across the lab. Start, monitor, and terminate exams.")
         info.setWordWrap(True)
-        info.setStyleSheet("font-size: 13px; color: #666; padding: 8px; background: #f0f4ff; border-radius: 6px;")
+        info.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY}; padding: 8px; background: {C.GLASS_CARD}; border-radius: 6px;")
         layout.addWidget(info)
 
         machines_group = QGroupBox("Lab Machines")
-        machines_group.setStyleSheet("QGroupBox { font-weight: bold; font-size: 14px; padding-top: 16px; }")
+        machines_group.setStyleSheet(f"QGroupBox {{ font-weight: bold; font-size: 14px; padding-top: 16px; border: 1px solid {C.GLASS_BORDER}; border-radius: 12px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY}; padding: 20px 16px 16px 16px; }} QGroupBox::title {{ subcontrol-origin: margin; left: 16px; padding: 0 8px; color: {C.TEXT_SECONDARY}; }}")
         mlayout = QVBoxLayout(machines_group)
 
         self.machine_list = QListWidget()
@@ -237,17 +233,17 @@ class ExamAdminWindow(QMainWindow):
 
         actions = QHBoxLayout()
         start_btn = QPushButton("▶ Start Exam on Selected")
-        start_btn.setStyleSheet("QPushButton { background: #16a34a; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background: #15803d; } QPushButton:pressed { background: #166534; padding: 11px 15px 9px 17px; }")
+        start_btn.setStyleSheet(glass_success_button_style())
         start_btn.clicked.connect(lambda: QMessageBox.information(self, "Start Exam", "Exam started on selected machine."))
         actions.addWidget(start_btn)
 
         stop_btn = QPushButton("■ Terminate Exam")
-        stop_btn.setStyleSheet("QPushButton { background: #dc2626; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background: #b91c1c; } QPushButton:pressed { background: #991b1b; padding: 11px 15px 9px 17px; }")
+        stop_btn.setStyleSheet(glass_danger_button_style())
         stop_btn.clicked.connect(lambda: QMessageBox.information(self, "Terminate Exam", "Exam terminated on selected machine."))
         actions.addWidget(stop_btn)
 
         lock_btn = QPushButton("🔒 Lock Selected")
-        lock_btn.setStyleSheet("QPushButton { background: #f59e0b; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background: #d97706; } QPushButton:pressed { background: #b45309; padding: 11px 15px 9px 17px; }")
+        lock_btn.setStyleSheet(glass_warning_button_style())
         lock_btn.clicked.connect(lambda: QMessageBox.information(self, "Lock Machine", "Selected machine locked."))
         actions.addWidget(lock_btn)
 
@@ -255,7 +251,7 @@ class ExamAdminWindow(QMainWindow):
         layout.addLayout(actions)
 
         broadcast_group = QGroupBox("Send Announcement")
-        broadcast_group.setStyleSheet("QGroupBox { font-weight: bold; font-size: 14px; padding-top: 16px; }")
+        broadcast_group.setStyleSheet(f"QGroupBox {{ font-weight: bold; font-size: 14px; padding-top: 16px; border: 1px solid {C.GLASS_BORDER}; border-radius: 12px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY}; padding: 20px 16px 16px 16px; }} QGroupBox::title {{ subcontrol-origin: margin; left: 16px; padding: 0 8px; color: {C.TEXT_SECONDARY}; }}")
         blayout = QVBoxLayout(broadcast_group)
         self.broadcast_msg = QTextEdit()
         self.broadcast_msg.setMaximumHeight(80)
@@ -263,7 +259,7 @@ class ExamAdminWindow(QMainWindow):
         blayout.addWidget(self.broadcast_msg)
 
         send_btn = QPushButton("📢 Send to All")
-        send_btn.setStyleSheet("QPushButton { background: #7c3aed; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background: #6d28d9; } QPushButton:pressed { background: #5b21b6; padding: 11px 9px 9px 11px; }")
+        send_btn.setStyleSheet(glass_button_style())
         send_btn.clicked.connect(self._send_announcement)
         blayout.addWidget(send_btn)
         layout.addWidget(broadcast_group)
@@ -284,7 +280,7 @@ class ExamAdminWindow(QMainWindow):
                 self.results_table.setItem(row, 4, QTableWidgetItem("✅ Submitted"))
 
                 view_btn = QPushButton("📄 View")
-                view_btn.setStyleSheet("padding: 4px 8px; font-size: 12px;")
+                view_btn.setStyleSheet(glass_button_style())
                 view_btn.clicked.connect(lambda checked, p=f: self._view_result(p))
                 self.results_table.setCellWidget(row, 5, view_btn)
 
@@ -385,6 +381,8 @@ class ExamAdminWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    apply_glass_theme(app)
     window = ExamAdminWindow()
     window.show()
     sys.exit(app.exec())

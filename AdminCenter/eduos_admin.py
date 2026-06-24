@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QPalette, QIcon, QAction
+from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
 
 
 class PingThread(QThread):
@@ -84,29 +85,29 @@ class AdminCenterWindow(QMainWindow):
         layout.setContentsMargins(12, 12, 12, 12)
 
         header = QWidget()
-        header.setStyleSheet("background: linear-gradient(135deg, #0f172a, #1e3a5f); border-radius: 12px; padding: 16px;")
+        header.setStyleSheet(f"background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {C.BG_DEEP}, stop:1 {C.BG_DARK}); border-radius: 12px; padding: 16px;")
         hlayout = QHBoxLayout(header)
 
         title = QLabel("⚙ EduOS Admin Center")
-        title.setStyleSheet("font-size: 22px; font-weight: bold; color: white;")
+        title.setStyleSheet(f"font-size: 22px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         hlayout.addWidget(title)
 
         self.status_label = QLabel("● Online")
-        self.status_label.setStyleSheet("color: #4ade80; font-size: 13px; background: #166534; padding: 4px 12px; border-radius: 12px;")
+        self.status_label.setStyleSheet(f"color: {C.ACCENT_GREEN}; font-size: 13px; background: {C.GLASS_CARD}; padding: 4px 12px; border-radius: 12px;")
         hlayout.addWidget(self.status_label)
 
         hlayout.addStretch()
 
         self.host_label = QLabel()
-        self.host_label.setStyleSheet("font-size: 12px; color: #94a3b8;")
+        self.host_label.setStyleSheet(f"font-size: 12px; color: {C.TEXT_MUTED};")
         hlayout.addWidget(self.host_label)
         layout.addWidget(header)
 
         tabs = QTabWidget()
-        tabs.setStyleSheet("""
-            QTabWidget::pane { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: white; }
-            QTabBar::tab { padding: 10px 20px; font-size: 13px; font-weight: bold; }
-            QTabBar::tab:selected { background: #2563eb; color: white; border-radius: 8px 8px 0 0; }
+        tabs.setStyleSheet(f"""
+            QTabWidget::pane {{ border: 1px solid {C.GLASS_BORDER}; border-radius: 8px; padding: 16px; background: {C.GLASS_CARD}; }}
+            QTabBar::tab {{ padding: 10px 20px; font-size: 13px; font-weight: bold; color: {C.TEXT_MUTED}; }}
+            QTabBar::tab:selected {{ background: {C.ACCENT_PRIMARY}; color: white; border-radius: 8px 8px 0 0; }}
         """)
 
         tabs.addTab(self._build_dashboard(), "📊 Dashboard")
@@ -132,7 +133,7 @@ class AdminCenterWindow(QMainWindow):
         ]
         for ctitle, value, color in cards:
             card = QFrame()
-            card.setStyleSheet(f"background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; border-left: 4px solid {color};")
+            card.setStyleSheet(f"background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 10px; padding: 16px; border-left: 4px solid {color};")
             cl = QVBoxLayout(card)
             cl.addWidget(QLabel(ctitle))
             v = QLabel(value)
@@ -143,7 +144,7 @@ class AdminCenterWindow(QMainWindow):
 
         self.monitor_tree = QTreeWidget()
         self.monitor_tree.setHeaderLabels(["Resource", "Usage", "Status"])
-        self.monitor_tree.setStyleSheet("font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px;")
+        self.monitor_tree.setStyleSheet(f"font-size: 13px; border: 1px solid {C.GLASS_BORDER}; border-radius: 8px; color: {C.TEXT_PRIMARY}; background: transparent;")
         layout.addWidget(self.monitor_tree)
 
         return tab
@@ -239,12 +240,12 @@ class AdminCenterWindow(QMainWindow):
 
         toolbar = QHBoxLayout()
         add_btn = QPushButton("➕ Add Lab Machine")
-        add_btn.setStyleSheet("background: #2563eb; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold;")
+        add_btn.setStyleSheet(accent_glow_style())
         add_btn.clicked.connect(self._add_lab_machine)
         toolbar.addWidget(add_btn)
 
         refresh_btn = QPushButton("🔄 Ping All")
-        refresh_btn.setStyleSheet("background: #7c3aed; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold;")
+        refresh_btn.setStyleSheet(glass_button_style())
         refresh_btn.clicked.connect(self._ping_all_hosts)
         toolbar.addWidget(refresh_btn)
 
@@ -255,7 +256,7 @@ class AdminCenterWindow(QMainWindow):
         self.systems_table.setColumnCount(7)
         self.systems_table.setHorizontalHeaderLabels(["System", "IP", "Status", "Uptime", "CPU", "Memory", "Last Seen"])
         self.systems_table.horizontalHeader().setStretchLastSection(True)
-        self.systems_table.setStyleSheet("font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px;")
+        self.systems_table.setStyleSheet(f"font-size: 13px; border: 1px solid {C.GLASS_BORDER}; border-radius: 8px; color: {C.TEXT_PRIMARY}; background: transparent;")
         layout.addWidget(self.systems_table)
 
         actions = QHBoxLayout()
@@ -267,14 +268,14 @@ class AdminCenterWindow(QMainWindow):
         ]
         for text, color, handler in btn_configs:
             btn = QPushButton(text)
-            btn.setStyleSheet(f"background: {color}; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold;")
+            btn.setStyleSheet(accent_glow_style() if color == "#2563eb" else glass_success_button_style() if color == "#16a34a" else glass_danger_button_style() if color == "#dc2626" else glass_button_style())
             btn.clicked.connect(handler)
             actions.addWidget(btn)
         actions.addStretch()
         layout.addLayout(actions)
 
         info = QLabel("💡 Select a lab machine row and use the buttons above to manage it remotely.")
-        info.setStyleSheet("font-size: 12px; color: #94a3b8; padding: 8px;")
+        info.setStyleSheet(f"font-size: 12px; color: {C.TEXT_MUTED}; padding: 8px;")
         layout.addWidget(info)
 
         return tab
@@ -307,7 +308,7 @@ class AdminCenterWindow(QMainWindow):
 
     def _ping_all_hosts(self):
         self.status_label.setText("⏳ Scanning...")
-        self.status_label.setStyleSheet("color: #f59e0b; font-size: 13px; background: #78350f; padding: 4px 12px; border-radius: 12px;")
+        self.status_label.setStyleSheet(f"color: {C.ACCENT_AMBER}; font-size: 13px; background: {C.GLASS_CARD}; padding: 4px 12px; border-radius: 12px;")
 
         hosts = [h["ip"] for h in self.lab_hosts]
         self.ping_results = {}
@@ -335,7 +336,7 @@ class AdminCenterWindow(QMainWindow):
 
         self._load_system_info()
         self.status_label.setText("● Online")
-        self.status_label.setStyleSheet("color: #4ade80; font-size: 13px; background: #166534; padding: 4px 12px; border-radius: 12px;")
+        self.status_label.setStyleSheet(f"color: {C.ACCENT_GREEN}; font-size: 13px; background: {C.GLASS_CARD}; padding: 4px 12px; border-radius: 12px;")
 
     def _lock_selected(self):
         row = self.systems_table.currentRow()
@@ -400,7 +401,7 @@ class AdminCenterWindow(QMainWindow):
 
         info = QLabel("Manage software across all lab machines. Select a system and action below.")
         info.setWordWrap(True)
-        info.setStyleSheet("font-size: 13px; color: #666; padding: 12px; background: #f0f4ff; border-radius: 8px;")
+        info.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY}; padding: 12px; background: {C.GLASS_CARD}; border-radius: 8px;")
         layout.addWidget(info)
 
         sw_layout = QHBoxLayout()
@@ -420,19 +421,19 @@ class AdminCenterWindow(QMainWindow):
 
         actions_layout = QVBoxLayout()
         install_btn = QPushButton("📥 Install Selected")
-        install_btn.setStyleSheet("background: #2563eb; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold;")
+        install_btn.setStyleSheet(accent_glow_style())
         actions_layout.addWidget(install_btn)
 
         remove_btn = QPushButton("🗑 Remove Selected")
-        remove_btn.setStyleSheet("background: #dc2626; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold;")
+        remove_btn.setStyleSheet(glass_danger_button_style())
         actions_layout.addWidget(remove_btn)
 
         update_btn = QPushButton("🔄 Update All Systems")
-        update_btn.setStyleSheet("background: #16a34a; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold;")
+        update_btn.setStyleSheet(glass_success_button_style())
         actions_layout.addWidget(update_btn)
 
         deploy_btn = QPushButton("🚀 Deploy to All Labs")
-        deploy_btn.setStyleSheet("background: #7c3aed; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold;")
+        deploy_btn.setStyleSheet(glass_button_style())
         actions_layout.addWidget(deploy_btn)
 
         actions_layout.addStretch()
@@ -441,7 +442,7 @@ class AdminCenterWindow(QMainWindow):
 
         status_area = QTextEdit()
         status_area.setReadOnly(True)
-        status_area.setStyleSheet("font-size: 12px; background: #1e293b; color: #a5f3fc; border-radius: 8px; padding: 8px;")
+        status_area.setStyleSheet(f"font-size: 12px; background: {C.BG_MID}; color: {C.ACCENT_SECONDARY}; border-radius: 8px; padding: 8px;")
         status_area.append("📦 Software Management Terminal")
         status_area.append("Ready. Select a system and action to begin.")
         layout.addWidget(status_area)
@@ -454,14 +455,14 @@ class AdminCenterWindow(QMainWindow):
 
         info = QLabel("Control examination sessions across the lab. Start, monitor, and terminate exams remotely.")
         info.setWordWrap(True)
-        info.setStyleSheet("font-size: 13px; color: #666; padding: 12px; background: #f0f4ff; border-radius: 8px;")
+        info.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY}; padding: 12px; background: {C.GLASS_CARD}; border-radius: 8px;")
         layout.addWidget(info)
 
         machines = QTableWidget()
         machines.setColumnCount(6)
         machines.setHorizontalHeaderLabels(["Lab", "Status", "Student", "Exam", "Time Remaining", "Actions"])
         machines.horizontalHeader().setStretchLastSection(True)
-        machines.setStyleSheet("font-size: 13px; border: 1px solid #e2e8f0; border-radius: 8px;")
+        machines.setStyleSheet(f"font-size: 13px; border: 1px solid {C.GLASS_BORDER}; border-radius: 8px; color: {C.TEXT_PRIMARY}; background: transparent;")
 
         machines.setRowCount(3)
         labs = [
@@ -487,7 +488,7 @@ class AdminCenterWindow(QMainWindow):
         ]
         for text, color, handler in btn_configs:
             btn = QPushButton(text)
-            btn.setStyleSheet(f"background: {color}; color: white; padding: 8px 18px; border: none; border-radius: 6px; font-weight: bold; font-size: 13px;")
+            btn.setStyleSheet(accent_glow_style() if color == "#2563eb" else glass_success_button_style() if color == "#16a34a" else glass_danger_button_style() if color == "#dc2626" else glass_warning_button_style())
             btn.clicked.connect(handler)
             exam_actions.addWidget(btn)
         exam_actions.addStretch()
@@ -543,15 +544,15 @@ class AdminCenterWindow(QMainWindow):
 
         actions = QHBoxLayout()
         generate_btn = QPushButton("📄 Generate Report")
-        generate_btn.setStyleSheet("background: #2563eb; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold;")
+        generate_btn.setStyleSheet(accent_glow_style())
         actions.addWidget(generate_btn)
 
         export_btn = QPushButton("📤 Export PDF")
-        export_btn.setStyleSheet("background: #7c3aed; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold;")
+        export_btn.setStyleSheet(glass_button_style())
         actions.addWidget(export_btn)
 
         refresh_report_btn = QPushButton("🔄 Refresh Data")
-        refresh_report_btn.setStyleSheet("background: #f59e0b; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold;")
+        refresh_report_btn.setStyleSheet(glass_warning_button_style())
         actions.addWidget(refresh_report_btn)
 
         actions.addStretch()
@@ -559,7 +560,7 @@ class AdminCenterWindow(QMainWindow):
 
         report_preview = QTextEdit()
         report_preview.setReadOnly(True)
-        report_preview.setStyleSheet("font-size: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;")
+        report_preview.setStyleSheet(f"font-size: 12px; background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 8px; padding: 12px; color: {C.TEXT_PRIMARY};")
         stats = self._get_realtime_stats()
         report_preview.setPlainText(
             f"EduOS System Report\n"
@@ -583,38 +584,38 @@ class AdminCenterWindow(QMainWindow):
 
         info = QLabel("Manage system updates and distribute software to lab machines.")
         info.setWordWrap(True)
-        info.setStyleSheet("font-size: 13px; color: #666; padding: 12px; background: #f0f4ff; border-radius: 8px;")
+        info.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY}; padding: 12px; background: {C.GLASS_CARD}; border-radius: 8px;")
         layout.addWidget(info)
 
         update_grid = QHBoxLayout()
 
         update_card = QFrame()
-        update_card.setStyleSheet("background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px;")
+        update_card.setStyleSheet(f"background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 10px; padding: 20px;")
         uc_layout = QVBoxLayout(update_card)
         uc_layout.addWidget(QLabel("📦 System Updates"))
         uc_layout.addWidget(QLabel("Check for available package updates across all systems."))
         check_btn = QPushButton("🔍 Check for Updates")
-        check_btn.setStyleSheet("background: #2563eb; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold;")
+        check_btn.setStyleSheet(accent_glow_style())
         uc_layout.addWidget(check_btn)
         update_grid.addWidget(update_card)
 
         dist_card = QFrame()
-        dist_card.setStyleSheet("background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px;")
+        dist_card.setStyleSheet(f"background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 10px; padding: 20px;")
         dc_layout = QVBoxLayout(dist_card)
         dc_layout.addWidget(QLabel("🚀 Distribution"))
         dc_layout.addWidget(QLabel("Push software updates to all connected lab machines."))
         push_btn = QPushButton("📤 Push to All Labs")
-        push_btn.setStyleSheet("background: #16a34a; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold;")
+        push_btn.setStyleSheet(glass_success_button_style())
         dc_layout.addWidget(push_btn)
         update_grid.addWidget(dist_card)
 
         policy_card = QFrame()
-        policy_card.setStyleSheet("background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px;")
+        policy_card.setStyleSheet(f"background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 10px; padding: 20px;")
         pc_layout = QVBoxLayout(policy_card)
         pc_layout.addWidget(QLabel("📋 Update Policy"))
         policy_select = QComboBox()
         policy_select.addItems(["Auto-update (Recommended)", "Manual approval only", "Schedule: Weekends", "Schedule: Nightly"])
-        policy_select.setStyleSheet("font-size: 13px; padding: 8px;")
+        policy_select.setStyleSheet(f"font-size: 13px; padding: 8px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY}; border: 1px solid {C.GLASS_BORDER};")
         pc_layout.addWidget(policy_select)
         pc_layout.addWidget(QLabel("Current policy: Auto-update"))
         update_grid.addWidget(policy_card)
@@ -623,7 +624,7 @@ class AdminCenterWindow(QMainWindow):
 
         self.update_log = QTextEdit()
         self.update_log.setReadOnly(True)
-        self.update_log.setStyleSheet("font-size: 12px; background: #1e293b; color: #a5f3fc; border-radius: 8px; padding: 8px;")
+        self.update_log.setStyleSheet(f"font-size: 12px; background: {C.BG_MID}; color: {C.ACCENT_SECONDARY}; border-radius: 8px; padding: 8px;")
         self.update_log.append("📋 Update Distribution Log")
         self.update_log.append(f"[{datetime.now().strftime('%H:%M:%S')}] System ready for update management.")
         self.update_log.append(f"[{datetime.now().strftime('%H:%M:%S')}] Lab hosts configured: {len(self.lab_hosts)}")
@@ -670,6 +671,8 @@ class AdminCenterWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    apply_glass_theme(app)
     window = AdminCenterWindow()
     window.show()
     sys.exit(app.exec())

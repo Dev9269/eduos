@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QPixmap
+from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
 
 
 TOOLS = [
@@ -44,14 +45,14 @@ class DevSuiteWindow(QMainWindow):
         layout = QVBoxLayout(central)
 
         header = QWidget()
-        header.setStyleSheet("background: #0f172a; border-radius: 12px; padding: 16px;")
+        header.setStyleSheet(f"background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {C.BG_DEEP}, stop:1 {C.BG_DARK}); border-radius: 12px; padding: 16px;")
         hlayout = QHBoxLayout(header)
         title = QLabel("🔧 EduOS Dev Suite")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+        title.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         hlayout.addWidget(title)
         hlayout.addStretch()
         info = QLabel("Engineering Programming Environment")
-        info.setStyleSheet("font-size: 13px; color: #94a3b8;")
+        info.setStyleSheet(f"font-size: 13px; color: {C.TEXT_MUTED};")
         hlayout.addWidget(info)
         layout.addWidget(header)
 
@@ -59,7 +60,7 @@ class DevSuiteWindow(QMainWindow):
             "Welcome to the EduOS Development Suite.\n"
             "All engineering programming tools are preinstalled and ready to use."
         )
-        welcome.setStyleSheet("font-size: 14px; color: #475569; padding: 12px; background: #f8fafc; border-radius: 8px; margin: 8px 0;")
+        welcome.setStyleSheet(f"font-size: 14px; color: {C.TEXT_SECONDARY}; padding: 12px; background: {C.GLASS_CARD}; border-radius: 8px; margin: 8px 0;")
         layout.addWidget(welcome)
 
         grid = QGridLayout()
@@ -68,15 +69,15 @@ class DevSuiteWindow(QMainWindow):
         row, col = 0, 0
         for tool in TOOLS:
             card = QFrame()
-            card.setStyleSheet("""
-                QFrame {
-                    background: white; border: 1px solid #e8edf5;
+            card.setStyleSheet(f"""
+                QFrame {{
+                    background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER};
                     border-radius: 12px; padding: 16px;
-                }
-                QFrame:hover {
-                    background: #f8fafc; border-color: #2563eb;
+                }}
+                QFrame:hover {{
+                    background: {C.GLASS_CARD_HOVER}; border-color: {C.ACCENT_PRIMARY};
                     margin: -2px;
-                }
+                }}
             """)
             card.setFixedSize(200, 140)
             card.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -89,12 +90,12 @@ class DevSuiteWindow(QMainWindow):
             card_layout.addWidget(icon)
 
             name = QLabel(tool["name"])
-            name.setStyleSheet("font-size: 14px; font-weight: bold; color: #1e293b;")
+            name.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {C.TEXT_PRIMARY};")
             name.setAlignment(Qt.AlignmentFlag.AlignCenter)
             card_layout.addWidget(name)
 
             desc = QLabel(tool["desc"])
-            desc.setStyleSheet("font-size: 11px; color: #94a3b8;")
+            desc.setStyleSheet(f"font-size: 11px; color: {C.TEXT_MUTED};")
             desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
             desc.setWordWrap(True)
             card_layout.addWidget(desc)
@@ -121,6 +122,8 @@ class DevSuiteWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    apply_glass_theme(app)
     window = DevSuiteWindow()
     window.show()
     sys.exit(app.exec())

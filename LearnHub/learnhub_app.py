@@ -16,6 +16,7 @@ from flask import (
     Flask, render_template_string, request, redirect,
     url_for, jsonify, session, send_from_directory, flash
 )
+from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
 
 
 DATA_DIR = Path.home() / ".eduos" / "learnhub"

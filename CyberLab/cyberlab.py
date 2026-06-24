@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QColor
+from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
 
 
 LABS = {
@@ -78,14 +79,14 @@ class CyberLabWindow(QMainWindow):
         layout = QVBoxLayout(central)
 
         header = QWidget()
-        header.setStyleSheet("background: #0f172a; border-radius: 12px; padding: 16px;")
+        header.setStyleSheet(f"background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {C.BG_DEEP}, stop:1 {C.BG_DARK}); border-radius: 12px; padding: 16px;")
         hlayout = QHBoxLayout(header)
         title = QLabel("🛡️ EduOS Cyber Lab")
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+        title.setStyleSheet(f"font-size: 24px; font-weight: bold; color: {C.TEXT_PRIMARY};")
         hlayout.addWidget(title)
         hlayout.addStretch()
         status = QLabel("🔒 Environment: Isolated | Mode: Safe")
-        status.setStyleSheet("font-size: 13px; color: #4ade80; background: #166534; padding: 6px 12px; border-radius: 6px;")
+        status.setStyleSheet(f"font-size: 13px; color: {C.ACCENT_GREEN}; background: {C.GLASS_CARD}; padding: 6px 12px; border-radius: 6px;")
         hlayout.addWidget(status)
         layout.addWidget(header)
 
@@ -95,7 +96,7 @@ class CyberLabWindow(QMainWindow):
         left_layout = QVBoxLayout(left_panel)
 
         labs_group = QGroupBox("Available Labs")
-        labs_group.setStyleSheet("QGroupBox { font-weight: bold; font-size: 14px; padding-top: 16px; }")
+        labs_group.setStyleSheet(f"QGroupBox {{ font-weight: bold; font-size: 14px; padding-top: 16px; border: 1px solid {C.GLASS_BORDER}; border-radius: 12px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY}; padding: 20px 16px 16px 16px; }} QGroupBox::title {{ subcontrol-origin: margin; left: 16px; padding: 0 8px; color: {C.TEXT_SECONDARY}; }}")
         glayout = QVBoxLayout(labs_group)
 
         self.lab_list = QListWidget()
@@ -106,12 +107,7 @@ class CyberLabWindow(QMainWindow):
         glayout.addWidget(self.lab_list)
 
         self.launch_btn = QPushButton("🚀 Launch Lab")
-        self.launch_btn.setStyleSheet("""
-            QPushButton { background: #2563eb; color: white; padding: 12px; font-size: 15px;
-                         font-weight: bold; border: none; border-radius: 8px; }
-            QPushButton:hover { background: #1d4ed8; }
-            QPushButton:pressed { background: #1e40af; padding: 13px 11px 11px 13px; }
-        """)
+        self.launch_btn.setStyleSheet(accent_glow_style())
         self.launch_btn.clicked.connect(self._launch_lab)
         glayout.addWidget(self.launch_btn)
         left_layout.addWidget(labs_group)
@@ -122,15 +118,15 @@ class CyberLabWindow(QMainWindow):
         right_layout = QVBoxLayout(right_panel)
 
         info_group = QGroupBox("Lab Information")
-        info_group.setStyleSheet("QGroupBox { font-weight: bold; font-size: 14px; padding-top: 16px; }")
+        info_group.setStyleSheet(f"QGroupBox {{ font-weight: bold; font-size: 14px; padding-top: 16px; border: 1px solid {C.GLASS_BORDER}; border-radius: 12px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY}; padding: 20px 16px 16px 16px; }} QGroupBox::title {{ subcontrol-origin: margin; left: 16px; padding: 0 8px; color: {C.TEXT_SECONDARY}; }}")
         ilayout = QVBoxLayout(info_group)
         self.lab_info = QTextBrowser()
-        self.lab_info.setStyleSheet("font-size: 13px; padding: 8px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px;")
+        self.lab_info.setStyleSheet(f"font-size: 13px; padding: 8px; background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 6px; color: {C.TEXT_PRIMARY};")
         ilayout.addWidget(self.lab_info)
         right_layout.addWidget(info_group)
 
         terminal_group = QGroupBox("Lab Console")
-        terminal_group.setStyleSheet("QGroupBox { font-weight: bold; font-size: 14px; padding-top: 16px; }")
+        terminal_group.setStyleSheet(f"QGroupBox {{ font-weight: bold; font-size: 14px; padding-top: 16px; border: 1px solid {C.GLASS_BORDER}; border-radius: 12px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY}; padding: 20px 16px 16px 16px; }} QGroupBox::title {{ subcontrol-origin: margin; left: 16px; padding: 0 8px; color: {C.TEXT_SECONDARY}; }}")
         tlayout = QVBoxLayout(terminal_group)
         self.console = QTextEdit()
         self.console.setReadOnly(True)
@@ -144,11 +140,11 @@ class CyberLabWindow(QMainWindow):
         cmd_layout = QHBoxLayout()
         self.cmd_input = QLineEdit()
         self.cmd_input.setPlaceholderText("Enter command (e.g. nmap -sn 192.168.1.0/24)")
-        self.cmd_input.setStyleSheet("font-family: monospace; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px;")
+        self.cmd_input.setStyleSheet(f"font-family: monospace; font-size: 12px; padding: 6px; border: 1px solid {C.GLASS_BORDER}; border-radius: 4px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};")
         self.cmd_input.returnPressed.connect(self._run_command)
         cmd_layout.addWidget(self.cmd_input)
         run_btn = QPushButton("▶ Run")
-        run_btn.setStyleSheet("QPushButton { background: #16a34a; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background: #15803d; } QPushButton:pressed { background: #166534; padding: 9px 15px 7px 17px; }")
+        run_btn.setStyleSheet(glass_success_button_style())
         run_btn.clicked.connect(self._run_command)
         cmd_layout.addWidget(run_btn)
         tlayout.addLayout(cmd_layout)
@@ -238,6 +234,8 @@ class CyberLabWindow(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    apply_glass_theme(app)
     window = CyberLabWindow()
     window.show()
     sys.exit(app.exec())
