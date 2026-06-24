@@ -1,5 +1,13 @@
 # 🎓 EduOS — Educational Operating System
 
+<p align="left">
+  <img src="https://img.shields.io/github/stars/Dev9269/eduos?style=flat-square&label=Stars" />
+  <img src="https://img.shields.io/github/forks/Dev9269/eduos?style=flat-square&label=Forks" />
+  <img src="https://img.shields.io/github/license/Dev9269/eduos?style=flat-square" />
+  <img src="https://img.shields.io/badge/Debian-13_Trixie-A81D33?style=flat-square&logo=debian" />
+  <img src="https://img.shields.io/badge/KDE-Plasma_6-1D99F3?style=flat-square&logo=kde" />
+</p>
+
 **A Personal Project by Jainam**
 
 > *Education First. Security Always.*
