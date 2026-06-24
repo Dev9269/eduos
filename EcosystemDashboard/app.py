@@ -59,8 +59,15 @@ def _stat_row(label, value):
     return w
 
 
+def _hex_to_rgba(hex_color, alpha=1.0):
+    """Convert #RRGGBB to rgba(r,g,b,a) CSS string."""
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
 # ═══════════════════════════════════════════════════════════════
-#  PHASE 1 — ECOSYSTEM DASHBOARD
+#  PHASE 1 — FLAGSHIP ECOSYSTEM DASHBOARD (Platform Command Center)
 # ═══════════════════════════════════════════════════════════════
 
 class EcosystemDashboard(QWidget):
@@ -82,120 +89,269 @@ class EcosystemDashboard(QWidget):
         content = QVBoxLayout(sw)
         content.setSpacing(16)
 
-        # Welcome banner
-        banner = GlassBanner("🏫 EduOS Ecosystem Dashboard",
-            "Complete educational infrastructure platform — Live monitoring across all connected systems.")
+        inst = self.data["institution"]
+        modules = self.data.get("modules", [])
+        updates = self.data.get("updates", [])
+        courses = self.data.get("courses", [])
+        exams = self.data.get("exams", [])
+        health = self.data.get("health", {})
+        active_courses = [c for c in courses if c.get("active")]
+        installed_modules = [m for m in modules if m["status"] == "installed"]
+        ongoing_exams = [e for e in exams if e["status"] == "Ongoing"]
+        scheduled_exams = [e for e in exams if e["status"] == "Scheduled"]
+        critical_updates = [u for u in updates if u.get("critical")]
+
+        # ═══ PLATFORM IDENTITY BANNER ═══
+        banner = QFrame()
+        banner.setStyleSheet(f"""
+            background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 rgba(108,99,255,0.12), stop:0.5 rgba(15,15,30,0.8),
+                stop:1 rgba(10,10,20,0.9));
+            border: 1px solid rgba(108,99,255,0.15);
+            border-radius: 18px; padding: 20px 28px;
+        """)
+        bl = QHBoxLayout(banner)
+        left = QVBoxLayout()
+        left.setSpacing(2)
+        left.addWidget(_label(f"🏛  {inst['name']}",
+            f"font-size: 26px; font-weight: 700; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY}; letter-spacing: -0.5px;"))
+        left.addWidget(_label(f"{inst['type']}  •  {inst['accreditation']}  •  Established {inst['established']}  •  {inst['campuses']} Campuses",
+            f"font-size: 12px; color: {C.TEXT_SECONDARY}; font-family: {T.FAMILY};"))
+        bl.addLayout(left, 1)
+
+        right = QVBoxLayout()
+        right.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        right.setSpacing(2)
+        right.addWidget(_label("EDUOS PLATFORM",
+            f"font-size: 11px; color: {C.ACCENT_PRIMARY}; font-weight: 700; font-family: {T.FAMILY}; letter-spacing: 2px;"))
+        right.addWidget(_label("Educational Infrastructure Platform  v2.0",
+            f"font-size: 11px; color: {C.TEXT_MUTED}; font-family: {T.FAMILY};"))
+        bl.addLayout(right)
         content.addWidget(banner)
 
-        # KPI row
-        inst = self.data["institution"]
-        kpis = QHBoxLayout()
-        kpis.setSpacing(12)
+        # ═══ PLATFORM METRICS — All 10 Key KPIs ═══
+        metrics = QHBoxLayout()
+        metrics.setSpacing(10)
         for val, label, icon in [
-            (f"{inst['students']:,}", "Active Students", "🎓"),
+            (f"{inst['students']:,}", "Total Students", "🎓"),
             (f"{inst['faculty']:,}", "Faculty Members", "👨‍🏫"),
             (f"{inst['departments']}", "Departments", "🏛"),
-            (f"{inst['total_devices']:,}", "Connected Devices", "💻"),
-            (f"{inst['online_devices']:,}", "Online Now", "📡"),
+            (f"{len(active_courses)}", "Active Courses", "📚"),
+            (f"{len(ongoing_exams)}", "Active Exams", "📝"),
         ]:
-            kpis.addWidget(GlassStatCard(val, label, icon))
-        content.addLayout(kpis)
+            metrics.addWidget(GlassStatCard(val, label, icon))
+        content.addLayout(metrics)
 
-        # Middle section
-        mid = QHBoxLayout()
-        mid.setSpacing(16)
+        metrics2 = QHBoxLayout()
+        metrics2.setSpacing(10)
+        for val, label, icon in [
+            (f"{inst['total_devices']:,}", "Total Devices", "💻"),
+            (f"{inst['online_devices']:,} / {inst['total_devices']:,}", "Devices Online", "📡"),
+            (f"{len(installed_modules)} / {len(modules)}", "Installed Modules", "🧩"),
+            (f"{len(updates)}", "Updates Available", "🔄"),
+            (f"+{len(scheduled_exams)}", "Upcoming Exams", "📅"),
+        ]:
+            metrics2.addWidget(GlassStatCard(val, label, icon))
+        content.addLayout(metrics2)
 
-        # Device status
-        dev_card = GlassCard()
-        dl = QVBoxLayout(dev_card)
-        dl.addWidget(SectionTitle("💻 Device Status Overview"))
-        tl = self.data.get("timeline", [])
-        latest = tl[-1] if tl else {}
-        health = self.data.get("health", {})
-        for label, val, color in [
-            ("System Health", f"{health.get('system_health', latest.get('system_health', 98))}%", C.ACCENT_GREEN),
-            ("Online Devices", f"{inst['online_devices']:,} / {inst['total_devices']:,}", C.ACCENT_GREEN),
+        # ═══ SERVER STATUS ROW ═══
+        server_title = SectionTitle("☁️ Platform Server Status")
+        content.addWidget(server_title)
+
+        server_row = QHBoxLayout()
+        server_row.setSpacing(12)
+
+        # Central Platform status
+        central_card = GlassCard()
+        ccl = QVBoxLayout(central_card)
+        ccl.setSpacing(6)
+        ccl.addWidget(_label("☁️ EduOS Central Platform",
+            f"font-size: 15px; font-weight: 700; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+        ccl.addWidget(StatusBadge("Online — All Services Operational", "active"))
+        for svc, st in [("API Gateway", "Online"), ("Authentication", "Online"),
+                         ("Analytics Engine", "Online"), ("Module Repository", "Online")]:
+            r = QHBoxLayout()
+            r.addWidget(_label(svc, f"font-size: 11px; color: {C.TEXT_SECONDARY}; font-family: {T.FAMILY};"))
+            r.addStretch()
+            r.addWidget(StatusBadge(st, "active" if st == "Online" else "inactive"))
+            ccl.addLayout(r)
+        server_row.addWidget(central_card, 1)
+
+        # Institution Server status
+        inst_card = GlassCard()
+        icl = QVBoxLayout(inst_card)
+        icl.setSpacing(6)
+        icl.addWidget(_label("🏛 Institution Server",
+            f"font-size: 15px; font-weight: 700; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+        icl.addWidget(StatusBadge("Connected — Synced 2 seconds ago", "active"))
+        for svc, st in [("Local Cache", "Online"), ("Exam Distribution", "Ready"),
+                         ("Student Sync", "Running"), ("Content Delivery", "Active")]:
+            r = QHBoxLayout()
+            r.addWidget(_label(svc, f"font-size: 11px; color: {C.TEXT_SECONDARY}; font-family: {T.FAMILY};"))
+            r.addStretch()
+            r.addWidget(StatusBadge(st, "active"))
+            icl.addLayout(r)
+        server_row.addWidget(inst_card, 1)
+
+        # System Health card
+        health_card = GlassCard()
+        hl = QVBoxLayout(health_card)
+        hl.setSpacing(6)
+        hl.addWidget(_label("🛡️ System Health",
+            f"font-size: 15px; font-weight: 700; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+        for label, val, col in [
+            ("Infrastructure Health", f"{health.get('system_health', 98)}%", C.ACCENT_GREEN),
             ("CPU Usage", f"{health.get('cpu_usage', 42)}%", C.ACCENT_PRIMARY),
             ("RAM Usage", f"{health.get('ram_usage', 62)}%", C.ACCENT_TERTIARY),
             ("Disk Usage", f"{health.get('disk_usage', 71)}%", C.ACCENT_AMBER),
             ("Security Score", f"{health.get('security_score', 96)}/100", C.ACCENT_GREEN),
+            ("Services Running", f"{health.get('services_running', 47)}/{health.get('services_total', 52)}", C.ACCENT_GREEN),
+            ("Uptime", f"{health.get('uptime_days', 124)} days", C.TEXT_SECONDARY),
         ]:
-            row = QHBoxLayout()
-            row.addWidget(_label(label, f"font-size: 12px; color: {C.TEXT_SECONDARY}; font-family: {T.FAMILY};"))
-            row.addStretch()
-            row.addWidget(_label(val, f"font-size: 14px; font-weight: 700; color: {color}; font-family: {T.FAMILY};"))
-            dl.addLayout(row)
-        mid.addWidget(dev_card, 2)
+            r = QHBoxLayout()
+            r.addWidget(_label(label, f"font-size: 11px; color: {C.TEXT_SECONDARY}; font-family: {T.FAMILY};"))
+            r.addStretch()
+            r.addWidget(_label(val, f"font-size: 12px; font-weight: 600; color: {col}; font-family: {T.FAMILY};"))
+            hl.addLayout(r)
+        server_row.addWidget(health_card, 1)
+        content.addLayout(server_row)
 
-        # Active courses + exams
+        # ═══ PLATFORM ARCHITECTURE MAP ═══
+        arch_card = GlassCard()
+        arch_layout = QVBoxLayout(arch_card)
+        arch_layout.addWidget(SectionTitle("🏗 Platform Architecture — Data Flow"))
+        arch_layout.setSpacing(8)
+
+        # Central Platform row
+        arch_central = QFrame()
+        arch_central.setStyleSheet(f"""
+            background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+                stop:0 rgba(108,99,255,0.15), stop:1 rgba(79,195,247,0.08));
+            border: 1px solid rgba(108,99,255,0.2); border-radius: 12px; padding: 12px;
+        """)
+        acl = QHBoxLayout(arch_central)
+        acl.addWidget(_label("☁️  EduOS Central Platform",
+            f"font-size: 14px; font-weight: 700; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+        acl.addStretch()
+        for t in ["Global Mgmt", "Update Distro", "Analytics", "Multi-Institution"]:
+            acl.addWidget(StatusBadge(t, "info"))
+        arch_layout.addWidget(arch_central)
+
+        # Down arrow
+        arch_layout.addWidget(_label("                             ⬇  Encrypted TLS 1.3 Link  ⬇",
+            f"font-size: 11px; color: {C.TEXT_MUTED}; font-family: {T.MONO};"))
+
+        # Institution Server row
+        arch_inst = QFrame()
+        arch_inst.setStyleSheet(f"""
+            background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+                stop:0 rgba(79,195,247,0.12), stop:1 rgba(108,99,255,0.06));
+            border: 1px solid rgba(79,195,247,0.2); border-radius: 12px; padding: 12px;
+        """)
+        ail = QHBoxLayout(arch_inst)
+        ail.addWidget(_label("🏛  {school_name} Institution Server".format(school_name=inst['name']),
+            f"font-size: 14px; font-weight: 700; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+        ail.addStretch()
+        for t in ["Local Deploy", "Exam Distro", "Content Cache", "Device Sync"]:
+            ail.addWidget(StatusBadge(t, "active"))
+        arch_layout.addWidget(arch_inst)
+
+        # Down arrow
+        arch_layout.addWidget(_label("                             ⬇  Institution LAN (10 Gbps)  ⬇",
+            f"font-size: 11px; color: {C.TEXT_MUTED}; font-family: {T.MONO};"))
+
+        # Student Devices row
+        arch_dev = QFrame()
+        arch_dev.setStyleSheet(f"""
+            background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+                stop:0 rgba(76,175,80,0.08), stop:1 rgba(79,195,247,0.05));
+            border: 1px solid rgba(76,175,80,0.15); border-radius: 12px; padding: 12px;
+        """)
+        adl = QHBoxLayout(arch_dev)
+        adl.addWidget(_label(f"💻  {inst['online_devices']:,} / {inst['total_devices']:,} Student Devices Online",
+            f"font-size: 14px; font-weight: 700; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+        adl.addStretch()
+        for t in ["EduOS Client", "Exam App", "Learn Portal", "Cyber Lab"]:
+            adl.addWidget(StatusBadge(t, "active"))
+        arch_layout.addWidget(arch_dev)
+
+        content.addWidget(arch_card)
+
+        # ═══ INSTALLED MODULES ═══
+        mod_card = GlassCard()
+        ml = QVBoxLayout(mod_card)
+        ml.addWidget(SectionTitle(f"🧩 Installed Modules ({len(installed_modules)}/{len(modules)})"))
+        ml_grid = QHBoxLayout()
+        ml_grid.setSpacing(8)
+        for m in installed_modules:
+            mc = QFrame()
+            mc.setStyleSheet(f"""
+                background: rgba(108,99,255,0.06); border: 1px solid {C.GLASS_BORDER};
+                border-radius: 10px; padding: 12px;
+            """)
+            mcl = QVBoxLayout(mc)
+            mcl.setSpacing(2)
+            mcl.addWidget(_label(f"{m['icon']} {m['name']}",
+                f"font-size: 13px; font-weight: 600; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+            mcl.addWidget(StatusBadge(m["category"], "info"))
+            mcl.addWidget(_label(f"v{m['version']}",
+                f"font-size: 10px; color: {C.TEXT_MUTED}; font-family: {T.MONO};"))
+            ml_grid.addWidget(mc)
+        ml.addLayout(ml_grid)
+        content.addWidget(mod_card)
+
+        # ═══ CRITICAL UPDATES ═══
+        if updates:
+            upd_card = GlassCard()
+            ul = QVBoxLayout(upd_card)
+            if critical_updates:
+                ul.addWidget(SectionTitle(f"🔴 Critical Updates ({len(critical_updates)})"))
+            else:
+                ul.addWidget(SectionTitle(f"🔄 Available Updates ({len(updates)})"))
+            for u in updates:
+                row = QHBoxLayout()
+                icon = "🔴" if u.get("critical") else "🔵"
+                row.addWidget(_label(f"{icon} {u['package']} v{u['version']}",
+                    f"font-size: 13px; font-weight: 500; font-family: {T.FAMILY}; color: {C.TEXT_PRIMARY};"))
+                row.addWidget(StatusBadge(u["type"], "danger" if u.get("critical") else "info"))
+                row.addWidget(_label(f"{u['size_mb']} MB",
+                    f"font-size: 11px; color: {C.TEXT_MUTED}; font-family: {T.FAMILY};"))
+                row.addStretch()
+                deploy = QPushButton("Deploy via Central Platform")
+                deploy.setStyleSheet(glass_button_style())
+                deploy.clicked.connect(lambda checked, p=u["package"]:
+                    QMessageBox.information(self, "Deploy Update",
+                        f"[PLATFORM SIMULATION]\n\nDeploying {p} to all connected devices...\n\n"
+                        f"Central Platform → Institution Server → {inst['online_devices']:,} devices"))
+                row.addWidget(deploy)
+                ul.addLayout(row)
+            content.addWidget(upd_card)
+
+        # ═══ COURSE PROGRESS ═══
         course_card = GlassCard()
         cl = QVBoxLayout(course_card)
-        cl.addWidget(SectionTitle("📚 Active Courses & Exams"))
-        courses = self.data.get("courses", [])
-        active_courses = [c for c in courses if c.get("active")]
-        exams = self.data.get("exams", [])
-        ongoing_exams = [e for e in exams if e["status"] == "Ongoing"]
-        cl.addWidget(_label(f"Active Courses: {len(active_courses)}",
-            f"font-size: 22px; font-weight: 700; color: {C.ACCENT_PRIMARY}; font-family: {T.FAMILY};"))
-        cl.addWidget(_label(f"Ongoing Exams: {len(ongoing_exams)}",
-            f"font-size: 13px; color: {C.TEXT_SECONDARY}; font-family: {T.FAMILY};"))
-        cl.addSpacing(8)
-        for c in active_courses[:5]:
+        cl.addWidget(SectionTitle(f"📚 Active Course Progress ({len(active_courses)} courses)"))
+        for c in active_courses[:8]:
             row = QHBoxLayout()
-            row.addWidget(_label(f"  {c['name']}", f"font-size: 12px; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+            row.addWidget(_label(f"  {c['name']}",
+                f"font-size: 12px; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+            row.addWidget(StatusBadge(c["dept"], "info"))
             row.addStretch()
             p = QProgressBar()
             p.setMaximum(100)
             p.setValue(c.get("progress", 50))
-            p.setFixedWidth(120)
+            p.setFixedWidth(140)
             p.setFormat(f"{c['progress']}%")
             row.addWidget(p)
             cl.addLayout(row)
-        mid.addWidget(course_card, 3)
-        content.addLayout(mid)
-
-        # Activity feed
-        act_card = GlassCard()
-        al = QVBoxLayout(act_card)
-        al.addWidget(SectionTitle("⏱ Live Activity Feed"))
-        activity = self.data.get("activity", [])
-        for entry in activity[:10]:
-            row = QHBoxLayout()
-            row.setContentsMargins(0, 2, 0, 2)
-            dot = QLabel("●")
-            dot.setStyleSheet(f"font-size: 8px; color: {C.ACCENT_PRIMARY};")
-            row.addWidget(dot)
-            ts = entry.get("timestamp", "")[11:16] if "T" in entry.get("timestamp", "") else ""
-            row.addWidget(_label(ts, f"font-size: 11px; color: {C.TEXT_MUTED}; font-family: {T.FAMILY};"))
-            row.addWidget(_label(entry.get("action", ""),
-                f"font-size: 12px; color: {C.TEXT_PRIMARY}; font-weight: 500; font-family: {T.FAMILY};"))
-            row.addStretch()
-            al.addLayout(row)
-        content.addWidget(act_card)
-
-        # Updates
-        upd_card = GlassCard()
-        ul = QVBoxLayout(upd_card)
-        updates = self.data.get("updates", [])
-        ul.addWidget(SectionTitle(f"🔄 Updates Available ({len(updates)})"))
-        for u in updates:
-            row = QHBoxLayout()
-            icon = "🔴" if u.get("critical") else "🔵"
-            row.addWidget(_label(f"{icon} {u['package']} v{u['version']}",
-                f"font-size: 13px; font-weight: 500; font-family: {T.FAMILY}; color: {C.TEXT_PRIMARY};"))
-            row.addWidget(StatusBadge(u["type"], "danger" if u.get("critical") else "info"))
-            row.addWidget(_label(f"{u['size_mb']} MB",
-                f"font-size: 11px; color: {C.TEXT_MUTED}; font-family: {T.FAMILY};"))
-            row.addStretch()
-            ul.addLayout(row)
-        content.addWidget(upd_card)
+        content.addWidget(course_card)
 
         content.addStretch()
         layout.addWidget(scroll)
 
 
 # ═══════════════════════════════════════════════════════════════
-#  PHASE 2 — CENTRAL SERVER SIMULATION
+#  PHASE 2 — CENTRAL PLATFORM SIMULATION (3-Tier Architecture Demo)
 # ═══════════════════════════════════════════════════════════════
 
 class CentralServerSimulation(QWidget):
@@ -217,85 +373,176 @@ class CentralServerSimulation(QWidget):
         content = QVBoxLayout(sw)
         content.setSpacing(16)
 
-        # Architecture banner
-        banner = GlassBanner("☁️ Central Platform  →  🏛 Institution Server  →  💻 Student Devices",
-            "End-to-end encrypted infrastructure with live device management and update orchestration.")
+        inst = self.data["institution"]
+        modules = self.data.get("modules", [])
+        exams = self.data.get("exams", [])
+        updates = self.data.get("updates", [])
+
+        # ═══ ARCHITECTURE BANNER ═══
+        banner = QFrame()
+        banner.setStyleSheet(f"""
+            background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+                stop:0 rgba(108,99,255,0.15), stop:0.5 rgba(15,15,30,0.8),
+                stop:1 rgba(10,10,20,0.9));
+            border: 1px solid rgba(108,99,255,0.15);
+            border-radius: 18px; padding: 20px 28px;
+        """)
+        bl = QHBoxLayout(banner)
+        bl.addWidget(_label("☁️ EduOS Central Platform  →  🏛 Institution Server  →  💻 Student Devices",
+            f"font-size: 18px; font-weight: 700; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY}; letter-spacing: 0.5px;"))
+        bl.addStretch()
+        bl.addWidget(StatusBadge("Simulation Mode", "active"))
         content.addWidget(banner)
 
-        # Architecture diagram
+        # ═══ 3-TIER ARCHITECTURE DIAGRAM ═══
+        arch_title = SectionTitle("🏗 3-Tier Platform Architecture")
+        content.addWidget(arch_title)
+
         diag = QHBoxLayout()
         diag.setSpacing(4)
-        layers = [
-            ("☁️ EduOS\nCentral\nPlatform",
-             ["Global Management", "Update Distribution", "Security Management", "Analytics Hub", "Multi-Institution"]),
-            ("🏛 Institution\nServer",
-             ["Local Deployment", "Student Sync", "Exam Distribution", "Content Cache", "Device Mgmt"]),
-            ("💻 Student\nDevices",
-             ["EduOS Client", "Exam Interface", "Learn Portal", "Dev Tools", "Cyber Lab"]),
+
+        tiers = [
+            ("☁️ EduOS Central Platform", "#6c63ff",
+             ["Global Management Hub", "Multi-Institution Sync", "Update Distribution Engine",
+              "Security Operations Center", "Analytics & Reporting", "Module Repository"]),
+            ("🏛 Institution Server", "#4fc3f7",
+             ["Local Deployment & Cache", "Student Data Sync", "Exam Distribution",
+              "Content Delivery Network", "Device Management", "Offline Resilience"]),
+            ("💻 Student Devices", "#4caf50",
+             ["EduOS Client Runtime", "Exam Application", "Learn Hub Portal",
+              "Dev Suite IDE", "Cyber Lab Environment", "Offline Mode Support"]),
         ]
-        for name, items in layers:
+
+        for name, accent, items in tiers:
             box = QFrame()
             box.setStyleSheet(f"""
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(108,99,255,0.12), stop:1 rgba(79,195,247,0.06));
-                border: 1px solid {C.GLASS_BORDER};
+                background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                    stop:0 {_hex_to_rgba(accent, 0.12)},
+                    stop:1 {_hex_to_rgba(accent, 0.05)});
+                border: 1px solid {_hex_to_rgba(accent, 0.25)};
                 border-radius: 14px; padding: 16px;
             """)
-            bl = QVBoxLayout(box)
-            bl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            bl.addWidget(_label(name, f"font-size: 13px; font-weight: 700; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
-            bl.addSpacing(6)
+            bl2 = QVBoxLayout(box)
+            bl2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            bl2.addWidget(_label(name,
+                f"font-size: 14px; font-weight: 700; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+            sep = QFrame()
+            sep.setFrameShape(QFrame.Shape.HLine)
+            sep.setStyleSheet(f"background: {accent}30; max-height: 1px; margin: 6px 0;")
+            bl2.addWidget(sep)
             for item in items:
-                bl.addWidget(_label(f"• {item}", f"font-size: 10px; color: {C.TEXT_SECONDARY}; font-family: {T.FAMILY};"))
+                bl2.addWidget(_label(f"• {item}",
+                    f"font-size: 10px; color: {C.TEXT_SECONDARY}; line-height: 1.6; font-family: {T.FAMILY};"))
             diag.addWidget(box, 1)
-            if layers.index((name, items)) < len(layers) - 1:
-                diag.addWidget(_label("  →  ", f"font-size: 28px; color: {C.TEXT_MUTED}; font-weight: 700; font-family: {T.MONO};"))
+            idx = tiers.index((name, accent, items))
+            if idx < len(tiers) - 1:
+                arrow = QFrame()
+                arrow.setStyleSheet("background: transparent;")
+                al2 = QVBoxLayout(arrow)
+                al2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                al2.addWidget(_label("⬇",
+                    f"font-size: 32px; color: {C.TEXT_MUTED};"))
+                al2.addWidget(_label("ENCRYPTED",
+                    f"font-size: 8px; color: {C.TEXT_MUTED}; font-weight: 700; font-family: {T.FAMILY};"))
+                al2.addWidget(_label("TLS 1.3",
+                    f"font-size: 8px; color: {C.TEXT_MUTED}; font-family: {T.MONO};"))
+                diag.addWidget(arrow)
         content.addLayout(diag)
 
-        # Simulation
+        # ═══ SIMULATION CONTROL ═══
         sim_card = GlassCard()
         sl = QVBoxLayout(sim_card)
-        sl.addWidget(SectionTitle("🔄 Data Flow Simulation"))
-        self.sim_status = QLabel("Ready. Click 'Simulate' to demonstrate the architecture in action.")
+        sl.addWidget(SectionTitle("🔄 Architecture Demonstration"))
+        sl.setSpacing(8)
+
+        sim_top = QHBoxLayout()
+        self.sim_status = QLabel("Ready. Select a flow below to demonstrate the platform architecture.")
         self.sim_status.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY}; font-family: {T.FAMILY};")
-        sl.addWidget(self.sim_status)
+        sim_top.addWidget(self.sim_status, 1)
+        self.sim_label = QLabel("")
+        self.sim_label.setStyleSheet(f"font-size: 12px; color: {C.TEXT_MUTED}; font-family: {T.MONO};")
+        self.sim_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        sim_top.addWidget(self.sim_label)
+        sl.addLayout(sim_top)
+
         self.sim_progress = QProgressBar()
         self.sim_progress.setVisible(False)
         self.sim_progress.setMaximum(100)
+        self.sim_progress.setTextVisible(False)
         sl.addWidget(self.sim_progress)
-        btn = QPushButton("▶ Run Simulation")
-        btn.setStyleSheet(accent_glow_style())
-        btn.clicked.connect(self._run_simulation)
-        sl.addWidget(btn)
+
+        # Flow selection buttons
+        flow_row = QHBoxLayout()
+        flow_row.setSpacing(8)
+        flows = [
+            ("📦 Update Distribution", self._run_update_flow),
+            ("📝 Exam Distribution", self._run_exam_flow),
+            ("📊 Analytics Sync", self._run_analytics_flow),
+        ]
+        for label, callback in flows:
+            btn = QPushButton(label)
+            btn.setStyleSheet(glass_button_style())
+            btn.clicked.connect(callback)
+            flow_row.addWidget(btn)
+        flow_row.addStretch()
+        sl.addLayout(flow_row)
+
         content.addWidget(sim_card)
 
-        # Institution stats
-        stats_card = GlassCard()
-        sl2 = QVBoxLayout(stats_card)
-        sl2.addWidget(SectionTitle("🏛 Connected Institution Statistics"))
-        inst = self.data["institution"]
-        for label, val in [
-            ("Institution", inst["name"]),
-            ("Type", inst["type"]),
-            ("Accreditation", inst["accreditation"]),
-            ("Total Students", f"{inst['students']:,}"),
-            ("Faculty & Staff", f"{inst['faculty'] + inst['staff']:,}"),
-            ("Departments", str(inst["departments"])),
-            ("Programs", str(inst["programs"])),
-            ("Total Devices", f"{inst['total_devices']:,}"),
-            ("Devices Online", f"{inst['online_devices']:,} ({round(inst['online_devices']/inst['total_devices']*100)}%)"),
-        ]:
-            sl2.addWidget(_stat_row(label, val))
-        content.addWidget(stats_card)
+        # ═══ INSTITUTION CONNECTION STATUS ═══
+        conn_card = GlassCard()
+        cl2 = QVBoxLayout(conn_card)
+        cl2.addWidget(SectionTitle("🔗 Platform Connection Status"))
+        conn_grid = QHBoxLayout()
+        conn_grid.setSpacing(12)
 
-        # Device monitoring
+        # Central Platform status
+        cp_card = QFrame()
+        cp_card.setStyleSheet(glass_stat_card_style())
+        cpl = QVBoxLayout(cp_card)
+        cpl.setContentsMargins(16, 12, 16, 12)
+        cpl.addWidget(_label("☁️ Central Platform",
+            f"font-size: 13px; font-weight: 600; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+        cpl.addWidget(StatusBadge("Operational • 12ms latency", "active"))
+        cpl.addWidget(_label("Updated 2s ago",
+            f"font-size: 10px; color: {C.TEXT_MUTED}; font-family: {T.FAMILY};"))
+        conn_grid.addWidget(cp_card)
+
+        # Institution Server status
+        is_card = QFrame()
+        is_card.setStyleSheet(glass_stat_card_style())
+        isl = QVBoxLayout(is_card)
+        isl.setContentsMargins(16, 12, 16, 12)
+        isl.addWidget(_label("🏛 Institution Server",
+            f"font-size: 13px; font-weight: 600; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+        isl.addWidget(StatusBadge(f"Connected • {inst['online_devices']:,}/{inst['total_devices']:,} devices synced", "active"))
+        isl.addWidget(_label("Last sync: 2 seconds ago",
+            f"font-size: 10px; color: {C.TEXT_MUTED}; font-family: {T.FAMILY};"))
+        conn_grid.addWidget(is_card)
+
+        # Platform metrics
+        pm_card = QFrame()
+        pm_card.setStyleSheet(glass_stat_card_style())
+        pml = QVBoxLayout(pm_card)
+        pml.setContentsMargins(16, 12, 16, 12)
+        pml.addWidget(_label("📊 Platform Metrics",
+            f"font-size: 13px; font-weight: 600; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+        pml.addWidget(_label(f"{inst['students']:,} Students  •  {inst['faculty']:,} Faculty  •  {len(exams)} Exams  •  {len(updates)} Updates",
+            f"font-size: 12px; color: {C.TEXT_SECONDARY}; font-family: {T.FAMILY};"))
+        pml.addWidget(_label("All services healthy",
+            f"font-size: 10px; color: {C.ACCENT_GREEN}; font-family: {T.FAMILY};"))
+        conn_grid.addWidget(pm_card)
+        cl2.addLayout(conn_grid)
+        content.addWidget(conn_card)
+
+        # ═══ DEVICE MONITORING TABLE ═══
         dev_card = GlassCard()
         dl = QVBoxLayout(dev_card)
-        dl.addWidget(SectionTitle("📡 Live Device Monitoring"))
+        dl.addWidget(SectionTitle("📡 Live Device Monitoring — Managed by Institution Server"))
         devices = self.data.get("devices", [])
         table = QTableWidget()
         table.setColumnCount(7)
-        table.setHorizontalHeaderLabels(["Device", "Type", "Department", "Status", "OS", "IP", "Last Seen"])
+        table.setHorizontalHeaderLabels(["Device", "Type", "Department", "Status", "OS", "IP", "Last Sync"])
         table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.verticalHeader().setVisible(False)
@@ -319,73 +566,155 @@ class CentralServerSimulation(QWidget):
             st = d.get("status", "offline")
             table.setCellWidget(row, 3, StatusBadge(st.capitalize(), st))
         dl.addWidget(table)
+        dl.addWidget(_label(f"Total: {len(devices)} devices  •  Online: {len([d for d in devices if d.get('status')=='online'])}  •  Managed via Institution Server",
+            f"font-size: 11px; color: {C.TEXT_MUTED}; font-family: {T.FAMILY};"))
         content.addWidget(dev_card)
 
-        # Update distribution
+        # ═══ EXAM DISTRIBUTION QUEUE ═══
+        exam_title = SectionTitle("📝 Exam Distribution — Pushed from Central Platform → Institution Server → Devices")
+        content.addWidget(exam_title)
+        exam_card = GlassCard()
+        el = QVBoxLayout(exam_card)
+        for e in exams[:5]:
+            row = QHBoxLayout()
+            row.addWidget(_label(f"{e['title']}",
+                f"font-size: 13px; font-weight: 600; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+            row.addWidget(StatusBadge(e["type"], "info"))
+            row.addWidget(StatusBadge(e["status"], "success" if e["status"]=="Completed" else "warning" if e["status"]=="Ongoing" else "info"))
+            row.addWidget(_label(f"{e['students']} students",
+                f"font-size: 11px; color: {C.TEXT_MUTED}; font-family: {T.FAMILY};"))
+            row.addStretch()
+            dist_btn = QPushButton("📤 Distribute")
+            dist_btn.setStyleSheet(glass_button_style())
+            dist_btn.clicked.connect(lambda checked, title=e["title"], s=e["students"]:
+                self._sim_status_msg(f"📝 Exam '{title}' distributed from Central Platform → Institution Server → {s} student devices."))
+            row.addWidget(dist_btn)
+            el.addLayout(row)
+        content.addWidget(exam_card)
+
+        # ═══ UPDATE DISTRIBUTION QUEUE ═══
         upd_card = GlassCard()
         ul = QVBoxLayout(upd_card)
-        ul.addWidget(SectionTitle("📦 Update Distribution Queue"))
-        updates = self.data.get("updates", [])
+        ul.addWidget(SectionTitle(f"📦 Update Distribution Queue — Managed from Central Platform"))
         for u in updates:
-            row_w = QFrame()
-            row_w.setStyleSheet(f"border-bottom: 1px solid {C.GLASS_BORDER}; padding: 8px 0;")
-            rl = QHBoxLayout(row_w)
-            rl.setContentsMargins(0, 4, 0, 4)
-            rl.addWidget(_label(f"{u['package']}", f"font-size: 13px; font-weight: 600; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
-            rl.addWidget(_label(f"v{u['version']}", f"font-size: 12px; color: {C.TEXT_MUTED}; font-family: {T.FAMILY};"))
-            rl.addWidget(StatusBadge(u["type"], "danger" if u.get("critical") else "info"))
+            row = QHBoxLayout()
+            row.addWidget(_label(f"{u['package']}",
+                f"font-size: 13px; font-weight: 600; color: {C.TEXT_PRIMARY}; font-family: {T.FAMILY};"))
+            row.addWidget(_label(f"v{u['version']}",
+                f"font-size: 12px; color: {C.TEXT_MUTED}; font-family: {T.MONO};"))
+            row.addWidget(StatusBadge(u["type"], "danger" if u.get("critical") else "info"))
             if u.get("critical"):
-                rl.addWidget(StatusBadge("CRITICAL", "danger"))
-            pb = QProgressBar()
-            pb.setMaximum(100)
-            pb.setValue(random.randint(0, 100))
-            pb.setFixedWidth(120)
-            pb.setFormat(f"{pb.value()}% deployed")
-            rl.addWidget(pb)
-            rl.addStretch()
-            deploy_btn = QPushButton("Deploy")
-            deploy_btn.setStyleSheet(glass_success_button_style())
+                row.addWidget(StatusBadge("CRITICAL", "danger"))
+            row.addStretch()
+            deploy_btn = QPushButton("🚀 Deploy via Platform")
+            deploy_btn.setStyleSheet(accent_glow_style())
             deploy_btn.clicked.connect(lambda checked, p=u["package"]: self._deploy_update(p))
-            rl.addWidget(deploy_btn)
-            ul.addWidget(row_w)
+            row.addWidget(deploy_btn)
+            ul.addLayout(row)
         content.addWidget(upd_card)
+
         content.addStretch()
         layout.addWidget(scroll)
 
-    def _run_simulation(self):
+    def _sim_status_msg(self, msg):
+        self.sim_status.setText(msg)
+        self.sim_label.setText("Flow complete")
+        self.sim_progress.setVisible(True)
+        self.sim_progress.setValue(100)
+        QTimer.singleShot(3000, lambda: self.sim_progress.setVisible(False))
+
+    def _run_update_flow(self):
         self.sim_progress.setVisible(True)
         self.sim_progress.setValue(0)
         self._sim_step = 0
+        self._sim_type = "update"
         self._sim_timer = QTimer()
         self._sim_timer.timeout.connect(self._sim_tick)
-        self._sim_timer.start(300)
+        self._sim_timer.start(350)
+
+    def _run_exam_flow(self):
+        self.sim_progress.setVisible(True)
+        self.sim_progress.setValue(0)
+        self._sim_step = 0
+        self._sim_type = "exam"
+        self._sim_timer = QTimer()
+        self._sim_timer.timeout.connect(self._sim_tick)
+        self._sim_timer.start(350)
+
+    def _run_analytics_flow(self):
+        self.sim_progress.setVisible(True)
+        self.sim_progress.setValue(0)
+        self._sim_step = 0
+        self._sim_type = "analytics"
+        self._sim_timer = QTimer()
+        self._sim_timer.timeout.connect(self._sim_tick)
+        self._sim_timer.start(350)
 
     def _sim_tick(self):
         self._sim_step += 1
         self.sim_progress.setValue(self._sim_step * 10)
-        steps = [
-            "☁️ Central Platform: Preparing update payload...",
-            "☁️ Central Platform: Encrypting with institution key...",
-            "📡 Transmitting to Institution Server (10 Gbps link)...",
-            "🏛 Institution Server: Verifying cryptographic signature...",
-            "🏛 Institution Server: Decrypting and staging update...",
-            "🏛 Institution Server: Queuing distribution to 4,892 devices...",
-            "💻 Student Devices: Receiving update (42% complete)...",
-            "💻 Student Devices: Receiving update (89% complete)...",
-            "✅ All devices updated. Confirmation sent to Central Platform.",
-            "📊 Analytics updated. 100% compliance achieved.",
-        ]
+        inst = self.data["institution"]
+
+        flows = {
+            "update": [
+                f"☁️ Central Platform: Packaging update (eduos-kernel v6.8.5)...",
+                f"☁️ Central Platform: Encrypting with institution RSA key...",
+                f"📡 Transmitting to {inst['name']} Institution Server (10 Gbps dedicated link)...",
+                f"🏛 Institution Server: Verifying cryptographic signature (SHA-256)...",
+                f"🏛 Institution Server: Staging update on local cache server...",
+                f"🏛 Institution Server: Queuing distribution to {inst['online_devices']:,} devices...",
+                f"💻 Student Devices: Receiving update — 42% of devices complete...",
+                f"💻 Student Devices: Receiving update — 89% of devices complete...",
+                "✅ All devices updated. Confirmation sent to Central Platform.",
+                "📊 Analytics updated. 100% patch compliance achieved.",
+            ],
+            "exam": [
+                f"☁️ Central Platform: Loading exam paper from secure vault...",
+                f"☁️ Central Platform: Encrypting with per-institution key...",
+                f"📡 Transmitting to {inst['name']} Institution Server...",
+                f"🏛 Institution Server: Decrypting and validating exam package...",
+                f"🏛 Institution Server: Registering exam in local schedule...",
+                f"🏛 Institution Server: Pushing to {inst['online_devices']:,} designated devices...",
+                f"💻 Student Devices: Exam available in Exam App — {len(self.data.get('exams',[]))} papers loaded...",
+                f"💻 Student Devices: Anti-cheating modules activated on all endpoints...",
+                "✅ Exam distributed. Results will sync back to Central Platform upon completion.",
+                "📊 Central Platform: Exam monitoring dashboard updated.",
+            ],
+            "analytics": [
+                f"☁️ Central Platform: Requesting analytics snapshot from {inst['name']}...",
+                f"📡 Transmitting query to Institution Server...",
+                f"🏛 Institution Server: Aggregating {inst['students']:,} student records...",
+                f"🏛 Institution Server: Compiling device metrics ({inst['online_devices']:,} online)...",
+                f"🏛 Institution Server: Calculating performance scores...",
+                f"📡 Transmitting encrypted analytics bundle to Central Platform...",
+                f"☁️ Central Platform: Processing analytics through ML pipeline...",
+                f"☁️ Central Platform: Updating global dashboard...",
+                "✅ Analytics sync complete. Dashboard refreshed.",
+                "📊 Cross-institution comparison available on Central Platform.",
+            ],
+        }
+
+        steps = flows.get(self._sim_type, flows["update"])
         if self._sim_step <= len(steps):
             self.sim_status.setText(steps[self._sim_step - 1])
-        if self._sim_step >= 10:
+            self.sim_label.setText(f"Step {self._sim_step}/{len(steps)}")
+        if self._sim_step >= len(steps):
             self._sim_timer.stop()
-            self.sim_status.setText("✅ Simulation complete: Central Platform → Institution Server → 4,892 Student Devices validated.")
+            self.sim_status.setText("✅ {name} simulation complete. Central Platform ↔ Institution Server ↔ {devices:,} Student Devices.".format(
+                name=self._sim_type.capitalize(), devices=inst['online_devices']))
+            self.sim_label.setText("Complete")
 
     def _deploy_update(self, pkg):
-        QMessageBox.information(self, "Deploy Update",
-            f"[SIMULATION] Deploying {pkg} to all connected devices...\n\n"
-            f"Central Platform → Institution Server → Student Devices\n\n"
-            f"Status: Queued for distribution to {self.data['institution']['online_devices']:,} online devices.")
+        inst = self.data["institution"]
+        QMessageBox.information(self, "Platform Update Deployment",
+            f"[PLATFORM SIMULATION]\n\n"
+            f"Deploying {pkg} through the EduOS infrastructure:\n\n"
+            f"  1. ☁️ Central Platform packages update\n"
+            f"  2. 📡 Transmitted to {inst['name']} Institution Server\n"
+            f"  3. 🏛 Institution Server stages and queues\n"
+            f"  4. 💻 Distributed to {inst['online_devices']:,} online devices\n"
+            f"  5. ✅ Compliance confirmation sent back to Central Platform\n\n"
+            f"This is the EduOS infrastructure advantage — manage once, deploy everywhere.")
 
 
 # ═══════════════════════════════════════════════════════════════
