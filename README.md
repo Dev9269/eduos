@@ -75,6 +75,23 @@ C, C++, Python, Java 21, JavaScript/Node.js, C# (.NET 8), Ruby, PHP, Perl — pl
 
 Wireshark, Nmap, Burp Suite, OWASP Juice Shop, SQLmap, John the Ripper, Hydra, Aircrack-ng, nikto, tcpdump, and more — all running in isolated environments.
 
+## ⚙️ Available Scripts (Scripts/)
+
+| Script | Purpose |
+|--------|---------|
+| `install-eduos.sh` | Full EduOS installation |
+| `create-backup.sh` | Create system backup |
+| `create-system-image.sh` | Build disk image for deployment |
+| `eduos-desktop-setup.sh` | Apply KDE Plasma desktop layout |
+| `eduos-admin-launcher.sh` | Launch Admin Center |
+| `eduos-cyberlab-launcher.sh` | Launch Cyber Lab |
+| `eduos-devsuite-launcher.sh` | Launch Dev Suite |
+| `eduos-exam-launcher.sh` | Launch Exam Mode |
+| `eduos-learnhub-launcher.sh` | Launch Learn Hub |
+| `eduos-welcome.py` | First-run welcome wizard |
+| `eduos-hardening.sh` | Apply system hardening |
+| `install-docker.sh` | Docker setup script |
+
 ## 📜 License
 
 MIT License — Copyright (c) 2026 Jainam
