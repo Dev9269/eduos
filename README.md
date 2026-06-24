@@ -1,18 +1,17 @@
-# 🎓 EduOS — Educational Operating System
+<div align="center">
 
-<p align="left">
-  <img src="https://img.shields.io/github/stars/Dev9269/eduos?style=flat-square&label=Stars" />
-  <img src="https://img.shields.io/github/forks/Dev9269/eduos?style=flat-square&label=Forks" />
-  <img src="https://img.shields.io/github/license/Dev9269/eduos?style=flat-square" />
-  <img src="https://img.shields.io/badge/Debian-13_Trixie-A81D33?style=flat-square&logo=debian" />
-  <img src="https://img.shields.io/badge/KDE-Plasma_6-1D99F3?style=flat-square&logo=kde" />
-</p>
+# 📚 EduOS
 
-**A Personal Project by Jainam**
+[![Stars](https://img.shields.io/github/stars/Dev9269/eduos?style=flat-square&logo=github&color=gold)](https://github.com/Dev9269/eduos)
+[![Forks](https://img.shields.io/github/forks/Dev9269/eduos?style=flat-square&logo=github&color=blue)](https://github.com/Dev9269/eduos/forks)
+[![License](https://img.shields.io/github/license/Dev9269/eduos?style=flat-square&color=brightgreen)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square)](https://github.com/Dev9269/eduos/pulls)
 
-> *Education First. Security Always.*
+Debian-based educational OS for engineering colleges — integrating learning, secure exams, dev tools, cyber labs, and campus administration.
 
-EduOS is a Debian-based educational operating system for engineering colleges and universities. It transforms a standard Linux desktop into a unified campus computing platform — integrating learning resources, secure examinations, software development environments, cybersecurity laboratories, and centralized administration into one cohesive ecosystem.
+**Created by** [Jainam Maru](https://github.com/Dev9269)
+
+</div>
 
 ---
 
