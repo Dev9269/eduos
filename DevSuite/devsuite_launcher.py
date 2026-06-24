@@ -19,8 +19,8 @@ TOOLS = [
     {"name": "VS Code", "icon": "💻", "cmd": "code", "desc": "Visual Studio Code IDE"},
     {"name": "Terminal", "icon": "🖥️", "cmd": "konsole", "desc": "System Terminal"},
     {"name": "Python", "icon": "🐍", "cmd": "python3", "desc": "Python 3 Interpreter"},
-    {"name": "Java", "icon": "☕", "cmd": "bash -c 'java -version; read'", "desc": "Java Runtime"},
-    {"name": "Node.js", "icon": "🟢", "cmd": "bash -c 'node --version; read'", "desc": "Node.js Runtime"},
+    {"name": "Java", "icon": "☕", "cmd": "konsole -e bash -c 'java -version; echo; read -p \"Press Enter...\"'", "desc": "Java Runtime"},
+    {"name": "Node.js", "icon": "🟢", "cmd": "konsole -e bash -c 'node --version; echo; read -p \"Press Enter...\"'", "desc": "Node.js Runtime"},
     {"name": "Git GUI", "icon": "🔀", "cmd": "gitk", "desc": "Git Repository Browser"},
     {"name": "Docker", "icon": "🐳", "cmd": "konsole -e 'docker ps'", "desc": "Docker Container Manager"},
     {"name": "Database", "icon": "🗄️", "cmd": "sqlitebrowser", "desc": "SQLite Database Browser"},
@@ -75,10 +75,12 @@ class DevSuiteWindow(QMainWindow):
                 }
                 QFrame:hover {
                     background: #f8fafc; border-color: #2563eb;
-                    transform: translateY(-2px);
+                    margin: -2px;
                 }
             """)
             card.setFixedSize(200, 140)
+            card.setCursor(Qt.CursorShape.PointingHandCursor)
+            card.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
             card_layout = QVBoxLayout(card)
 
             icon = QLabel(tool["icon"])
@@ -97,7 +99,9 @@ class DevSuiteWindow(QMainWindow):
             desc.setWordWrap(True)
             card_layout.addWidget(desc)
 
-            card.mousePressEvent = lambda e, c=tool["cmd"]: self._launch_tool(c)
+            cmd = tool["cmd"]
+            card.mousePressEvent = lambda e, c=cmd: self._launch_tool(c)
+            card.keyPressEvent = lambda e, c=cmd: self._launch_tool(c) if e.key() in (Qt.Key.Key_Return, Qt.Key.Key_Space) else QFrame.keyPressEvent(card, e)
 
             grid.addWidget(card, row, col)
             col += 1

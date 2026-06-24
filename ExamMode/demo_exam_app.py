@@ -16,6 +16,7 @@ Screens:
 import sys
 import os
 import json
+import shutil
 import subprocess
 import tempfile
 import signal
@@ -28,7 +29,7 @@ from PyQt6.QtWidgets import (
     QStackedWidget, QFrame, QMessageBox, QProgressBar,
     QComboBox, QFileDialog
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QEvent
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QEvent, QObject
 from PyQt6.QtGui import (
     QColor, QFont, QTextCharFormat, QSyntaxHighlighter
 )
@@ -55,25 +56,29 @@ QPushButton {
     font-family: 'Inter', 'Segoe UI', sans-serif;
 }
 QPushButton:hover { background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.25); }
-QPushButton:pressed { background: rgba(255, 255, 255, 0.08); }
+QPushButton:pressed { background: rgba(255, 255, 255, 0.06); padding: 11px 23px 9px 25px; }
 QPushButton:disabled { background: rgba(255, 255, 255, 0.04); color: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.05); }
 QPushButton#secondary {
     background: transparent; border: 2px solid rgba(255, 255, 255, 0.3); color: rgba(255, 255, 255, 0.9);
 }
 QPushButton#secondary:hover { background: rgba(255, 255, 255, 0.08); }
+QPushButton#secondary:pressed { background: rgba(255, 255, 255, 0.03); padding: 11px 23px 9px 25px; }
 QPushButton#danger {
     background: rgba(220, 53, 69, 0.3); border-color: rgba(220, 53, 69, 0.4);
 }
 QPushButton#danger:hover { background: rgba(220, 53, 69, 0.5); }
+QPushButton#danger:pressed { background: rgba(220, 53, 69, 0.2); padding: 11px 23px 9px 25px; }
 QPushButton#success {
     background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.2);
 }
 QPushButton#success:hover { background: rgba(255, 255, 255, 0.25); }
+QPushButton#success:pressed { background: rgba(255, 255, 255, 0.08); padding: 11px 23px 9px 25px; }
 QPushButton#nav {
     background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08);
     padding: 8px 12px; font-size: 13px; min-width: 40px; color: rgba(255, 255, 255, 0.8);
 }
 QPushButton#nav:hover { background: rgba(255, 255, 255, 0.12); }
+QPushButton#nav:pressed { background: rgba(255, 255, 255, 0.03); padding: 9px 11px 7px 13px; }
 QPushButton#nav:checked, QPushButton#nav[current="true"] {
     background: rgba(200, 145, 62, 0.5); border-color: rgba(200, 145, 62, 0.6); color: white;
 }
@@ -368,6 +373,7 @@ class LoginScreen(QWidget):
                 font-family: 'Inter', 'Segoe UI', sans-serif;
             }
             QPushButton:hover { background: rgba(200, 145, 62, 0.65); }
+            QPushButton:pressed { background: rgba(200, 145, 62, 0.35); padding: 15px 13px 13px 15px; }
         """)
         self.login_btn.clicked.connect(self._handle_login)
         card_layout.addWidget(self.login_btn)
@@ -446,6 +452,7 @@ class InstructionsScreen(QWidget):
                 font-family: 'Inter', 'Segoe UI', sans-serif;
             }
             QPushButton:hover { background: rgba(200, 145, 62, 0.65); }
+            QPushButton:pressed { background: rgba(200, 145, 62, 0.35); padding: 15px 13px 13px 15px; }
         """)
         self.start_btn.clicked.connect(self.proceed.emit)
         self.start_btn.setDefault(True)
@@ -540,6 +547,7 @@ class MCQSectionWidget(QWidget):
             QPushButton { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.1);
             border-radius: 8px; padding: 10px 24px; font-size: 14px; font-weight: 600; }
             QPushButton:hover { background: rgba(255,255,255,0.15); }
+            QPushButton:pressed { background: rgba(255,255,255,0.04); padding: 11px 23px 9px 25px; }
             QPushButton:disabled { background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.05); }
         """)
         self.prev_btn.clicked.connect(self._go_prev)
@@ -552,6 +560,7 @@ class MCQSectionWidget(QWidget):
             QPushButton { background: rgba(200,145,62,0.5); color: white; border: 1px solid rgba(200,145,62,0.4);
             border-radius: 8px; padding: 10px 24px; font-size: 14px; font-weight: 600; }
             QPushButton:hover { background: rgba(200,145,62,0.65); }
+            QPushButton:pressed { background: rgba(200,145,62,0.35); padding: 11px 23px 9px 25px; }
         """)
         self.next_btn.clicked.connect(self._go_next)
         nav_row.addWidget(self.next_btn)
@@ -563,6 +572,7 @@ class MCQSectionWidget(QWidget):
             QPushButton { background: rgba(200,145,62,0.5); color: white; border: 1px solid rgba(200,145,62,0.4);
             border-radius: 8px; padding: 12px; font-size: 15px; font-weight: 600; }
             QPushButton:hover { background: rgba(200,145,62,0.65); }
+            QPushButton:pressed { background: rgba(200,145,62,0.35); padding: 13px 11px 11px 13px; }
         """)
         self.submit_mcq_btn.clicked.connect(self._submit_mcq)
         card_layout.addWidget(self.submit_mcq_btn)
@@ -599,16 +609,17 @@ class MCQSectionWidget(QWidget):
         self.topic_label.setText(f"📌 {q['topic']}  |  {q['difficulty']}")
         self.question_label.setText(f"Q{index + 1}. {q['question']}")
 
-        # Block signals while updating
-        self.option_group.blockSignals(True)
+        self.option_group.setExclusive(False)
+        for rb in self.option_widgets:
+            rb.blockSignals(True)
         for i, opt in enumerate(q["options"]):
             self.option_widgets[i].setText(opt)
             self.option_widgets[i].setChecked(False)
-        self.option_group.blockSignals(False)
-
-        # Restore saved answer
         if index in self.answers:
             self.option_widgets[self.answers[index]].setChecked(True)
+        for rb in self.option_widgets:
+            rb.blockSignals(False)
+        self.option_group.setExclusive(True)
 
         self._update_progress()
 
@@ -672,6 +683,7 @@ class CodingSectionWidget(QWidget):
         self.time_remaining = EXAM_CONFIG["coding_duration_minutes"] * 60
         self.code = ""
         self.language = "Python"
+        self._code_by_lang = {}
         self._setup_ui()
 
     def _setup_ui(self):
@@ -733,6 +745,7 @@ class CodingSectionWidget(QWidget):
             QPushButton { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.15);
             border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; }
             QPushButton:hover { background: rgba(255,255,255,0.18); }
+            QPushButton:pressed { background: rgba(255,255,255,0.06); padding: 11px 19px 9px 21px; }
         """)
         run_btn.clicked.connect(self._run_code)
         action_bar.addWidget(run_btn)
@@ -742,6 +755,7 @@ class CodingSectionWidget(QWidget):
             QPushButton { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.1);
             border-radius: 8px; padding: 10px 20px; font-size: 14px; }
             QPushButton:hover { background: rgba(255,255,255,0.12); }
+            QPushButton:pressed { background: rgba(255,255,255,0.04); padding: 11px 19px 9px 21px; }
         """)
         save_draft_btn.clicked.connect(self._save_draft)
         action_bar.addWidget(save_draft_btn)
@@ -753,6 +767,7 @@ class CodingSectionWidget(QWidget):
             QPushButton { background: rgba(200,145,62,0.5); color: white; border: 1px solid rgba(200,145,62,0.4);
             border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; }
             QPushButton:hover { background: rgba(200,145,62,0.65); }
+            QPushButton:pressed { background: rgba(200,145,62,0.35); padding: 11px 19px 9px 21px; }
         """)
         self.submit_coding_btn.clicked.connect(self._submit_coding)
         action_bar.addWidget(self.submit_coding_btn)
@@ -789,8 +804,14 @@ class CodingSectionWidget(QWidget):
             self._submit_coding()
 
     def _change_language(self, lang):
+        # Save current code before switching
+        self._code_by_lang[self.language] = self.code_editor.toPlainText()
         self.language = lang
-        self.code = CODING_CHALLENGE["starter_code"][lang]
+        # Restore previously written code for this language, or load starter code
+        if lang in self._code_by_lang:
+            self.code = self._code_by_lang[lang]
+        else:
+            self.code = CODING_CHALLENGE["starter_code"][lang]
         self.code_editor.setPlainText(self.code)
 
         # Set highlighter
@@ -848,21 +869,22 @@ class CodingSectionWidget(QWidget):
                     return
 
             elif lang == "Java":
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.java', delete=False) as f:
-                    f.write(code)
-                    src = f.name
-                comp = subprocess.run(["javac", src], capture_output=True, text=True, timeout=15)
-                if comp.returncode == 0:
-                    class_name = "Solution"
-                    result = subprocess.run(["java", "-cp", os.path.dirname(src), class_name],
-                                            capture_output=True, text=True, timeout=10)
-                    os.unlink(src)
-                    class_file = os.path.join(os.path.dirname(src), f"{class_name}.class")
-                    if os.path.exists(class_file):
-                        os.unlink(class_file)
-                else:
-                    self.output_area.append(comp.stderr)
-                    return
+                tmpdir = tempfile.mkdtemp()
+                src = os.path.join(tmpdir, "Main.java")
+                try:
+                    with open(src, "w") as f:
+                        f.write(code)
+                    comp = subprocess.run(["javac", src], capture_output=True, text=True, timeout=15)
+                    if comp.returncode == 0:
+                        result = subprocess.run(
+                            ["java", "-cp", tmpdir, "Main"],
+                            capture_output=True, text=True, timeout=10
+                        )
+                    else:
+                        self.output_area.append(comp.stderr)
+                        return
+                finally:
+                    shutil.rmtree(tmpdir, ignore_errors=True)
 
             if 'result' in locals() and result.stdout:
                 self.output_area.append(result.stdout)
@@ -965,6 +987,7 @@ class ReviewScreen(QWidget):
                 padding: 12px; font-size: 15px; font-weight: 600;
             }
             QPushButton:hover { background: rgba(200, 145, 62, 0.65); }
+            QPushButton:pressed { background: rgba(200, 145, 62, 0.35); padding: 13px 11px 11px 13px; }
         """)
         confirm_btn.clicked.connect(self.confirmed.emit)
         card_layout.addWidget(confirm_btn)
@@ -1314,13 +1337,24 @@ class DemoExamWindow(QMainWindow):
             QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
+            self._cleanup()
             self._log_security("EXIT_ATTEMPT", "User confirmed exit")
             event.accept()
         else:
             event.ignore()
 
+    def _cleanup(self):
+        """Stop all timers and remove event filters before exit."""
+        QApplication.instance().removeEventFilter(self._anti_cheat_filter)
+        for attr in ('mcq_section', 'coding_section'):
+            section = getattr(self, attr, None)
+            if section and hasattr(section, 'timer') and section.timer.isActive():
+                section.timer.stop()
+            if section and hasattr(section, 'auto_save_timer') and section.auto_save_timer.isActive():
+                section.auto_save_timer.stop()
 
-class AntiCheatFilter(QWidget):
+
+class AntiCheatFilter(QObject):
     def __init__(self, logger):
         super().__init__()
         self.logger = logger

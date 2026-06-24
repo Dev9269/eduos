@@ -99,12 +99,17 @@ class SecurityKeyDialog(QDialog):
                 font-size: 15px; border: none; border-radius: 8px; font-weight: bold;
             }
             QPushButton:hover { background: #1d4ed8; }
+            QPushButton:pressed { background: #1e40af; padding: 13px 23px 11px 25px; }
         """)
         self.auth_btn.clicked.connect(self.accept)
         btn_layout.addWidget(self.auth_btn)
 
         cancel_btn = QPushButton("Cancel")
-        cancel_btn.setStyleSheet("padding: 12px 24px; font-size: 14px; border: 1px solid #ccc; border-radius: 8px;")
+        cancel_btn.setStyleSheet("""
+            QPushButton { padding: 12px 24px; font-size: 14px; border: 1px solid #ccc; border-radius: 8px; }
+            QPushButton:hover { background: #f3f4f6; }
+            QPushButton:pressed { padding: 13px 23px 11px 25px; }
+        """)
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(cancel_btn)
         layout.addLayout(btn_layout)
@@ -637,6 +642,10 @@ class ExamWindow(QMainWindow):
             event.ignore()
             return
         super().keyPressEvent(event)
+
+    def closeEvent(self, event):
+        self.timer_widget.stop()
+        event.accept()
 
 
 def load_exam_config(exam_file: str) -> dict:

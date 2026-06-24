@@ -1,65 +1,8 @@
-# ── Python ──────────────────────────────────────────────
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
-*.so
-*.egg-info/
-dist/
-build/
-venv/
-.venv/
-
-# ── Development ─────────────────────────────────────────
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-*.bak
-
-# ── System ──────────────────────────────────────────────
-*.log
-*.iso
-*.img
-*.buildinfo
-*.changes
-*.enc
-*.pem
-
-# ── User data & runtime ─────────────────────────────────
-Backups/
-ExamMode/results/
-ExamMode/DemoResults/
-!ExamMode/DemoResults/.gitkeep
-ExamMode/config/
-ExamMode/data/
-ExamMode/exams/*.json
-LearnHub/*.db
-*.sqlite
-*.sqlite3
-.eduos-welcome-done
-
-# ── OS files ────────────────────────────────────────────
 .DS_Store
-Thumbs.db
-Desktop.ini
-.directory
-
-# ── Secrets (filename-based) ────────────────────────────
-**/config.json
-**/*key*
-**/*secret*
-**/*credential*
-
-# ── Build artifacts ─────────────────────────────────────
-build/live-build/work/
-Packages/live-build/work/
-Packages/live-build/output/*.iso
-*.deb
-
-# ── Generated packages (source files tracked in Documentation/) ──
-PresentationPackage-*/
-
-# ── Dependencies ────────────────────────────────────────
-node_modules/
-vendor/
+*.bak
+*.log
+data/
+docs/

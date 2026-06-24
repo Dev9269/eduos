@@ -13,7 +13,7 @@ from datetime import datetime
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget,
-    QGroupBox, QTextEdit, QMessageBox, QHeaderView, QListWidget,
+    QGroupBox, QTextEdit, QLineEdit, QMessageBox, QHeaderView, QListWidget,
     QSplitter, QFrame, QTextBrowser
 )
 from PyQt6.QtCore import Qt, QTimer
@@ -110,6 +110,7 @@ class CyberLabWindow(QMainWindow):
             QPushButton { background: #2563eb; color: white; padding: 12px; font-size: 15px;
                          font-weight: bold; border: none; border-radius: 8px; }
             QPushButton:hover { background: #1d4ed8; }
+            QPushButton:pressed { background: #1e40af; padding: 13px 11px 11px 13px; }
         """)
         self.launch_btn.clicked.connect(self._launch_lab)
         glayout.addWidget(self.launch_btn)
@@ -141,13 +142,13 @@ class CyberLabWindow(QMainWindow):
         tlayout.addWidget(self.console)
 
         cmd_layout = QHBoxLayout()
-        self.cmd_input = QTextEdit()
-        self.cmd_input.setMaximumHeight(40)
+        self.cmd_input = QLineEdit()
         self.cmd_input.setPlaceholderText("Enter command (e.g. nmap -sn 192.168.1.0/24)")
         self.cmd_input.setStyleSheet("font-family: monospace; font-size: 12px; padding: 6px; border: 1px solid #ccc; border-radius: 4px;")
+        self.cmd_input.returnPressed.connect(self._run_command)
         cmd_layout.addWidget(self.cmd_input)
         run_btn = QPushButton("▶ Run")
-        run_btn.setStyleSheet("background: #16a34a; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold;")
+        run_btn.setStyleSheet("QPushButton { background: #16a34a; color: white; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background: #15803d; } QPushButton:pressed { background: #166534; padding: 9px 15px 7px 17px; }")
         run_btn.clicked.connect(self._run_command)
         cmd_layout.addWidget(run_btn)
         tlayout.addLayout(cmd_layout)
@@ -189,9 +190,10 @@ class CyberLabWindow(QMainWindow):
 
         try:
             result = subprocess.run(
-                ["sudo", "docker", "run", "--rm", "-d", "--network", "none", lab["docker"],
+                ["sudo", "-A", "docker", "run", "--rm", "-d", "--network", "none", lab["docker"],
                  "sh", "-c", "sleep 3600"],
-                capture_output=True, text=True, timeout=120
+                capture_output=True, text=True, timeout=120,
+                env={"SUDO_ASKPASS": "/bin/false"}
             )
             if result.returncode == 0:
                 container_id = result.stdout.strip()[:12]
@@ -204,7 +206,7 @@ class CyberLabWindow(QMainWindow):
             self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Error: {e}")
 
     def _run_command(self):
-        cmd = self.cmd_input.toPlainText().strip()
+        cmd = self.cmd_input.text().strip()
         if not cmd:
             return
 
@@ -213,8 +215,9 @@ class CyberLabWindow(QMainWindow):
 
         try:
             result = subprocess.run(
-                ["sudo", "sh", "-c", cmd],
-                capture_output=True, text=True, timeout=30
+                ["sudo", "-A", "sh", "-c", cmd],
+                capture_output=True, text=True, timeout=30,
+                env={"SUDO_ASKPASS": "/bin/false"}
             )
             output = result.stdout or result.stderr or "No output"
             self.console.append(output[:2000])
@@ -227,8 +230,9 @@ class CyberLabWindow(QMainWindow):
 
     def closeEvent(self, event):
         for name, cid in self.active_containers.items():
-            self.console.append(f"Cleaning up {name} ({cid})...")
-            subprocess.run(["sudo", "docker", "rm", "-f", cid], capture_output=True)
+            subprocess.run(["sudo", "-A", "docker", "rm", "-f", cid],
+                           capture_output=True,
+                           env={"SUDO_ASKPASS": "/bin/false"})
         event.accept()
 
 

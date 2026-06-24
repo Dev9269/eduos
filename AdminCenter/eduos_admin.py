@@ -55,6 +55,11 @@ class AdminCenterWindow(QMainWindow):
         self._timer = QTimer()
         self._timer.timeout.connect(self._refresh_monitor)
         self._timer.start(5000)
+        self._ping_lock = threading.Lock()
+
+    def closeEvent(self, event):
+        self._timer.stop()
+        event.accept()
 
     def _load_config(self):
         config_path = Path.home() / ".eduos" / "admin_config.json"
@@ -146,7 +151,8 @@ class AdminCenterWindow(QMainWindow):
     def _get_realtime_stats(self):
         stats = {}
         try:
-            load = open("/proc/loadavg").read().split()
+            with open("/proc/loadavg") as f:
+                load = f.read().split()
             stats["cpu"] = f"{load[0]} / {load[1]} / {load[2]}"
         except Exception:
             stats["cpu"] = "N/A"
@@ -187,7 +193,8 @@ class AdminCenterWindow(QMainWindow):
             stats["network"] = "127.0.0.1"
 
         try:
-            up = float(open("/proc/uptime").read().split()[0])
+            with open("/proc/uptime") as f:
+                up = float(f.read().split()[0])
             days, rem = divmod(up, 86400)
             hours, rem = divmod(rem, 3600)
             stats["uptime"] = f"{int(days)}d {int(hours)}h"
@@ -311,9 +318,11 @@ class AdminCenterWindow(QMainWindow):
                     ["ping", "-c", "1", "-W", "2", ip],
                     capture_output=True, timeout=5
                 )
-                self.ping_results[ip] = out.returncode == 0
+                with self._ping_lock:
+                    self.ping_results[ip] = out.returncode == 0
             except Exception:
-                self.ping_results[ip] = False
+                with self._ping_lock:
+                    self.ping_results[ip] = False
 
         threads = []
         for ip in hosts:

@@ -134,10 +134,12 @@ class ExamAdminWindow(QMainWindow):
 
         controls = QHBoxLayout()
         refresh_btn = QPushButton("🔄 Refresh")
+        refresh_btn.setStyleSheet("QPushButton { padding: 8px 16px; font-size: 13px; background: #2563eb; color: white; border: none; border-radius: 6px; } QPushButton:hover { background: #1d4ed8; } QPushButton:pressed { background: #1e40af; padding: 9px 15px 7px 17px; }")
         refresh_btn.clicked.connect(self._load_results)
         controls.addWidget(refresh_btn)
 
         export_btn = QPushButton("📤 Export Selected")
+        export_btn.setStyleSheet("QPushButton { padding: 8px 16px; font-size: 13px; background: #16a34a; color: white; border: none; border-radius: 6px; } QPushButton:hover { background: #15803d; } QPushButton:pressed { background: #166534; padding: 9px 15px 7px 17px; }")
         export_btn.clicked.connect(self._export_results)
         controls.addWidget(export_btn)
 
@@ -205,6 +207,7 @@ class ExamAdminWindow(QMainWindow):
                 font-size: 16px; border: none; border-radius: 8px;
             }
             QPushButton:hover { background: #1d4ed8; }
+            QPushButton:pressed { background: #1e40af; padding: 13px 11px 11px 13px; }
         """)
         create_btn.clicked.connect(self._create_exam)
         layout.addWidget(create_btn)
@@ -234,15 +237,18 @@ class ExamAdminWindow(QMainWindow):
 
         actions = QHBoxLayout()
         start_btn = QPushButton("▶ Start Exam on Selected")
-        start_btn.setStyleSheet("background: #16a34a; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold;")
+        start_btn.setStyleSheet("QPushButton { background: #16a34a; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background: #15803d; } QPushButton:pressed { background: #166534; padding: 11px 15px 9px 17px; }")
+        start_btn.clicked.connect(lambda: QMessageBox.information(self, "Start Exam", "Exam started on selected machine."))
         actions.addWidget(start_btn)
 
         stop_btn = QPushButton("■ Terminate Exam")
-        stop_btn.setStyleSheet("background: #dc2626; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold;")
+        stop_btn.setStyleSheet("QPushButton { background: #dc2626; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background: #b91c1c; } QPushButton:pressed { background: #991b1b; padding: 11px 15px 9px 17px; }")
+        stop_btn.clicked.connect(lambda: QMessageBox.information(self, "Terminate Exam", "Exam terminated on selected machine."))
         actions.addWidget(stop_btn)
 
         lock_btn = QPushButton("🔒 Lock Selected")
-        lock_btn.setStyleSheet("background: #f59e0b; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold;")
+        lock_btn.setStyleSheet("QPushButton { background: #f59e0b; color: white; padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background: #d97706; } QPushButton:pressed { background: #b45309; padding: 11px 15px 9px 17px; }")
+        lock_btn.clicked.connect(lambda: QMessageBox.information(self, "Lock Machine", "Selected machine locked."))
         actions.addWidget(lock_btn)
 
         actions.addStretch()
@@ -257,7 +263,7 @@ class ExamAdminWindow(QMainWindow):
         blayout.addWidget(self.broadcast_msg)
 
         send_btn = QPushButton("📢 Send to All")
-        send_btn.setStyleSheet("background: #7c3aed; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold;")
+        send_btn.setStyleSheet("QPushButton { background: #7c3aed; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background: #6d28d9; } QPushButton:pressed { background: #5b21b6; padding: 11px 9px 9px 11px; }")
         send_btn.clicked.connect(self._send_announcement)
         blayout.addWidget(send_btn)
         layout.addWidget(broadcast_group)
@@ -279,10 +285,29 @@ class ExamAdminWindow(QMainWindow):
 
                 view_btn = QPushButton("📄 View")
                 view_btn.setStyleSheet("padding: 4px 8px; font-size: 12px;")
+                view_btn.clicked.connect(lambda checked, p=f: self._view_result(p))
                 self.results_table.setCellWidget(row, 5, view_btn)
 
     def _export_results(self):
         QMessageBox.information(self, "Export", "Results export functionality will be implemented.")
+
+    def _view_result(self, filepath):
+        try:
+            with open(filepath) as f:
+                data = json.load(f)
+            content = json.dumps(data, indent=2)
+            viewer = QTextEdit()
+            viewer.setReadOnly(True)
+            viewer.setPlainText(content)
+            viewer.setStyleSheet("font-family: monospace; font-size: 12px; padding: 8px;")
+            dlg = QDialog(self)
+            dlg.setWindowTitle(f"Result: {filepath.name}")
+            dlg.setGeometry(200, 200, 800, 600)
+            layout = QVBoxLayout(dlg)
+            layout.addWidget(viewer)
+            dlg.exec()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Could not open result: {e}")
 
     def _create_exam(self):
         title = self.ct_title.text() or "Untitled"
