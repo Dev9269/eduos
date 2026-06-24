@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+  <defs>
+    <linearGradient id="tooltipBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f1e;stop-opacity:0.95"/>
+      <stop offset="100%" style="stop-color:#0a0a14;stop-opacity:0.98"/>
+    </linearGradient>
+    <filter id="tooltipShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="16" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <rect x="2" y="2" width="196" height="56" rx="10" ry="10" fill="url(#tooltipBg)" filter="url(#tooltipShadow)"/>
+  <rect x="2" y="2" width="196" height="56" rx="10" ry="10" fill="none" stroke="rgba(108,99,255,0.2)" stroke-width="1"/>
+</svg>

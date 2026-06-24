@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=EduOS Liquid Glass
+Comment=Premium educational OS theme with frosted glass aesthetics
+Type=Service
+X-KDE-PluginInfo-Author=EduOS Team
+X-KDE-PluginInfo-Email=team@eduos.org
+X-KDE-PluginInfo-Name=EduOS-Plasma
+X-KDE-PluginInfo-Version=2.0
+X-KDE-PluginInfo-Website=https://eduos.org
+X-KDE-PluginInfo-License=GPL-3.0
+X-KDE-PluginInfo-EnabledByDefault=true
+X-KDE-ServiceTypes=Plasma/Theme
+X-KDE-ParentApp=plasma-desktop
+X-Plasma-API=5.0
