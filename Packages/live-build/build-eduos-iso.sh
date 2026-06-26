@@ -46,8 +46,15 @@ cd "$WORK_DIR"
 # ── Configure the build ────────────────────────────────────────────
 lb config \
     --distribution trixie \
-    --archive-areas "main contrib non-free-firmware" \
+    --archive-areas "main contrib non-free" \
     --binary-images iso-hybrid \
+    --mirror-bootstrap http://deb.debian.org/debian \
+    --mirror-chroot http://deb.debian.org/debian \
+    --mirror-binary http://deb.debian.org/debian \
+    --mirror-chroot-security http://deb.debian.org/debian-security \
+    --mirror-binary-security http://deb.debian.org/debian-security \
+    --no-check-gpg \
+    --no-recommends \
     --bootappend-live "boot=live components username=student hostname=eduos locales=en_US.UTF-8 keyboard-layouts=us" \
     --bootappend-install "username=student hostname=eduos" \
     --iso-application "EduOS Educational Operating System" \

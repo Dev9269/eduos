@@ -11,7 +11,7 @@ jobs:
       - name: Install Debian live-build
         run: |
           sudo apt-get update
-          sudo apt-get install -y -qq live-build debootstrap wget ca-certificates
+          sudo apt-get install -y -qq live-build debootstrap wget ca-certificates debian-archive-keyring
       - name: Build ISO
         run: |
           export EDUOS_REPO="$GITHUB_WORKSPACE"
