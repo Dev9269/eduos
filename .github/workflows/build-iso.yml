@@ -8,15 +8,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Install Debian live-build
+      - name: Build ISO in Debian container
         run: |
-          sudo apt-get update
-          sudo apt-get install -y -qq live-build debootstrap wget ca-certificates debian-archive-keyring
-      - name: Build ISO
-        run: |
-          export EDUOS_REPO="$GITHUB_WORKSPACE"
-          cd "$EDUOS_REPO"
-          sudo bash Packages/live-build/build-eduos-iso.sh
+          docker run --privileged --rm -v $PWD:/build -w /build debian:trixie-slim bash -c "
+            apt-get update && apt-get install -y -qq live-build debootstrap
+            export EDUOS_REPO=/build
+            cd /build
+            bash Packages/live-build/build-eduos-iso.sh
+          "
         timeout-minutes: 120
       - name: Upload ISO
         uses: actions/upload-artifact@v4
