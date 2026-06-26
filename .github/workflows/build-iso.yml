@@ -21,6 +21,7 @@ jobs:
 
       - name: Copy EduOS files into chroot
         run: |
+          sudo mkdir -p ./chroot/opt/eduos
           sudo cp -r AdminCenter CyberLab DevSuite ExamMode \
             LearnHub Scripts Branding Themes ./chroot/opt/eduos/
           sudo cp -r Packages ./chroot/opt/eduos/
