@@ -1,0 +1,31 @@
+name: Build EduOS ISO
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-24.04
+    container:
+      image: debian:trixie-slim
+      options: --user root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: eduos-repo
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y -qq live-build debootstrap git wget ca-certificates
+      - name: Build ISO
+        run: |
+          export EDUOS_REPO="$GITHUB_WORKSPACE/eduos-repo"
+          cd "$EDUOS_REPO"
+          bash Packages/live-build/build-eduos-iso.sh
+        timeout-minutes: 120
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: eduos-iso
+          path: eduos-repo/Packages/live-build/output/*.iso
+          retention-days: 30
