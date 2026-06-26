@@ -3,10 +3,26 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
         run: |
-          mkdir -p build && cd build && cmake .. && make
+          if (Test-Path requirements.txt) {
+            pip install -r requirements.txt
+          }
+        shell: pwsh
+      - name: Run tests
+        run: |
+          if (Test-Path tests/) {
+            pip install pytest
+            pytest
+          } else {
+            Write-Host "No tests found"
+            exit 0
+          }
+        shell: pwsh

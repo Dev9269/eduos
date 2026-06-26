@@ -1,5 +1,4 @@
 name: Build EduOS ISO
-
 on:
   workflow_dispatch:
 
@@ -8,18 +7,58 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Build ISO in Debian container
+
+      - name: Install build tools
         run: |
-          docker run --privileged --rm -v $PWD:/build -w /build debian:trixie-slim bash -c "
-            apt-get update && apt-get install -y -qq live-build debootstrap
-            export EDUOS_REPO=/build
-            cd /build
-            bash Packages/live-build/build-eduos-iso.sh
+          sudo apt-get update
+          sudo apt-get install -y debootstrap xorriso squashfs-tools \
+            grub-pc-bin grub-efi-amd64-bin mtools isolinux
+
+      - name: Bootstrap Debian base
+        run: |
+          sudo debootstrap --arch=amd64 trixie ./chroot \
+            http://deb.debian.org/debian
+
+      - name: Copy EduOS files into chroot
+        run: |
+          sudo cp -r AdminCenter CyberLab DevSuite ExamMode \
+            LearnHub Scripts Branding Themes ./chroot/opt/eduos/
+          sudo cp -r Packages ./chroot/opt/eduos/
+
+      - name: Install EduOS packages inside chroot
+        run: |
+          sudo chroot ./chroot bash -c "
+            apt-get update
+            apt-get install -y --no-install-recommends \
+              python3 python3-pip python3-pyqt6 python3-flask \
+              sqlite3 git curl wget ufw openssh-server \
+              linux-image-amd64 live-boot systemd-sysv
+            pip3 install cryptography fastapi uvicorn --break-system-packages
           "
-        timeout-minutes: 120
+
+      - name: Build squashfs
+        run: |
+          sudo mksquashfs chroot filesystem.squashfs -comp xz -noappend
+
+      - name: Build ISO with xorriso
+        run: |
+          mkdir -p isoroot/live isoroot/boot/grub
+          sudo cp filesystem.squashfs isoroot/live/
+          sudo cp chroot/boot/vmlinuz-* isoroot/live/vmlinuz
+          sudo cp chroot/boot/initrd.img-* isoroot/live/initrd.img
+          cat > isoroot/boot/grub/grub.cfg << 'EOF'
+          set default=0
+          set timeout=5
+          menuentry "EduOS" {
+            linux /live/vmlinuz boot=live quiet splash
+            initrd /live/initrd.img
+          }
+          EOF
+          sudo grub-mkrescue -o eduos.iso isoroot -- -volid EduOS
+
       - name: Upload ISO
         uses: actions/upload-artifact@v4
         with:
           name: eduos-iso
-          path: Packages/live-build/output/*.iso
+          path: eduos.iso
           retention-days: 30
