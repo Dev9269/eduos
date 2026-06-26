@@ -53,7 +53,6 @@ lb config \
     --mirror-binary http://deb.debian.org/debian \
     --mirror-chroot-security http://deb.debian.org/debian-security \
     --mirror-binary-security http://deb.debian.org/debian-security \
-
     --bootappend-live "boot=live components username=student hostname=eduos locales=en_US.UTF-8 keyboard-layouts=us" \
     --bootappend-install "username=student hostname=eduos" \
     --iso-application "EduOS Educational Operating System" \
