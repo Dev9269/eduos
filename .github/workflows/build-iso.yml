@@ -42,11 +42,7 @@ jobs:
             echo 'student:student123' | chpasswd
             echo 'student ALL=(ALL) ALL' >> /etc/sudoers.d/student
             mkdir -p /etc/sddm.conf.d
-            cat > /etc/sddm.conf.d/autologin.conf << SDDM
-[Autologin]
-User=student
-Session=plasma.desktop
-SDDM
+            printf '[Autologin]\nUser=student\nSession=plasma.desktop\n' > /etc/sddm.conf.d/autologin.conf
             systemctl enable sddm
           "
 
