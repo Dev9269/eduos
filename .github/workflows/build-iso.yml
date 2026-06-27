@@ -44,6 +44,10 @@ jobs:
             mkdir -p /etc/sddm.conf.d
             printf '[Autologin]\nUser=student\nSession=plasma.desktop\n' > /etc/sddm.conf.d/autologin.conf
             systemctl enable sddm
+            sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+            sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+            printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' >> /etc/ssh/sshd_config
+            systemctl enable ssh
           "
 
       - name: Build squashfs
