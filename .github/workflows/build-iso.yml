@@ -33,12 +33,21 @@ jobs:
             apt-get install -y --no-install-recommends \
               python3 python3-pip python3-pyqt6 python3-flask \
               sqlite3 git curl wget ufw openssh-server \
-              linux-image-amd64 live-boot live-config systemd-sysv sudo
+              linux-image-amd64 live-boot live-config systemd-sysv sudo \
+              kde-plasma-desktop plasma-workspace sddm sddm-theme-breeze \
+              konsole dolphin firefox-esr
             pip3 install cryptography fastapi uvicorn --break-system-packages
             echo 'root:root' | chpasswd
             useradd -m -s /bin/bash student
             echo 'student:student123' | chpasswd
             echo 'student ALL=(ALL) ALL' >> /etc/sudoers.d/student
+            mkdir -p /etc/sddm.conf.d
+            cat > /etc/sddm.conf.d/autologin.conf << SDDM
+[Autologin]
+User=student
+Session=plasma.desktop
+SDDM
+            systemctl enable sddm
           "
 
       - name: Build squashfs
