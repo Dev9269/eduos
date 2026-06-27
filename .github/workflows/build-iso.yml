@@ -33,8 +33,12 @@ jobs:
             apt-get install -y --no-install-recommends \
               python3 python3-pip python3-pyqt6 python3-flask \
               sqlite3 git curl wget ufw openssh-server \
-              linux-image-amd64 live-boot systemd-sysv
+              linux-image-amd64 live-boot live-config systemd-sysv sudo
             pip3 install cryptography fastapi uvicorn --break-system-packages
+            echo 'root:root' | chpasswd
+            useradd -m -s /bin/bash student
+            echo 'student:student123' | chpasswd
+            echo 'student ALL=(ALL) ALL' >> /etc/sudoers.d/student
           "
 
       - name: Build squashfs
@@ -51,7 +55,7 @@ jobs:
           set default=0
           set timeout=5
           menuentry "EduOS" {
-            linux /live/vmlinuz boot=live quiet splash
+            linux /live/vmlinuz boot=live quiet splash username=student
             initrd /live/initrd.img
           }
           EOF
