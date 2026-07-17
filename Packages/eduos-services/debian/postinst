@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Enable and start EduOS services
+        if command -v systemctl >/dev/null 2>&1; then
+            for svc in edos-sync edos-update edos-exam edos-security edos-server; do
+                if [ -f "/lib/systemd/system/$svc.service" ]; then
+                    systemctl enable "$svc.service" 2>/dev/null || true
+                    systemctl start "$svc.service" 2>/dev/null || true
+                fi
+            done
+        fi
+        ;;
+esac
+
+exit 0

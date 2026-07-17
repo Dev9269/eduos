@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=EduOS Developer Suite
+Comment=Write and manage code projects
+Exec=eduos-devsuite
+Icon=eduos-devsuite
+Terminal=false
+Type=Application
+Categories=Development;IDE;
+StartupNotify=true

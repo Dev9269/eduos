@@ -1,0 +1,13 @@
+Source: eduos-services
+Section: edu
+Priority: optional
+Maintainer: EduOS Team <team@edos.edu>
+Build-Depends: debhelper-compat (= 13), dh-python
+Standards-Version: 4.7.0
+
+Package: eduos-services
+Architecture: all
+Depends: python3, systemd, ${misc:Depends}
+Description: EduOS System Services
+ Systemd services and Python daemons for EduOS v3 providing
+ sync, update, exam, and security monitoring functionality.

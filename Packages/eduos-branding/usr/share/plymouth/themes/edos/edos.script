@@ -1,0 +1,10 @@
+wallpaper_image = Image("logo.png");
+fun animated_progress(callback) {
+    progress = 0.0;
+    while (progress <= 1.0) {
+        callback(progress);
+        progress = progress + 0.01;
+        sleep(0.03);
+    }
+}
+animated_progress();

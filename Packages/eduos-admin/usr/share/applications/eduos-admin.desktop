@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=EduOS Admin Center
+Comment=Manage EduOS system and users
+Exec=eduos-admin
+Icon=eduos-admin
+Terminal=false
+Type=Application
+Categories=System;Administration;
+StartupNotify=true

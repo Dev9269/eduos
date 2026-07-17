@@ -1,0 +1,3 @@
+lib/systemd/system/edos-server.service
+etc/edos/server.conf
+usr/lib/edos/server/*

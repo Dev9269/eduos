@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=EduOS Settings
+Comment=Configure EduOS system settings
+Exec=eduos-settings
+Icon=eduos-settings
+Terminal=false
+Type=Application
+Categories=Settings;System;
+StartupNotify=true

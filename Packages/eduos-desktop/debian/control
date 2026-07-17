@@ -1,0 +1,13 @@
+Source: eduos-desktop
+Section: edu
+Priority: optional
+Maintainer: EduOS Team <team@edos.edu>
+Build-Depends: debhelper-compat (= 13), dh-python
+Standards-Version: 4.7.0
+
+Package: eduos-desktop
+Architecture: all
+Depends: python3, plasma-desktop, ${misc:Depends}
+Description: EduOS Desktop Configuration
+ KDE Plasma desktop configuration for EduOS v3 including default
+ user settings, desktop theme, color scheme, and konsole theme.

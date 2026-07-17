@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=EduOS Update Manager
+Comment=Manage system updates
+Exec=eduos-update
+Icon=eduos-update
+Terminal=false
+Type=Application
+Categories=System;Settings;
+StartupNotify=true

@@ -1,0 +1,39 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Create edos user if it doesn't exist
+        if ! getent passwd edos >/dev/null 2>&1; then
+            adduser --system --group --home /home/edos \
+                --shell /bin/bash --disabled-password edos 2>/dev/null || true
+            mkdir -p /home/edos
+            chown edos:edos /home/edos
+            chmod 755 /home/edos
+        fi
+
+        # Set Plymouth theme
+        if [ -f /usr/share/plymouth/themes/edos/edos.plymouth ]; then
+            plymouth-set-default-theme edos 2>/dev/null || true
+        fi
+
+        # Update SDDM theme
+        if [ -d /usr/share/sddm/themes/edos ]; then
+            mkdir -p /etc/sddm.conf.d
+            cat > /etc/sddm.conf.d/edos-theme.conf << 'SDDMEOF'
+[Theme]
+Current=edos
+SDDMEOF
+        fi
+
+        # Copy logo.png for SDDM if it exists
+        if [ -f /usr/share/plymouth/themes/edos/logo.png ] && \
+           [ ! -f /usr/share/sddm/themes/edos/logo.png ]; then
+            cp -f /usr/share/plymouth/themes/edos/logo.png \
+                /usr/share/sddm/themes/edos/logo.png 2>/dev/null || true
+        fi
+        ;;
+esac
+
+# dh_installdeb will replace this shell snippet
+exit 0

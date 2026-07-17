@@ -1,0 +1,12 @@
+[Unit]
+Description=EduOS Update Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/edos/services/update-daemon.py
+Restart=on-failure
+RestartSec=10
+User=edos
+
+[Install]
+WantedBy=multi-user.target

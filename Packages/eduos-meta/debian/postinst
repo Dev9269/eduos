@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Welcome message
+        cat > /etc/motd << 'MOTDEOF'
+╔══════════════════════════════════════════╗
+║        Welcome to EduOS v3.0!            ║
+║     The Educational Operating System     ║
+║                                          ║
+║    Login: edos / edos                    ║
+║                                          ║
+║    For help: man eduos                   ║
+╚══════════════════════════════════════════╝
+MOTDEOF
+        ;;
+esac
+
+exit 0

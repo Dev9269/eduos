@@ -1,0 +1,13 @@
+Source: eduos-cyberlab
+Section: edu
+Priority: optional
+Maintainer: EduOS Team <team@edos.edu>
+Build-Depends: debhelper-compat (= 13), dh-python
+Standards-Version: 4.7.0
+
+Package: eduos-cyberlab
+Architecture: all
+Depends: python3, python3-pyqt5, ${misc:Depends}
+Description: EduOS Cyber Lab
+ Cybersecurity lab environment for EduOS v3 providing
+ security tools, network analysis, and lab management.

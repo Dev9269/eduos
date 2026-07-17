@@ -1,0 +1,5 @@
+etc/skel/.config/*
+usr/share/plasma/layout-templates/org.edos.desktop/*
+usr/share/plasma/desktoptheme/edos-dark/*
+usr/share/color-schemes/EduOSDark.colors
+usr/share/konsole/EduOS.colorscheme

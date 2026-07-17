@@ -1,0 +1,36 @@
+# EduOS GRUB Theme
+title-font: "DejaVu Sans Bold 12"
+title-color: "#E8F4FD"
+title-text: "EduOS v3.0"
+desktop-image: "background.png"
+desktop-color: "#0A1628"
+terminal-font: "DejaVu Sans Mono 10"
+terminal-box: "#0F2044"
+terminal-left: "0"
+terminal-top: "0"
+terminal-width: "100%"
+terminal-height: "100%"
++ boot_menu {
+    left = 20%
+    top = 25%
+    width = 60%
+    height = 50%
+    item_color = "#8899B4"
+    selected_item_color = "#E8F4FD"
+    item_height = 32
+    item_padding = 8
+    item_spacing = 4
+    item_font = "DejaVu Sans 11"
+    selected_item_font = "DejaVu Sans Bold 11"
+    selected_item_pixmap_style = "select-*.png"
+    scrollbar = true
+}
++ progress_bar {
+    id = "__timeout__"
+    left = 20%
+    top = 80%
+    width = 60%
+    height = 4
+    bar_color = "#2563EB"
+    bg_color = "#0F2044"
+}

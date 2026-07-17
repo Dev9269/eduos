@@ -1,0 +1,5 @@
+# EduOS GRUB Theme
+desktop-image: "background.png"
+title-text: "EduOS"
+title-color: "#00d4ff"
+title-font: "DejaVu Sans Bold 24"

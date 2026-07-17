@@ -1,0 +1,4 @@
+[Compositing]
+Enabled=true
+OpenGLIsUnsafe=false
+Backend=OpenGL

@@ -1,0 +1,15 @@
+Source: eduos-meta
+Section: edu
+Priority: optional
+Maintainer: EduOS Team <team@edos.edu>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+
+Package: eduos
+Architecture: all
+Depends: eduos-branding, eduos-desktop, eduos-services, eduos-exam,
+ eduos-learnhub, eduos-admin, eduos-devsuite, eduos-cyberlab,
+ eduos-settings, eduos-update, eduos-server
+Description: EduOS Metapackage
+ Meta package for EduOS v3 educational operating system.
+ Installs all core EduOS components and applications.

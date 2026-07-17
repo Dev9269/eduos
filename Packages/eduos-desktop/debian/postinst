@@ -1,0 +1,28 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Ensure edos user has desktop directories
+        if getent passwd edos >/dev/null 2>&1; then
+            mkdir -p /home/edos/Desktop /home/edos/Documents /home/edos/Downloads
+            mkdir -p /home/edos/Music /home/edos/Pictures /home/edos/Videos
+            chown -R edos:edos /home/edos 2>/dev/null || true
+
+            # Copy desktop files
+            if [ -d /usr/share/applications ]; then
+                for f in eduos-admin.desktop eduos-exam.desktop eduos-learnhub.desktop \
+                          eduos-devsuite.desktop eduos-cyberlab.desktop \
+                          eduos-settings.desktop eduos-update.desktop; do
+                    if [ -f "/usr/share/applications/$f" ]; then
+                        cp -f "/usr/share/applications/$f" "/home/edos/Desktop/$f" 2>/dev/null || true
+                        chown edos:edos "/home/edos/Desktop/$f" 2>/dev/null || true
+                        chmod +x "/home/edos/Desktop/$f" 2>/dev/null || true
+                    fi
+                done
+            fi
+        fi
+        ;;
+esac
+
+exit 0

@@ -1,0 +1,39 @@
+Wallpaper.SetBackgroundTopColor(0.0, 0.1, 0.2);
+Wallpaper.SetBackgroundBottomColor(0.0, 0.0, 0.05);
+
+fun message_callback(text) {}
+
+fun display_theme() {
+    Window.SetBackgroundTopColor(0.0, 0.1, 0.2);
+    Window.SetBackgroundBottomColor(0.0, 0.0, 0.05);
+
+    logo = Image.Text("logo.png");
+    logo.SetX(Window.GetWidth() / 2 - 64);
+    logo.SetY(Window.GetHeight() / 3 - 64);
+    logo.SetOpacity(0.9);
+    logo.SetZ(10);
+
+    title = Text.Text("EduOS v3.0");
+    title.SetX(Window.GetWidth() / 2 - 60);
+    title.SetY(Window.GetHeight() / 3 + 60);
+    title.SetColor(0.15, 0.39, 0.92);
+    title.SetFontName("DejaVu Sans Bold");
+    title.SetFontSize(22);
+    title.SetZ(10);
+
+    progress_bar = ProgressBar.Bar();
+    progress_bar.SetX(Window.GetWidth() * 0.15);
+    progress_bar.SetY(Window.GetHeight() * 0.7);
+    progress_bar.SetWidth(Window.GetWidth() * 0.7);
+    progress_bar.SetHeight(12);
+    progress_bar.SetBarColor(0.15, 0.39, 0.92);
+    progress_bar.SetBackgroundColor(0.04, 0.06, 0.12);
+    progress_bar.SetZ(10);
+}
+
+fun refresh_callback() {
+    progress_bar.SetValue(Plymouth.GetProgress());
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);
+display_theme();

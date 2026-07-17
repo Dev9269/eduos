@@ -1,0 +1,13 @@
+[Unit]
+Description=EduOS Institution Server
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/edos/server/__main__.py
+Restart=on-failure
+RestartSec=10
+User=edos
+WorkingDirectory=/usr/lib/edos/server
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=EduOS
+Description=EduOS Boot Theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/edos
+ScriptFile=/usr/share/plymouth/themes/edos/edos.script

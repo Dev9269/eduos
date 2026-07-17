@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=EduOS Cyber Lab
+Comment=Cybersecurity lab and tools
+Exec=eduos-cyberlab
+Icon=eduos-cyberlab
+Terminal=false
+Type=Application
+Categories=Education;Security;
+StartupNotify=true

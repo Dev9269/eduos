@@ -1,0 +1,12 @@
+[Unit]
+Description=EduOS Security Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/edos/services/security-daemon.py
+Restart=on-failure
+RestartSec=5
+User=edos
+
+[Install]
+WantedBy=multi-user.target

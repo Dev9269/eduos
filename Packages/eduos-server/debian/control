@@ -1,0 +1,13 @@
+Source: eduos-server
+Section: edu
+Priority: optional
+Maintainer: EduOS Team <team@edos.edu>
+Build-Depends: debhelper-compat (= 13), dh-python
+Standards-Version: 4.7.0
+
+Package: eduos-server
+Architecture: all
+Depends: python3, python3-fastapi, python3-uvicorn, python3-jwcrypto, python3-pydantic, ${misc:Depends}
+Description: EduOS Institution Server
+ Institutional server for EduOS v3 providing REST API,
+ user management, course management, and exam services.

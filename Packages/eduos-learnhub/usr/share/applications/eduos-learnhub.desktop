@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=EduOS Learn Hub
+Comment=Access courses and learning materials
+Exec=eduos-learnhub
+Icon=eduos-learnhub
+Terminal=false
+Type=Application
+Categories=Education;
+StartupNotify=true

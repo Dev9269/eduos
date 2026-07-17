@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=EduOS Exam Portal
+Comment=Take and manage exams
+Exec=eduos-exam
+Icon=eduos-exam
+Terminal=false
+Type=Application
+Categories=Education;Exam;
+StartupNotify=true

@@ -1,0 +1,12 @@
+[Unit]
+Description=EduOS Synchronization Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/edos/services/sync-daemon.py
+Restart=on-failure
+RestartSec=5
+User=edos
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=EduOS Exam Monitoring Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/edos/services/exam-daemon.py
+Restart=on-failure
+RestartSec=5
+User=edos
+
+[Install]
+WantedBy=multi-user.target
