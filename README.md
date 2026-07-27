@@ -34,9 +34,9 @@ eduos-hardening  # Apply system hardening
 | User | Password | Role |
 |------|----------|------|
 | `jainam` | *(personal)* | Administrator / Developer |
-| `student` | `student123` | Daily learning |
-| `exam` | `exam123` | Restricted examinations |
-| `admin` | `admin123` | Lab administration |
+| `student` | *(set during installation)* | Daily learning |
+| `exam` | *(set during installation)* | Restricted examinations |
+| `admin` | *(set during installation)* | Lab administration |
 
 ## 🏗️ Architecture
 

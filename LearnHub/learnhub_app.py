@@ -13,10 +13,31 @@ from datetime import datetime, date
 from pathlib import Path
 
 from flask import (
-    Flask, render_template_string, request, redirect,
-    url_for, jsonify, session, send_from_directory, flash
+    Flask,
+    render_template_string,
+    request,
+    redirect,
+    url_for,
+    jsonify,
+    session,
+    send_from_directory,
+    flash,
 )
-from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
+from design_system import (
+    EduOSColors as C,
+    apply_glass_theme,
+    glass_card_style,
+    glass_button_style,
+    accent_glow_style,
+    glass_success_button_style,
+    glass_danger_button_style,
+    glass_warning_button_style,
+    status_badge_style,
+    StatusBadge,
+    SectionTitle,
+    glass_stat_card_style,
+    glass_banner_style,
+)
 
 
 DATA_DIR = Path.home() / ".eduos" / "learnhub"
@@ -25,8 +46,22 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 app = Flask(__name__)
-app.secret_key = "eduos-learnhub-secret-key-2026"
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+app.secret_key = os.environ.get("EDUOS_FLASK_SECRET", os.urandom(32).hex())
+app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
+
+
+@app.after_request
+def add_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    )
+    return response
 
 
 BASE = """<!doctype html>
@@ -113,7 +148,7 @@ def init_db():
     db_path = DATA_DIR / "learnhub.db"
     conn = sqlite3.connect(str(db_path))
     c = conn.cursor()
-    c.executescript('''
+    c.executescript("""
         CREATE TABLE IF NOT EXISTS materials (
             id INTEGER PRIMARY KEY, title TEXT, subject TEXT,
             description TEXT, file_path TEXT, uploaded DATE
@@ -157,33 +192,37 @@ def init_db():
             (3, 'Database Normalization', 'CS301', '1NF, 2NF, 3NF, BCNF explained with examples. Includes normalization exercises.', '', '2026-06-05');
         INSERT OR IGNORE INTO notes (id, title, content, created, updated) VALUES
             (1, 'Quick Reference: Big-O Notation', 'Common time complexities:\\n- O(1): Constant\\n- O(log n): Logarithmic\\n- O(n): Linear\\n- O(n log n): Linearithmic\\n- O(n²): Quadratic', '2026-06-10', '2026-06-10');
-    ''')
+    """)
     conn.commit()
     conn.close()
 
 
-@app.route('/')
+@app.route("/")
 def dashboard():
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
     materials = c.execute("SELECT COUNT(*) FROM materials").fetchone()[0]
-    raw_assignments = c.execute("SELECT * FROM assignments ORDER BY due LIMIT 5").fetchall()
-    raw_announcements = c.execute("SELECT * FROM announcements ORDER BY date DESC LIMIT 5").fetchall()
+    raw_assignments = c.execute(
+        "SELECT * FROM assignments ORDER BY due LIMIT 5"
+    ).fetchall()
+    raw_announcements = c.execute(
+        "SELECT * FROM announcements ORDER BY date DESC LIMIT 5"
+    ).fetchall()
     notes_c = c.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
     schedule_c = c.execute("SELECT COUNT(*) FROM schedule").fetchone()[0]
     assignments_c = c.execute("SELECT COUNT(*) FROM assignments").fetchone()[0]
     announcements_c = c.execute("SELECT COUNT(*) FROM announcements").fetchone()[0]
     conn.close()
 
-    user = os.environ.get('USER', 'Student')
+    user = os.environ.get("USER", "Student")
 
     # Build assignment cards
     assignment_html = ""
     for a in raw_assignments:
-        status_badge = 'done' if a[5] else 'pending'
-        status_text = 'Completed' if a[5] else 'Pending'
-        icon = '✅' if a[5] else '⏳'
-        assignment_html += f'''
+        status_badge = "done" if a[5] else "pending"
+        status_text = "Completed" if a[5] else "Pending"
+        icon = "✅" if a[5] else "⏳"
+        assignment_html += f"""
         <div class="list-card">
             <div class="icon">{icon}</div>
             <div class="info">
@@ -192,12 +231,12 @@ def dashboard():
             </div>
             <span class="badge badge-{status_badge}">{status_text}</span>
             <a href="/assignments/{a[0]}" class="btn btn-primary btn-small">View</a>
-        </div>'''
+        </div>"""
 
     # Build announcement cards
     ann_html = ""
     for a in raw_announcements:
-        ann_html += f'''
+        ann_html += f"""
         <div class="list-card">
             <div class="icon">📢</div>
             <div class="info">
@@ -205,14 +244,14 @@ def dashboard():
                 <p>{a[4]} | {a[3]}</p>
             </div>
             <a href="/announcements/{a[0]}" class="btn btn-primary btn-small">Read</a>
-        </div>'''
+        </div>"""
 
     if not assignment_html:
         assignment_html = '<div class="empty-state"><div class="icon">📝</div><p>No assignments yet</p></div>'
     if not ann_html:
         ann_html = '<div class="empty-state"><div class="icon">📢</div><p>No announcements</p></div>'
 
-    body = f'''
+    body = f"""
     <div class="grid">
         <div class="card" onclick="window.location='/materials'">
             <div class="card-icon">📖</div>
@@ -252,60 +291,61 @@ def dashboard():
         </div>
     </div>
     <div class="section"><h2>📋 Recent Assignments</h2>{assignment_html}</div>
-    <div class="section"><h2>📢 Latest Announcements</h2>{ann_html}</div>'''
+    <div class="section"><h2>📢 Latest Announcements</h2>{ann_html}</div>"""
 
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/assignments')
+@app.route("/assignments")
 def assignments_page():
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
     items = c.execute("SELECT * FROM assignments ORDER BY due").fetchall()
     conn.close()
 
-    user = os.environ.get('USER', 'Student')
+    user = os.environ.get("USER", "Student")
     rows = ""
     for i in items:
         status = "✅ Completed" if i[5] else "⏳ Pending"
         badge = "badge-done" if i[5] else "badge-pending"
         desc = i[3][:100] + ("..." if len(i[3]) > 100 else "")
-        rows += f'''
+        rows += f"""
         <div class="list-card">
-            <div class="icon">{'✅' if i[5] else '⏳'}</div>
+            <div class="icon">{"✅" if i[5] else "⏳"}</div>
             <div class="info">
                 <h4>{i[1]}</h4>
                 <p>{desc} | Due: {i[4]}</p>
             </div>
             <span class="badge {badge}">{status}</span>
             <a href="/assignments/{i[0]}" class="btn btn-primary btn-small">View</a>
-        </div>'''
+        </div>"""
 
     if not rows:
         rows = '<div class="empty-state"><div class="icon">📝</div><p>No assignments yet</p></div>'
 
-    body = f'''
+    body = f"""
     <div class="page-title"><a href="/" class="back">← Back to Dashboard</a></div>
     <h2>📝 Assignments</h2>
-    {rows}'''
+    {rows}"""
 
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/assignments/<int:aid>')
+@app.route("/assignments/<int:aid>")
 def assignment_detail(aid):
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
     item = c.execute("SELECT * FROM assignments WHERE id=?", (aid,)).fetchone()
     submissions = c.execute(
-        "SELECT * FROM submissions WHERE assignment_id=? ORDER BY submitted DESC", (aid,)
+        "SELECT * FROM submissions WHERE assignment_id=? ORDER BY submitted DESC",
+        (aid,),
     ).fetchall()
     conn.close()
 
     if not item:
-        return redirect('/assignments')
+        return redirect("/assignments")
 
-    user = os.environ.get('USER', 'student')
+    user = os.environ.get("USER", "student")
     has_submitted = any(s[2] == user for s in submissions)
     status_text = "✅ Completed" if item[5] else "⏳ Pending"
 
@@ -317,9 +357,9 @@ def assignment_detail(aid):
         sub_rows += f"<tr><td>{s[2]}</td><td>{s[5]}</td><td><a href='/uploads/{filename}' style='color:#2563eb'>Download</a></td><td>{grade}</td></tr>"
 
     flash_msg_html = ""
-    if request.args.get('submitted'):
+    if request.args.get("submitted"):
         flash_msg_html = flash_msg("success", "✅ Assignment submitted successfully!")
-    elif request.args.get('error'):
+    elif request.args.get("error"):
         flash_msg_html = flash_msg("error", "❌ Submission failed. Please try again.")
 
     alert_html = ""
@@ -358,27 +398,27 @@ def assignment_detail(aid):
     </div>'''
 
     if sub_rows:
-        body += f'''
+        body += f"""
         <div class="detail-card">
             <h3>📋 Submissions</h3>
             <table><tr><th>Student</th><th>Date</th><th>File</th><th>Grade</th></tr>
             {sub_rows}</table>
-        </div>'''
+        </div>"""
 
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/assignments/<int:aid>/submit', methods=['POST'])
+@app.route("/assignments/<int:aid>/submit", methods=["POST"])
 def submit_assignment(aid):
-    student_name = request.form.get('student_name', 'unknown')
-    notes = request.form.get('notes', '')
+    student_name = request.form.get("student_name", "unknown")
+    notes = request.form.get("notes", "")
 
-    if 'file' not in request.files:
-        return redirect(f'/assignments/{aid}?error=1')
+    if "file" not in request.files:
+        return redirect(f"/assignments/{aid}?error=1")
 
-    f = request.files['file']
-    if f.filename == '':
-        return redirect(f'/assignments/{aid}?error=1')
+    f = request.files["file"]
+    if f.filename == "":
+        return redirect(f"/assignments/{aid}?error=1")
 
     ext = Path(f.filename).suffix
     safe_name = f"{uuid.uuid4().hex}{ext}"
@@ -389,54 +429,54 @@ def submit_assignment(aid):
     c = conn.cursor()
     c.execute(
         "INSERT INTO submissions (assignment_id, student, file_path, notes, submitted) VALUES (?, ?, ?, ?, ?)",
-        (aid, student_name, str(file_path), notes, date.today().isoformat())
+        (aid, student_name, str(file_path), notes, date.today().isoformat()),
     )
     conn.commit()
     conn.close()
 
-    return redirect(f'/assignments/{aid}?submitted=1')
+    return redirect(f"/assignments/{aid}?submitted=1")
 
 
-@app.route('/schedule')
+@app.route("/schedule")
 def schedule_page():
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
     items = c.execute("SELECT * FROM schedule ORDER BY datetime").fetchall()
     conn.close()
 
-    user = os.environ.get('USER', 'Student')
+    user = os.environ.get("USER", "Student")
     rows = ""
     for i in items:
         icon = "📚" if i[2] == "class" else "💻"
-        rows += f'''
+        rows += f"""
         <div class="list-card">
             <div class="icon">{icon}</div>
             <div class="info"><h4>{i[1]}</h4><p>{i[3]} | {i[4]}</p></div>
             <span class="badge">{i[2].capitalize()}</span>
-        </div>'''
+        </div>"""
     if not rows:
         rows = '<div class="empty-state"><div class="icon">📅</div><p>No schedule items</p></div>'
 
-    body = f'''
+    body = f"""
     <div class="page-title"><a href="/" class="back">← Back to Dashboard</a></div>
     <h2>📅 Schedule</h2>
-    {rows}'''
+    {rows}"""
 
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/materials')
+@app.route("/materials")
 def materials_page():
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
     items = c.execute("SELECT * FROM materials").fetchall()
     conn.close()
 
-    user = os.environ.get('USER', 'Student')
+    user = os.environ.get("USER", "Student")
     rows = ""
     for i in items:
         desc = i[3][:150] + ("..." if len(i[3]) > 150 else "")
-        rows += f'''
+        rows += f"""
         <div class="list-card">
             <div class="icon">📘</div>
             <div class="info">
@@ -444,30 +484,30 @@ def materials_page():
                 <p>{i[2]}: {desc}</p>
                 <p style="font-size:12px;color:#94a3b8;">Uploaded: {i[5]}</p>
             </div>
-        </div>'''
+        </div>"""
     if not rows:
         rows = '<div class="empty-state"><div class="icon">📖</div><p>No materials available</p></div>'
 
-    body = f'''
+    body = f"""
     <div class="page-title"><a href="/" class="back">← Back to Dashboard</a></div>
     <h2>📖 Study Materials</h2>
-    {rows}'''
+    {rows}"""
 
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/notes')
+@app.route("/notes")
 def notes_page():
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
     items = c.execute("SELECT * FROM notes ORDER BY updated DESC").fetchall()
     conn.close()
 
-    user = os.environ.get('USER', 'Student')
+    user = os.environ.get("USER", "Student")
     rows = ""
     for i in items:
         content_preview = i[2][:150] + ("..." if len(i[2]) > 150 else "")
-        rows += f'''
+        rows += f"""
         <div class="list-card">
             <div class="icon">📄</div>
             <div class="info">
@@ -478,45 +518,47 @@ def notes_page():
             <a href="/notes/{i[0]}" class="btn btn-primary btn-small">View</a>
             <a href="/notes/{i[0]}/edit" class="btn btn-warning btn-small">Edit</a>
             <a href="/notes/{i[0]}/delete" class="btn btn-danger btn-small" onclick="return confirm('Delete this note?')">Del</a>
-        </div>'''
+        </div>"""
 
     if not rows:
         rows = '<div class="empty-state"><div class="icon">✏️</div><p>No notes yet. Create your first note!</p></div>'
 
     # Check for flash messages
     flash_messages = ""
-    if request.args.get('saved'):
+    if request.args.get("saved"):
         flash_messages = flash_msg("success", "✅ Note saved successfully!")
-    elif request.args.get('deleted'):
+    elif request.args.get("deleted"):
         flash_messages = flash_msg("success", "🗑 Note deleted successfully!")
 
-    body = f'''
+    body = f"""
     <div class="page-title"><a href="/" class="back">← Back to Dashboard</a></div>
     <h2>✏️ My Notes</h2>
     {flash_messages}
     <div class="action-bar"><a href="/notes/new" class="btn btn-primary">➕ Create Note</a></div>
-    {rows}'''
+    {rows}"""
 
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/notes/new', methods=['GET', 'POST'])
+@app.route("/notes/new", methods=["GET", "POST"])
 def notes_new():
-    user = os.environ.get('USER', 'Student')
+    user = os.environ.get("USER", "Student")
 
-    if request.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
+    if request.method == "POST":
+        title = request.form["title"]
+        content = request.form["content"]
         today = date.today().isoformat()
         conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
         c = conn.cursor()
-        c.execute("INSERT INTO notes (title, content, created, updated) VALUES (?, ?, ?, ?)",
-                   (title, content, today, today))
+        c.execute(
+            "INSERT INTO notes (title, content, created, updated) VALUES (?, ?, ?, ?)",
+            (title, content, today, today),
+        )
         conn.commit()
         conn.close()
-        return redirect('/notes?saved=1')
+        return redirect("/notes?saved=1")
 
-    body = f'''
+    body = f"""
     <div class="page-title"><a href="/notes" class="back">← Back to Notes</a></div>
     <h2>➕ Create Note</h2>
     <div class="detail-card">
@@ -531,12 +573,12 @@ def notes_new():
             </div>
             <button type="submit" class="btn btn-success">💾 Save Note</button>
         </form>
-    </div>'''
+    </div>"""
 
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/notes/<int:nid>')
+@app.route("/notes/<int:nid>")
 def notes_view(nid):
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
@@ -544,10 +586,10 @@ def notes_view(nid):
     conn.close()
 
     if not item:
-        return redirect('/notes')
+        return redirect("/notes")
 
-    user = os.environ.get('USER', 'Student')
-    body = f'''
+    user = os.environ.get("USER", "Student")
+    body = f"""
     <div class="page-title"><a href="/notes" class="back">← Back to Notes</a></div>
     <div class="detail-card">
         <h3>{item[1]}</h3>
@@ -557,12 +599,12 @@ def notes_view(nid):
     <div class="action-bar">
         <a href="/notes/{nid}/edit" class="btn btn-primary">✏️ Edit</a>
         <a href="/notes/{nid}/delete" class="btn btn-danger" onclick="return confirm('Delete this note?')">🗑 Delete</a>
-    </div>'''
+    </div>"""
 
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/notes/<int:nid>/edit', methods=['GET', 'POST'])
+@app.route("/notes/<int:nid>/edit", methods=["GET", "POST"])
 def notes_edit(nid):
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
@@ -570,21 +612,23 @@ def notes_edit(nid):
 
     if not item:
         conn.close()
-        return redirect('/notes')
+        return redirect("/notes")
 
-    if request.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
+    if request.method == "POST":
+        title = request.form["title"]
+        content = request.form["content"]
         today = date.today().isoformat()
-        c.execute("UPDATE notes SET title=?, content=?, updated=? WHERE id=?",
-                   (title, content, today, nid))
+        c.execute(
+            "UPDATE notes SET title=?, content=?, updated=? WHERE id=?",
+            (title, content, today, nid),
+        )
         conn.commit()
         conn.close()
-        return redirect(f'/notes/{nid}')
+        return redirect(f"/notes/{nid}")
 
     conn.close()
 
-    user = os.environ.get('USER', 'Student')
+    user = os.environ.get("USER", "Student")
     body = f'''
     <div class="page-title"><a href="/notes" class="back">← Back to Notes</a></div>
     <h2>✏️ Edit Note</h2>
@@ -605,28 +649,28 @@ def notes_edit(nid):
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/notes/<int:nid>/delete')
+@app.route("/notes/<int:nid>/delete")
 def notes_delete(nid):
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
     c.execute("DELETE FROM notes WHERE id=?", (nid,))
     conn.commit()
     conn.close()
-    return redirect('/notes?deleted=1')
+    return redirect("/notes?deleted=1")
 
 
-@app.route('/announcements')
+@app.route("/announcements")
 def announcements_full():
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
     items = c.execute("SELECT * FROM announcements ORDER BY date DESC").fetchall()
     conn.close()
 
-    user = os.environ.get('USER', 'Student')
+    user = os.environ.get("USER", "Student")
     rows = ""
     for i in items:
         desc = i[2][:150] + ("..." if len(i[2]) > 150 else "")
-        rows += f'''
+        rows += f"""
         <div class="list-card">
             <div class="icon">📢</div>
             <div class="info">
@@ -635,19 +679,19 @@ def announcements_full():
                 <p style="font-size:12px;color:#94a3b8;">{i[4]} | {i[3]}</p>
             </div>
             <a href="/announcements/{i[0]}" class="btn btn-primary btn-small">Read</a>
-        </div>'''
+        </div>"""
     if not rows:
         rows = '<div class="empty-state"><div class="icon">📢</div><p>No announcements</p></div>'
 
-    body = f'''
+    body = f"""
     <div class="page-title"><a href="/" class="back">← Back to Dashboard</a></div>
     <h2>📢 Announcements</h2>
-    {rows}'''
+    {rows}"""
 
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/announcements/<int:aid>')
+@app.route("/announcements/<int:aid>")
 def announcement_detail(aid):
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
@@ -655,31 +699,31 @@ def announcement_detail(aid):
     conn.close()
 
     if not item:
-        return redirect('/announcements')
+        return redirect("/announcements")
 
-    user = os.environ.get('USER', 'Student')
-    body = f'''
+    user = os.environ.get("USER", "Student")
+    body = f"""
     <div class="page-title"><a href="/announcements" class="back">← Back to Announcements</a></div>
     <div class="detail-card">
         <h3>{item[1]}</h3>
         <p>{item[2]}</p>
         <div class="meta">{item[4]} | {item[3]}</div>
-    </div>'''
+    </div>"""
 
     return BASE.format(user=user) + body + FOOTER
 
 
-@app.route('/timetable')
+@app.route("/timetable")
 def timetable_page():
     return schedule_page()
 
 
-@app.route('/uploads/<filename>')
+@app.route("/uploads/<filename>")
 def uploaded_file(filename):
     return send_from_directory(str(UPLOAD_DIR), filename)
 
 
-@app.route('/api/stats')
+@app.route("/api/stats")
 def api_stats():
     conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
     c = conn.cursor()
@@ -697,11 +741,11 @@ def api_stats():
 
 def main():
     init_db()
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("  📚 EduOS Learn Hub - Student Learning Portal")
     print("  Running at: http://localhost:5050")
     print("  Press Ctrl+C to stop")
-    print("="*50 + "\n")
+    print("=" * 50 + "\n")
     app.run(host="127.0.0.1", port=5050, debug=False)
 
 

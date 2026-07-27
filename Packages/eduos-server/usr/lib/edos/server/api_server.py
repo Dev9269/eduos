@@ -1,17 +1,20 @@
 import json
+import os
 import sqlite3
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 from pydantic import BaseModel
 import jwt
 
 from database import Database
 from models import User
 
-SECRET_KEY = "eduos-secret-change-in-production"
+SECRET_KEY = os.environ.get("EDUOS_JWT_SECRET", "eduos-secret-change-in-production")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_MINUTES = 480
 
@@ -28,14 +31,29 @@ async def lifespan(app: FastAPI):
         db.close()
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+        return response
+
+
 app = FastAPI(title="EduOS Server", version="3.0.0", lifespan=lifespan)
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.environ.get("EDUOS_CORS_ORIGINS", "http://localhost:5050").split(
+        ","
+    ),
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 

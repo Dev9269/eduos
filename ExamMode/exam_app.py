@@ -15,16 +15,62 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QLineEdit, QTextEdit, QRadioButton,
-    QButtonGroup, QMessageBox, QProgressBar, QScrollArea,
-    QFrame, QStackedWidget, QCheckBox, QGroupBox, QGridLayout,
-    QFileDialog, QDialog, QDialogButtonBox, QListWidget, QListWidgetItem,
-    QTabWidget, QSplitter, QComboBox, QSpinBox, QTimeEdit
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QLineEdit,
+    QTextEdit,
+    QRadioButton,
+    QButtonGroup,
+    QMessageBox,
+    QProgressBar,
+    QScrollArea,
+    QFrame,
+    QStackedWidget,
+    QCheckBox,
+    QGroupBox,
+    QGridLayout,
+    QFileDialog,
+    QDialog,
+    QDialogButtonBox,
+    QListWidget,
+    QListWidgetItem,
+    QTabWidget,
+    QSplitter,
+    QComboBox,
+    QSpinBox,
+    QTimeEdit,
 )
 from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtSignal
-from PyQt6.QtGui import QFont, QPalette, QColor, QIcon, QAction, QKeySequence, QPixmap, QShortcut
-from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
+from PyQt6.QtGui import (
+    QFont,
+    QPalette,
+    QColor,
+    QIcon,
+    QAction,
+    QKeySequence,
+    QPixmap,
+    QShortcut,
+)
+from design_system import (
+    EduOSColors as C,
+    apply_glass_theme,
+    glass_card_style,
+    glass_button_style,
+    accent_glow_style,
+    glass_success_button_style,
+    glass_danger_button_style,
+    glass_warning_button_style,
+    status_badge_style,
+    StatusBadge,
+    SectionTitle,
+    glass_stat_card_style,
+    glass_banner_style,
+)
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -62,10 +108,14 @@ class SecurityKeyDialog(QDialog):
 
         title = QLabel("🔐 Exam Security Authentication")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {C.ACCENT_PRIMARY};")
+        title.setStyleSheet(
+            f"font-size: 18px; font-weight: bold; color: {C.ACCENT_PRIMARY};"
+        )
         layout.addWidget(title)
 
-        desc = QLabel("Enter your exam security key to begin the examination.\nContact your invigilator if you don't have a key.")
+        desc = QLabel(
+            "Enter your exam security key to begin the examination.\nContact your invigilator if you don't have a key."
+        )
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc.setWordWrap(True)
         desc.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY};")
@@ -85,12 +135,16 @@ class SecurityKeyDialog(QDialog):
 
         self.student_name = QLineEdit()
         self.student_name.setPlaceholderText("Your Full Name")
-        self.student_name.setStyleSheet(f"padding: 10px; font-size: 14px; border: 1px solid {C.GLASS_BORDER}; border-radius: 6px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};")
+        self.student_name.setStyleSheet(
+            f"padding: 10px; font-size: 14px; border: 1px solid {C.GLASS_BORDER}; border-radius: 6px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};"
+        )
         layout.addWidget(self.student_name)
 
         self.student_id = QLineEdit()
         self.student_id.setPlaceholderText("Student ID / Roll Number")
-        self.student_id.setStyleSheet(f"padding: 10px; font-size: 14px; border: 1px solid {C.GLASS_BORDER}; border-radius: 6px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};")
+        self.student_id.setStyleSheet(
+            f"padding: 10px; font-size: 14px; border: 1px solid {C.GLASS_BORDER}; border-radius: 6px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};"
+        )
         layout.addWidget(self.student_id)
 
         btn_layout = QHBoxLayout()
@@ -112,7 +166,7 @@ class SecurityKeyDialog(QDialog):
         return {
             "key": self.key_input.text().strip(),
             "name": self.student_name.text().strip(),
-            "student_id": self.student_id.text().strip()
+            "student_id": self.student_id.text().strip(),
         }
 
 
@@ -131,7 +185,9 @@ class QuestionWidget(QWidget):
 
         q_label = QLabel(f"Q{self.question_number}. {self.question_data['question']}")
         q_label.setWordWrap(True)
-        q_label.setStyleSheet(f"font-size: 16px; font-weight: bold; padding: 10px; background: {C.GLASS_CARD}; border-radius: 8px; color: {C.TEXT_PRIMARY};")
+        q_label.setStyleSheet(
+            f"font-size: 16px; font-weight: bold; padding: 10px; background: {C.GLASS_CARD}; border-radius: 8px; color: {C.TEXT_PRIMARY};"
+        )
         layout.addWidget(q_label)
 
         qtype = self.question_data.get("type", "mcq")
@@ -151,7 +207,9 @@ class QuestionWidget(QWidget):
                     QRadioButton::indicator {{ width: 18px; height: 18px; }}
                 """)
                 self.answer_group.addButton(rb, i)
-                self.answer_group.buttonClicked.connect(lambda: self.answer_changed.emit())
+                self.answer_group.buttonClicked.connect(
+                    lambda: self.answer_changed.emit()
+                )
                 layout.addWidget(rb)
         elif qtype == "multiple_select":
             self.checkboxes = []
@@ -186,7 +244,9 @@ class QuestionWidget(QWidget):
 
             if self.question_data.get("language"):
                 lang_label = QLabel(f"Language: {self.question_data['language']}")
-                lang_label.setStyleSheet(f"font-size: 12px; color: {C.TEXT_SECONDARY}; padding: 4px 0;")
+                lang_label.setStyleSheet(
+                    f"font-size: 12px; color: {C.TEXT_SECONDARY}; padding: 4px 0;"
+                )
                 layout.addWidget(lang_label)
 
             if self.question_data.get("starter_code"):
@@ -197,11 +257,15 @@ class QuestionWidget(QWidget):
                 starter_edit.setPlainText(self.question_data["starter_code"])
                 starter_edit.setReadOnly(True)
                 starter_edit.setMaximumHeight(150)
-                starter_edit.setStyleSheet(f"font-family: monospace; font-size: 12px; background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 4px; padding: 8px; color: {C.TEXT_PRIMARY};")
+                starter_edit.setStyleSheet(
+                    f"font-family: monospace; font-size: 12px; background: {C.GLASS_CARD}; border: 1px solid {C.GLASS_BORDER}; border-radius: 4px; padding: 8px; color: {C.TEXT_PRIMARY};"
+                )
                 layout.addWidget(starter_edit)
         elif qtype == "practical":
             self.practical_edit = QTextEdit()
-            self.practical_edit.setPlaceholderText("Describe your approach and solution...")
+            self.practical_edit.setPlaceholderText(
+                "Describe your approach and solution..."
+            )
             self.practical_edit.setStyleSheet(f"""
                 QTextEdit {{
                     font-size: 14px; padding: 10px;
@@ -216,12 +280,16 @@ class QuestionWidget(QWidget):
             self.short_answer = QTextEdit()
             self.short_answer.setPlaceholderText("Type your answer here...")
             self.short_answer.setMaximumHeight(120)
-            self.short_answer.setStyleSheet(f"font-size: 14px; padding: 10px; border: 1px solid {C.GLASS_BORDER}; border-radius: 6px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};")
+            self.short_answer.setStyleSheet(
+                f"font-size: 14px; padding: 10px; border: 1px solid {C.GLASS_BORDER}; border-radius: 6px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY};"
+            )
             self.short_answer.textChanged.connect(lambda: self.answer_changed.emit())
             layout.addWidget(self.short_answer)
 
         layout.addStretch()
-        self.setStyleSheet(f"background: {C.GLASS_CARD}; border-radius: 10px; padding: 10px;")
+        self.setStyleSheet(
+            f"background: {C.GLASS_CARD}; border-radius: 10px; padding: 10px;"
+        )
 
     def get_answer(self):
         qtype = self.question_data.get("type", "mcq")
@@ -251,11 +319,11 @@ class QuestionWidget(QWidget):
             for cb in self.checkboxes:
                 if cb.text() in answer:
                     cb.setChecked(True)
-        elif qtype == "programming" and hasattr(self, 'code_edit'):
+        elif qtype == "programming" and hasattr(self, "code_edit"):
             self.code_edit.setPlainText(answer)
-        elif qtype == "practical" and hasattr(self, 'practical_edit'):
+        elif qtype == "practical" and hasattr(self, "practical_edit"):
             self.practical_edit.setPlainText(answer)
-        elif qtype == "short_answer" and hasattr(self, 'short_answer'):
+        elif qtype == "short_answer" and hasattr(self, "short_answer"):
             self.short_answer.setPlainText(answer)
 
 
@@ -347,7 +415,9 @@ class ExamWindow(QMainWindow):
 
     def _setup_restrictions(self):
         try:
-            subprocess.run(["xdotool", "key", "--clearmodifiers", "Super_L"], capture_output=True)
+            subprocess.run(
+                ["xdotool", "key", "--clearmodifiers", "Super_L"], capture_output=True
+            )
             for key in ["Print", "Alt+Print", "Shift+Print"]:
                 shortcut = QShortcut(QKeySequence(key), self)
                 shortcut.activated.connect(lambda: None)
@@ -355,10 +425,10 @@ class ExamWindow(QMainWindow):
             pass
 
         self.setWindowFlags(
-            Qt.WindowType.Window |
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.CustomizeWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint
+            Qt.WindowType.Window
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.CustomizeWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
         )
         self.showFullScreen()
         self.setCursor(Qt.CursorShape.BlankCursor)
@@ -374,16 +444,22 @@ class ExamWindow(QMainWindow):
         main_layout.setSpacing(10)
 
         header = QWidget()
-        header.setStyleSheet(f"background: {C.BG_MID}; border-radius: 12px; padding: 8px;")
+        header.setStyleSheet(
+            f"background: {C.BG_MID}; border-radius: 12px; padding: 8px;"
+        )
         header_layout = QHBoxLayout(header)
 
         info = QLabel(f"📝 {self.exam_config.get('title', 'Examination')}")
-        info.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {C.TEXT_PRIMARY};")
+        info.setStyleSheet(
+            f"font-size: 18px; font-weight: bold; color: {C.TEXT_PRIMARY};"
+        )
         header_layout.addWidget(info)
 
         header_layout.addStretch()
 
-        student_info = QLabel(f"{self.credentials.get('name', 'Student')} | {self.credentials.get('student_id', '')}")
+        student_info = QLabel(
+            f"{self.credentials.get('name', 'Student')} | {self.credentials.get('student_id', '')}"
+        )
         student_info.setStyleSheet(f"font-size: 13px; color: {C.TEXT_MUTED};")
         header_layout.addWidget(student_info)
 
@@ -429,7 +505,9 @@ class ExamWindow(QMainWindow):
         main_layout.addWidget(content, 1)
 
         footer = QWidget()
-        footer.setStyleSheet(f"background: {C.BG_MID}; border-radius: 12px; padding: 8px;")
+        footer.setStyleSheet(
+            f"background: {C.BG_MID}; border-radius: 12px; padding: 8px;"
+        )
         footer_layout = QHBoxLayout(footer)
 
         self.save_status = QLabel("💾 Auto-save enabled")
@@ -501,7 +579,9 @@ class ExamWindow(QMainWindow):
                 backup[f"q{i}"] = answer
 
         if backup:
-            backup_path = EXAM_DATA_DIR / f"autosave_{self.credentials['student_id']}.json"
+            backup_path = (
+                EXAM_DATA_DIR / f"autosave_{self.credentials['student_id']}.json"
+            )
             try:
                 with open(backup_path, "w") as f:
                     json.dump(backup, f)
@@ -512,10 +592,10 @@ class ExamWindow(QMainWindow):
     def _collect_answers(self) -> dict:
         answers = {}
         for i, qw in enumerate(self.question_widgets):
-            answers[f"question_{i+1}"] = {
+            answers[f"question_{i + 1}"] = {
                 "question": qw.question_data["question"],
                 "answer": qw.get_answer(),
-                "type": qw.question_data.get("type", "mcq")
+                "type": qw.question_data.get("type", "mcq"),
             }
         return answers
 
@@ -526,16 +606,22 @@ class ExamWindow(QMainWindow):
             msg = f"⚠ {unanswered} question(s) unanswered. {msg}"
 
         reply = QMessageBox.question(
-            self, "Submit Exam", msg,
+            self,
+            "Submit Exam",
+            msg,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.final_submit()
 
     def auto_submit(self):
         self.is_submitted = True
-        QMessageBox.information(self, "Time Up", "Your time is up! The exam will be submitted automatically.")
+        QMessageBox.information(
+            self,
+            "Time Up",
+            "Your time is up! The exam will be submitted automatically.",
+        )
         self.final_submit()
 
     def final_submit(self):
@@ -551,7 +637,9 @@ class ExamWindow(QMainWindow):
         self._show_completion()
 
     def _encrypt_and_save(self, answers: dict):
-        password = self.exam_config.get("encryption_key", "eduos-exam-default-key")
+        password = self.exam_config.get(
+            "encryption_key", os.environ.get("EDUOS_EXAM_KEY", "eduos-exam-default-key")
+        )
         fernet, salt = get_fernet_from_password(password)
 
         data = {
@@ -559,7 +647,7 @@ class ExamWindow(QMainWindow):
             "student": self.credentials,
             "answers": answers,
             "timestamp": datetime.now().isoformat(),
-            "elapsed_seconds": self.timer_widget.get_elapsed()
+            "elapsed_seconds": self.timer_widget.get_elapsed(),
         }
 
         encrypted = fernet.encrypt(json.dumps(data).encode())
@@ -574,7 +662,13 @@ class ExamWindow(QMainWindow):
     def _generate_result(self, answers: dict):
         try:
             from reportlab.lib.pagesizes import A4
-            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+            from reportlab.platypus import (
+                SimpleDocTemplate,
+                Paragraph,
+                Spacer,
+                Table,
+                TableStyle,
+            )
             from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
             from reportlab.lib import colors
             from reportlab.lib.units import inch
@@ -586,12 +680,29 @@ class ExamWindow(QMainWindow):
             styles = getSampleStyleSheet()
             elements = []
 
-            elements.append(Paragraph(f"EduOS Examination Result", styles['Title']))
+            elements.append(Paragraph(f"EduOS Examination Result", styles["Title"]))
             elements.append(Spacer(1, 0.2 * inch))
-            elements.append(Paragraph(f"Student: {self.credentials.get('name', 'N/A')}", styles['Normal']))
-            elements.append(Paragraph(f"ID: {self.credentials.get('student_id', 'N/A')}", styles['Normal']))
-            elements.append(Paragraph(f"Exam: {self.exam_config.get('title', 'N/A')}", styles['Normal']))
-            elements.append(Paragraph(f"Date: {datetime.now().strftime('%B %d, %Y %H:%M')}", styles['Normal']))
+            elements.append(
+                Paragraph(
+                    f"Student: {self.credentials.get('name', 'N/A')}", styles["Normal"]
+                )
+            )
+            elements.append(
+                Paragraph(
+                    f"ID: {self.credentials.get('student_id', 'N/A')}", styles["Normal"]
+                )
+            )
+            elements.append(
+                Paragraph(
+                    f"Exam: {self.exam_config.get('title', 'N/A')}", styles["Normal"]
+                )
+            )
+            elements.append(
+                Paragraph(
+                    f"Date: {datetime.now().strftime('%B %d, %Y %H:%M')}",
+                    styles["Normal"],
+                )
+            )
             elements.append(Spacer(1, 0.3 * inch))
 
             for q_key, q_data in answers.items():
@@ -599,14 +710,20 @@ class ExamWindow(QMainWindow):
                 q_answer = q_data.get("answer", "")
                 if isinstance(q_answer, list):
                     q_answer = ", ".join(q_answer)
-                elements.append(Paragraph(f"<b>{q_key}:</b> {q_text}", styles['Normal']))
-                elements.append(Paragraph(f"<i>Answer:</i> {q_answer}", styles['Normal']))
+                elements.append(
+                    Paragraph(f"<b>{q_key}:</b> {q_text}", styles["Normal"])
+                )
+                elements.append(
+                    Paragraph(f"<i>Answer:</i> {q_answer}", styles["Normal"])
+                )
                 elements.append(Spacer(1, 0.1 * inch))
 
             doc.build(elements)
         except ImportError:
-            with open(RESULTS_DIR / f"{self.credentials['student_id']}_result.txt", "w") as f:
-                f.write(f"Exam Result\n{'='*40}\n")
+            with open(
+                RESULTS_DIR / f"{self.credentials['student_id']}_result.txt", "w"
+            ) as f:
+                f.write(f"Exam Result\n{'=' * 40}\n")
                 f.write(f"Student: {self.credentials.get('name', 'N/A')}\n")
                 f.write(f"ID: {self.credentials.get('student_id', 'N/A')}\n")
                 f.write(f"Date: {datetime.now().isoformat()}\n\n")
@@ -616,16 +733,24 @@ class ExamWindow(QMainWindow):
 
     def _show_completion(self):
         QMessageBox.information(
-            self, "Exam Submitted",
+            self,
+            "Exam Submitted",
             "Your exam has been submitted successfully.\n\n"
             "You may now close this window and return to the desktop.\n"
-            "Your answers have been encrypted and saved locally."
+            "Your answers have been encrypted and saved locally.",
         )
 
     def keyPressEvent(self, event):
-        if event.key() in [Qt.Key.Key_Escape, Qt.Key.Key_Super_L, Qt.Key.Key_Super_R,
-                           Qt.Key.Key_Alt, Qt.Key.Key_Tab, Qt.Key.Key_F11,
-                           Qt.Key.Key_Print, Qt.Key.Key_SysReq]:
+        if event.key() in [
+            Qt.Key.Key_Escape,
+            Qt.Key.Key_Super_L,
+            Qt.Key.Key_Super_R,
+            Qt.Key.Key_Alt,
+            Qt.Key.Key_Tab,
+            Qt.Key.Key_F11,
+            Qt.Key.Key_Print,
+            Qt.Key.Key_SysReq,
+        ]:
             event.ignore()
             return
         super().keyPressEvent(event)
@@ -644,7 +769,7 @@ def load_exam_config(exam_file: str) -> dict:
         with open(path) as f:
             return json.load(f)
     elif path.suffix == ".enc":
-        password = "eduos-exam-default-key"
+        password = os.environ.get("EDUOS_EXAM_KEY", "eduos-exam-default-key")
         with open(path, "rb") as f:
             salt = f.read(16)
             encrypted = f.read()
@@ -659,41 +784,41 @@ def create_sample_exam():
         "title": "Sample Mid-Term Examination",
         "subject": "Computer Science Fundamentals",
         "duration_minutes": 30,
-        "encryption_key": "eduos-exam-default-key",
+        "encryption_key": os.environ.get("EDUOS_EXAM_KEY", "eduos-exam-default-key"),
         "instructions": "Answer all questions. Each question carries equal marks.",
         "questions": [
             {
                 "type": "mcq",
                 "question": "What is the time complexity of binary search?",
                 "options": ["O(n)", "O(log n)", "O(n²)", "O(1)"],
-                "correct": "O(log n)"
+                "correct": "O(log n)",
             },
             {
                 "type": "mcq",
                 "question": "Which data structure uses LIFO principle?",
                 "options": ["Queue", "Stack", "Tree", "Graph"],
-                "correct": "Stack"
+                "correct": "Stack",
             },
             {
                 "type": "multiple_select",
                 "question": "Which of the following are programming paradigms?",
-                "options": ["Object-Oriented", "Functional", "Procedural", "Linear"]
+                "options": ["Object-Oriented", "Functional", "Procedural", "Linear"],
             },
             {
                 "type": "programming",
                 "question": "Write a Python function to check if a string is a palindrome.",
                 "language": "Python",
-                "starter_code": "def is_palindrome(s):\n    # Your code here\n    pass"
+                "starter_code": "def is_palindrome(s):\n    # Your code here\n    pass",
             },
             {
                 "type": "short_answer",
-                "question": "What is the difference between TCP and UDP?"
+                "question": "What is the difference between TCP and UDP?",
             },
             {
                 "type": "practical",
-                "question": "Design a simple REST API endpoint for a library management system. Describe the endpoint, HTTP methods, request/response format, and authentication approach."
-            }
-        ]
+                "question": "Design a simple REST API endpoint for a library management system. Describe the endpoint, HTTP methods, request/response format, and authentication approach.",
+            },
+        ],
     }
 
     sample_path = EXAMS_DIR / "sample_exam.json"
@@ -724,7 +849,9 @@ def main():
 
     credentials = auth.get_credentials()
     if not credentials["key"] or not credentials["name"]:
-        QMessageBox.critical(None, "Error", "Security key and student name are required.")
+        QMessageBox.critical(
+            None, "Error", "Security key and student name are required."
+        )
         sys.exit(1)
 
     key_hash = hashlib.sha256(credentials["key"].encode()).hexdigest()

@@ -4,21 +4,56 @@ EduOS Exam Admin Tool - Manage examinations, view results, control sessions
 """
 
 import sys
+import os
 import json
 import subprocess
 from datetime import datetime
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QTableWidget, QTableWidgetItem, QTabWidget,
-    QGroupBox, QTextEdit, QFileDialog, QMessageBox, QHeaderView,
-    QListWidget, QSplitter, QFrame, QComboBox, QLineEdit, QSpinBox,
-    QDialog, QDialogButtonBox, QFormLayout, QCheckBox
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QGroupBox,
+    QTextEdit,
+    QFileDialog,
+    QMessageBox,
+    QHeaderView,
+    QListWidget,
+    QSplitter,
+    QFrame,
+    QComboBox,
+    QLineEdit,
+    QSpinBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QCheckBox,
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QColor, QPalette
-from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
+from design_system import (
+    EduOSColors as C,
+    apply_glass_theme,
+    glass_card_style,
+    glass_button_style,
+    accent_glow_style,
+    glass_success_button_style,
+    glass_danger_button_style,
+    glass_warning_button_style,
+    status_badge_style,
+    StatusBadge,
+    SectionTitle,
+    glass_stat_card_style,
+    glass_banner_style,
+)
 
 
 EXAM_DATA_DIR = Path.home() / ".eduos" / "exam"
@@ -87,7 +122,8 @@ class ExamCreatorDialog(QDialog):
             "mcq_count": self.mcq_count.value(),
             "prog_count": self.prog_count.value(),
             "short_count": self.short_count.value(),
-            "encryption_key": self.key_edit.text() or "eduos-exam-default-key"
+            "encryption_key": self.key_edit.text()
+            or os.environ.get("EDUOS_EXAM_KEY", "eduos-exam-default-key"),
         }
 
 
@@ -105,7 +141,9 @@ class ExamAdminWindow(QMainWindow):
         layout = QVBoxLayout(central)
 
         header = QLabel("📋 EduOS Examination Management Console")
-        header.setStyleSheet(f"font-size: 24px; font-weight: bold; padding: 16px; color: {C.ACCENT_PRIMARY};")
+        header.setStyleSheet(
+            f"font-size: 24px; font-weight: bold; padding: 16px; color: {C.ACCENT_PRIMARY};"
+        )
         layout.addWidget(header)
 
         tabs = QTabWidget()
@@ -149,9 +187,13 @@ class ExamAdminWindow(QMainWindow):
 
         self.results_table = QTableWidget()
         self.results_table.setColumnCount(6)
-        self.results_table.setHorizontalHeaderLabels(["Student ID", "Name", "Exam", "Date", "Status", "Actions"])
+        self.results_table.setHorizontalHeaderLabels(
+            ["Student ID", "Name", "Exam", "Date", "Status", "Actions"]
+        )
         self.results_table.horizontalHeader().setStretchLastSection(True)
-        self.results_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.results_table.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
         self.results_table.setStyleSheet(f"""
             QTableWidget {{
                 border: 1px solid {C.GLASS_BORDER}; border-radius: 8px;
@@ -170,9 +212,13 @@ class ExamAdminWindow(QMainWindow):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        info = QLabel("Create a new examination configuration. Questions will be auto-generated with placeholders.")
+        info = QLabel(
+            "Create a new examination configuration. Questions will be auto-generated with placeholders."
+        )
         info.setWordWrap(True)
-        info.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY}; padding: 8px; background: {C.GLASS_CARD}; border-radius: 6px;")
+        info.setStyleSheet(
+            f"font-size: 13px; color: {C.TEXT_SECONDARY}; padding: 8px; background: {C.GLASS_CARD}; border-radius: 6px;"
+        )
         layout.addWidget(info)
 
         form = QFormLayout()
@@ -192,13 +238,19 @@ class ExamAdminWindow(QMainWindow):
         self.ct_duration.setSuffix(" minutes")
         form.addRow("Duration:", self.ct_duration)
 
-        self.ct_mcq = QSpinBox(); self.ct_mcq.setRange(0, 100); self.ct_mcq.setValue(10)
+        self.ct_mcq = QSpinBox()
+        self.ct_mcq.setRange(0, 100)
+        self.ct_mcq.setValue(10)
         form.addRow("MCQ Questions:", self.ct_mcq)
 
-        self.ct_prog = QSpinBox(); self.ct_prog.setRange(0, 10); self.ct_prog.setValue(2)
+        self.ct_prog = QSpinBox()
+        self.ct_prog.setRange(0, 10)
+        self.ct_prog.setValue(2)
         form.addRow("Programming Questions:", self.ct_prog)
 
-        self.ct_short = QSpinBox(); self.ct_short.setRange(0, 10); self.ct_short.setValue(3)
+        self.ct_short = QSpinBox()
+        self.ct_short.setRange(0, 10)
+        self.ct_short.setValue(3)
         form.addRow("Short Answer Questions:", self.ct_short)
 
         layout.addLayout(form)
@@ -215,13 +267,19 @@ class ExamAdminWindow(QMainWindow):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        info = QLabel("Control examination sessions across the lab. Start, monitor, and terminate exams.")
+        info = QLabel(
+            "Control examination sessions across the lab. Start, monitor, and terminate exams."
+        )
         info.setWordWrap(True)
-        info.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY}; padding: 8px; background: {C.GLASS_CARD}; border-radius: 6px;")
+        info.setStyleSheet(
+            f"font-size: 13px; color: {C.TEXT_SECONDARY}; padding: 8px; background: {C.GLASS_CARD}; border-radius: 6px;"
+        )
         layout.addWidget(info)
 
         machines_group = QGroupBox("Lab Machines")
-        machines_group.setStyleSheet(f"QGroupBox {{ font-weight: bold; font-size: 14px; padding-top: 16px; border: 1px solid {C.GLASS_BORDER}; border-radius: 12px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY}; padding: 20px 16px 16px 16px; }} QGroupBox::title {{ subcontrol-origin: margin; left: 16px; padding: 0 8px; color: {C.TEXT_SECONDARY}; }}")
+        machines_group.setStyleSheet(
+            f"QGroupBox {{ font-weight: bold; font-size: 14px; padding-top: 16px; border: 1px solid {C.GLASS_BORDER}; border-radius: 12px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY}; padding: 20px 16px 16px 16px; }} QGroupBox::title {{ subcontrol-origin: margin; left: 16px; padding: 0 8px; color: {C.TEXT_SECONDARY}; }}"
+        )
         mlayout = QVBoxLayout(machines_group)
 
         self.machine_list = QListWidget()
@@ -234,24 +292,38 @@ class ExamAdminWindow(QMainWindow):
         actions = QHBoxLayout()
         start_btn = QPushButton("▶ Start Exam on Selected")
         start_btn.setStyleSheet(glass_success_button_style())
-        start_btn.clicked.connect(lambda: QMessageBox.information(self, "Start Exam", "Exam started on selected machine."))
+        start_btn.clicked.connect(
+            lambda: QMessageBox.information(
+                self, "Start Exam", "Exam started on selected machine."
+            )
+        )
         actions.addWidget(start_btn)
 
         stop_btn = QPushButton("■ Terminate Exam")
         stop_btn.setStyleSheet(glass_danger_button_style())
-        stop_btn.clicked.connect(lambda: QMessageBox.information(self, "Terminate Exam", "Exam terminated on selected machine."))
+        stop_btn.clicked.connect(
+            lambda: QMessageBox.information(
+                self, "Terminate Exam", "Exam terminated on selected machine."
+            )
+        )
         actions.addWidget(stop_btn)
 
         lock_btn = QPushButton("🔒 Lock Selected")
         lock_btn.setStyleSheet(glass_warning_button_style())
-        lock_btn.clicked.connect(lambda: QMessageBox.information(self, "Lock Machine", "Selected machine locked."))
+        lock_btn.clicked.connect(
+            lambda: QMessageBox.information(
+                self, "Lock Machine", "Selected machine locked."
+            )
+        )
         actions.addWidget(lock_btn)
 
         actions.addStretch()
         layout.addLayout(actions)
 
         broadcast_group = QGroupBox("Send Announcement")
-        broadcast_group.setStyleSheet(f"QGroupBox {{ font-weight: bold; font-size: 14px; padding-top: 16px; border: 1px solid {C.GLASS_BORDER}; border-radius: 12px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY}; padding: 20px 16px 16px 16px; }} QGroupBox::title {{ subcontrol-origin: margin; left: 16px; padding: 0 8px; color: {C.TEXT_SECONDARY}; }}")
+        broadcast_group.setStyleSheet(
+            f"QGroupBox {{ font-weight: bold; font-size: 14px; padding-top: 16px; border: 1px solid {C.GLASS_BORDER}; border-radius: 12px; background: {C.GLASS_CARD}; color: {C.TEXT_PRIMARY}; padding: 20px 16px 16px 16px; }} QGroupBox::title {{ subcontrol-origin: margin; left: 16px; padding: 0 8px; color: {C.TEXT_SECONDARY}; }}"
+        )
         blayout = QVBoxLayout(broadcast_group)
         self.broadcast_msg = QTextEdit()
         self.broadcast_msg.setMaximumHeight(80)
@@ -273,10 +345,22 @@ class ExamAdminWindow(QMainWindow):
             for f in files[:50]:
                 row = self.results_table.rowCount()
                 self.results_table.insertRow(row)
-                self.results_table.setItem(row, 0, QTableWidgetItem(f.stem.split("_")[0] if "_" in f.stem else f.stem))
+                self.results_table.setItem(
+                    row,
+                    0,
+                    QTableWidgetItem(f.stem.split("_")[0] if "_" in f.stem else f.stem),
+                )
                 self.results_table.setItem(row, 1, QTableWidgetItem("Student"))
                 self.results_table.setItem(row, 2, QTableWidgetItem("Exam"))
-                self.results_table.setItem(row, 3, QTableWidgetItem(datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M")))
+                self.results_table.setItem(
+                    row,
+                    3,
+                    QTableWidgetItem(
+                        datetime.fromtimestamp(f.stat().st_mtime).strftime(
+                            "%Y-%m-%d %H:%M"
+                        )
+                    ),
+                )
                 self.results_table.setItem(row, 4, QTableWidgetItem("✅ Submitted"))
 
                 view_btn = QPushButton("📄 View")
@@ -285,7 +369,9 @@ class ExamAdminWindow(QMainWindow):
                 self.results_table.setCellWidget(row, 5, view_btn)
 
     def _export_results(self):
-        QMessageBox.information(self, "Export", "Results export functionality will be implemented.")
+        QMessageBox.information(
+            self, "Export", "Results export functionality will be implemented."
+        )
 
     def _view_result(self, filepath):
         try:
@@ -295,7 +381,9 @@ class ExamAdminWindow(QMainWindow):
             viewer = QTextEdit()
             viewer.setReadOnly(True)
             viewer.setPlainText(content)
-            viewer.setStyleSheet("font-family: monospace; font-size: 12px; padding: 8px;")
+            viewer.setStyleSheet(
+                "font-family: monospace; font-size: 12px; padding: 8px;"
+            )
             dlg = QDialog(self)
             dlg.setWindowTitle(f"Result: {filepath.name}")
             dlg.setGeometry(200, 200, 800, 600)
@@ -317,52 +405,93 @@ class ExamAdminWindow(QMainWindow):
             "title": title,
             "subject": subject,
             "duration_minutes": duration,
-            "encryption_key": "eduos-exam-default-key",
+            "encryption_key": os.environ.get(
+                "EDUOS_EXAM_KEY", "eduos-exam-default-key"
+            ),
             "instructions": "Read each question carefully. Manage your time wisely.",
-            "questions": []
+            "questions": [],
         }
 
         import random
+
         mcq_templates = [
-            ("What is the capital of France?", ["London", "Paris", "Berlin", "Madrid"], "Paris"),
-            ("Which planet is known as the Red Planet?", ["Venus", "Mars", "Jupiter", "Saturn"], "Mars"),
+            (
+                "What is the capital of France?",
+                ["London", "Paris", "Berlin", "Madrid"],
+                "Paris",
+            ),
+            (
+                "Which planet is known as the Red Planet?",
+                ["Venus", "Mars", "Jupiter", "Saturn"],
+                "Mars",
+            ),
             ("What is 2 + 2?", ["3", "4", "5", "6"], "4"),
-            ("Which language is used for web development?", ["Python", "HTML", "C++", "Java"], "HTML"),
-            ("What does CPU stand for?", ["Central Processing Unit", "Computer Personal Unit", "Central Program Unit", "None"], "Central Processing Unit"),
-            ("Which is an operating system?", ["Windows", "Mouse", "Keyboard", "Monitor"], "Windows"),
+            (
+                "Which language is used for web development?",
+                ["Python", "HTML", "C++", "Java"],
+                "HTML",
+            ),
+            (
+                "What does CPU stand for?",
+                [
+                    "Central Processing Unit",
+                    "Computer Personal Unit",
+                    "Central Program Unit",
+                    "None",
+                ],
+                "Central Processing Unit",
+            ),
+            (
+                "Which is an operating system?",
+                ["Windows", "Mouse", "Keyboard", "Monitor"],
+                "Windows",
+            ),
             ("What is the square root of 64?", ["6", "7", "8", "9"], "8"),
-            ("Which protocol is used for email?", ["HTTP", "FTP", "SMTP", "TCP"], "SMTP"),
-            ("What is the chemical symbol for water?", ["H2O", "CO2", "NaCl", "O2"], "H2O"),
-            ("Which year did World War II end?", ["1943", "1944", "1945", "1946"], "1945"),
+            (
+                "Which protocol is used for email?",
+                ["HTTP", "FTP", "SMTP", "TCP"],
+                "SMTP",
+            ),
+            (
+                "What is the chemical symbol for water?",
+                ["H2O", "CO2", "NaCl", "O2"],
+                "H2O",
+            ),
+            (
+                "Which year did World War II end?",
+                ["1943", "1944", "1945", "1946"],
+                "1945",
+            ),
         ]
 
         for i in range(mcq):
             if i < len(mcq_templates):
                 q, opts, correct = mcq_templates[i]
             else:
-                q = f"Sample MCQ Question {i+1}?"
+                q = f"Sample MCQ Question {i + 1}?"
                 opts = [f"Option A", f"Option B", f"Option C", f"Option D"]
                 correct = "Option A"
-            exam["questions"].append({
-                "type": "mcq",
-                "question": q,
-                "options": opts,
-                "correct": correct
-            })
+            exam["questions"].append(
+                {"type": "mcq", "question": q, "options": opts, "correct": correct}
+            )
 
         for i in range(prog):
-            exam["questions"].append({
-                "type": "programming",
-                "question": f"Programming Question {i+1}: Write a function to solve the given problem.",
-                "language": "Python",
-                "starter_code": f"def solution_{i+1}():\n    # Your implementation here\n    pass"
-            })
+            exam["questions"].append(
+                {
+                    "type": "programming",
+                    "question": f"Programming Question {i + 1}: Write a function to solve the given problem.",
+                    "language": "Python",
+                    "starter_code": f"def solution_{i + 1}():\n    # Your implementation here\n    pass",
+                }
+            )
 
         for i in range(short):
-            exam["questions"].append({
-                "type": "short_answer",
-                "question": f"Short Answer Question {i+1}: Explain the concept briefly."
-            })
+            exam["questions"].append(
+                {
+                    "type": "short_answer",
+                    "question": f"Short Answer Question {i + 1}: Explain the concept briefly.",
+                }
+            )
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"exam_{timestamp}.json"
@@ -370,12 +499,20 @@ class ExamAdminWindow(QMainWindow):
         with open(filepath, "w") as f:
             json.dump(exam, f, indent=2)
 
-        QMessageBox.information(self, "Success", f"Exam '{title}' created successfully!\n\nSaved to: {filepath}")
+        QMessageBox.information(
+            self,
+            "Success",
+            f"Exam '{title}' created successfully!\n\nSaved to: {filepath}",
+        )
 
     def _send_announcement(self):
         msg = self.broadcast_msg.toPlainText().strip()
         if msg:
-            QMessageBox.information(self, "Sent", f"Announcement sent to all lab machines.\n\nMessage: {msg}")
+            QMessageBox.information(
+                self,
+                "Sent",
+                f"Announcement sent to all lab machines.\n\nMessage: {msg}",
+            )
             self.broadcast_msg.clear()
 
 
