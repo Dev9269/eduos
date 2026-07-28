@@ -18,6 +18,20 @@ Debian-based educational OS for engineering colleges — integrating learning, s
 
 ---
 
+## 📑 Table of Contents
+
+- [Installation](#-installation)
+- [Quick Start](#-quick-start)
+- [System Users](#-system-users)
+- [Architecture](#-architecture)
+- [Security](#-security)
+- [Project Structure](#-project-structure)
+- [Pre-installed Tools](#-pre-installed-development-tools)
+- [Available Scripts](#-available-scripts-scripts)
+- [License](#-license)
+
+---
+
 ## 📥 Installation
 
 EduOS is a Debian-based operating system. To install on bare metal or a VM:
@@ -110,6 +124,8 @@ eduos-hardening  # Apply system hardening
 ```
 
 ## 🖥️ Pre-installed Development Tools
+
+
 
 C, C++, Python, Java 21, JavaScript/Node.js, C# (.NET 8), Ruby, PHP, Perl — plus VS Code, Docker, Git, PostgreSQL, SQLite, CMake, and more.
 
