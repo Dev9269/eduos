@@ -4,14 +4,49 @@
 
 [![Stars](https://img.shields.io/github/stars/Dev9269/eduos?style=flat-square&logo=github&color=gold)](https://github.com/Dev9269/eduos)
 [![Forks](https://img.shields.io/github/forks/Dev9269/eduos?style=flat-square&logo=github&color=blue)](https://github.com/Dev9269/eduos/forks)
+[![Last Commit](https://img.shields.io/github/last-commit/Dev9269/eduos?style=flat-square&color=blueviolet)](https://github.com/Dev9269/eduos/commits/main)
 [![License](https://img.shields.io/github/license/Dev9269/eduos?style=flat-square&color=brightgreen)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square)](https://github.com/Dev9269/eduos/pulls)
+[![Debian](https://img.shields.io/badge/Debian-13%20Trixie-A81D33?style=flat-square&logo=debian&logoColor=white)](https://debian.org)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 
 Debian-based educational OS for engineering colleges — integrating learning, secure exams, dev tools, cyber labs, and campus administration.
 
 **Created by** [Jainam Maru](https://github.com/Dev9269)
 
 </div>
+
+---
+
+## 📥 Installation
+
+EduOS is a Debian-based operating system. To install on bare metal or a VM:
+
+### Requirements
+
+- **CPU:** 64-bit (x86_64), dual-core minimum
+- **RAM:** 4 GB minimum (8 GB recommended)
+- **Disk:** 20 GB minimum (40 GB recommended)
+- **Boot:** USB or DVD for installation media
+
+### Quick Install
+
+```bash
+# Download the latest EduOS ISO from the releases page
+# Boot from the ISO and follow the installer prompts
+# Or run the installation script on an existing Debian 13 system:
+sudo bash Scripts/install-eduos.sh
+```
+
+### Docker (for individual modules)
+
+Some EduOS modules can also run in Docker:
+
+```bash
+# Learn Hub (Flask)
+cd LearnHub && docker compose up -d
+# Access at http://localhost:5050
+```
 
 ---
 
@@ -101,9 +136,10 @@ Wireshark, Nmap, Burp Suite, OWASP Juice Shop, SQLmap, John the Ripper, Hydra, A
 
 ## 📜 License
 
-MIT License — Copyright (c) 2026 Jainam
+MIT License — Copyright (c) 2026 Jainam Maru
 
 This is a personal, private project. Use freely for educational purposes.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ---
 
