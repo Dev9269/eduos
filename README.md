@@ -2,6 +2,7 @@
 
 # 📚 EduOS
 
+[![CI](https://github.com/Dev9269/eduos/actions/workflows/ci.yml/badge.svg)](https://github.com/Dev9269/eduos/actions/workflows/ci.yml)
 [![Stars](https://img.shields.io/github/stars/Dev9269/eduos?style=flat-square&logo=github&color=gold)](https://github.com/Dev9269/eduos)
 [![Forks](https://img.shields.io/github/forks/Dev9269/eduos?style=flat-square&logo=github&color=blue)](https://github.com/Dev9269/eduos/forks)
 [![Last Commit](https://img.shields.io/github/last-commit/Dev9269/eduos?style=flat-square&color=blueviolet)](https://github.com/Dev9269/eduos/commits/main)
@@ -83,8 +84,8 @@ eduos-hardening  # Apply system hardening
 | User | Password | Role |
 |------|----------|------|
 | `jainam` | *(personal)* | Administrator / Developer |
-| `student` | *(set during installation)* | Daily learning |
-| `exam` | *(set during installation)* | Restricted examinations |
+| `student` | *(random, written to `/etc/eduos/credentials.conf`)* | Daily learning |
+| `exam` | *(random, written to `/etc/eduos/credentials.conf`)* | Restricted examinations |
 | `admin` | *(set during installation)* | Lab administration |
 
 ## 🏗️ Architecture
@@ -96,12 +97,16 @@ eduos-hardening  # Apply system hardening
 | **Admin Center** | PyQt6 | System monitoring and lab management |
 | **Dev Suite** | PyQt6 | 12-tool development environment |
 | **Cyber Lab** | PyQt6 + Docker | Isolated security practice labs |
+| **Agent Service** | Python + MQTT/WebSocket | Background device monitoring daemon |
+| **Central Server** | FastAPI + WebSocket | JWT-protected device broker |
 
 ## 🔒 Security
 
 - UFW firewall, locked root, hardened SSH
 - Restricted exam session: network/screenshot/terminal blocking
 - Fernet-encrypted exam submissions with PBKDF2 key derivation
+- Fernet-encrypted admin config with login gate
+- JWT-authenticated agent↔server communication
 - Process accounting and audit trails
 - CyberLab containers isolated from host network
 
@@ -116,7 +121,12 @@ eduos-hardening  # Apply system hardening
 ├── Documentation/     # Whitepaper and guides
 ├── ExamMode/          # Exam app + admin tool
 ├── LearnHub/          # Flask learning portal
+├── Packages/          # Live-build ISO recipes
 ├── Scripts/           # Launchers and tools
+├── Server/            # Central broker (FastAPI)
+├── Services/          # Background agent daemon
+├── tests/             # Pytest suite (agent + server)
+├── .github/           # CI + ISO build workflows
 ├── CHANGELOG.md       # Complete build history
 ├── EDUOS_WHITEPAPER.md # Full system documentation
 ├── LICENSE            # MIT License
@@ -154,8 +164,7 @@ Wireshark, Nmap, Burp Suite, OWASP Juice Shop, SQLmap, John the Ripper, Hydra, A
 
 MIT License — Copyright (c) 2026 Jainam Maru
 
-This is a personal, private project. Use freely for educational purposes.
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+Use freely for educational purposes. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ---
 
