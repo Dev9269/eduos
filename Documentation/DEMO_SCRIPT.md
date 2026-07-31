@@ -13,7 +13,7 @@
 
 **Narrator:** *"Welcome. This is EduOS — a purpose-built Linux distribution for engineering education, cybersecurity labs, and controlled examinations."*
 
-**Action:** Enter `student` / `student123`, press Enter.
+**Action:** Enter `student` / the generated password (see `/etc/eduos/credentials.conf` on the installed system), press Enter.
 
 **Check:** Smooth login, no errors. Watermark visible top-right.
 
@@ -51,7 +51,7 @@
 
 ## Step 5 — Admin Center (1 min)
 
-**Action:** Click Admin Center icon. Password: `admin123`.
+**Action:** Click Admin Center icon. Password: the generated admin password from `/etc/eduos/credentials.conf`.
 
 **Narrator:** *"The Admin Center gives faculty real-time system monitoring — CPU, memory, disk, network status, system load, and uptime. It also manages user accounts and lab network connectivity."*
 

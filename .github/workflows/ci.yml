@@ -3,6 +3,23 @@ name: CI
 on: [push, pull_request]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install pyflakes pylint
+          pip install -r requirements.txt --ignore-requires-python \
+            || true
+      - name: Lint Python files
+        run: |
+          find . -name "*.py" -not -path "./.git/*" | \
+            xargs pyflakes 2>&1 || true
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -12,17 +29,14 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: |
-          if (Test-Path requirements.txt) {
-            pip install -r requirements.txt
-          }
-        shell: pwsh
+          pip install pytest
+          pip install -r requirements.txt --ignore-requires-python \
+            || true
       - name: Run tests
         run: |
-          if (Test-Path tests/) {
-            pip install pytest
-            pytest
-          } else {
-            Write-Host "No tests found"
+          if [ -d "tests/" ]; then
+            pytest tests/ -v
+          else
+            echo "No tests directory found — skipping"
             exit 0
-          }
-        shell: pwsh
+          fi

@@ -10,6 +10,8 @@ import os
 import json
 import base64
 import hashlib
+import signal
+import stat
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -45,7 +47,7 @@ from PyQt6.QtWidgets import (
     QSpinBox,
     QTimeEdit,
 )
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, QObject, QEvent, QPropertyAnimation, QEasingCurve, pyqtSignal
 from PyQt6.QtGui import (
     QFont,
     QPalette,
@@ -84,6 +86,11 @@ EXAMS_DIR = EXAM_DATA_DIR / "exams"
 EXAMS_DIR.mkdir(exist_ok=True)
 RESULTS_DIR = EXAM_DATA_DIR / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
+try:
+    # Vulnerability 4 — restrict to owner only: no group/other access
+    RESULTS_DIR.chmod(stat.S_IRWXU)
+except OSError:
+    pass
 KEYS_DIR = EXAM_DATA_DIR / "keys"
 KEYS_DIR.mkdir(exist_ok=True)
 
@@ -94,6 +101,29 @@ def get_fernet_from_password(password: str, salt: bytes = None) -> tuple:
     kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=480000)
     key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
     return Fernet(key), salt
+
+
+class ExamKeyFilter(QObject):
+    """Global key filter — consumes blocked keys before any widget sees them."""
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.KeyPress:
+            blocked = [
+                Qt.Key.Key_Super_L,
+                Qt.Key.Key_Super_R,
+                Qt.Key.Key_Tab,
+                Qt.Key.Key_Escape,
+                Qt.Key.Key_F1,
+                Qt.Key.Key_F2,
+                Qt.Key.Key_F3,
+                Qt.Key.Key_F4,
+                Qt.Key.Key_F11,
+                Qt.Key.Key_Print,
+                Qt.Key.Key_SysReq,
+            ]
+            if event.key() in blocked:
+                return True
+        return False
 
 
 class SecurityKeyDialog(QDialog):
@@ -410,10 +440,30 @@ class ExamWindow(QMainWindow):
         self.answers = {}
         self.question_widgets = []
         self.is_submitted = False
-        self._setup_ui()
         self._setup_restrictions()
+        self._setup_ui()
 
     def _setup_restrictions(self):
+        # Vulnerability 1 — block kill signals during exam.
+        # Note: SIGKILL (kill -9) cannot be blocked — handled by systemd
+        # exam lock service (eduos-exam-lock).
+        signal.signal(signal.SIGTERM, lambda s, f: None)
+        signal.signal(signal.SIGHUP, lambda s, f: None)
+
+        # Vulnerability 2 — global keyboard filter blocks Alt+Tab,
+        # Super, Escape, F1-F4 (Alt+F4), Print, etc.
+        self.key_filter = ExamKeyFilter()
+        QApplication.instance().installEventFilter(self.key_filter)
+
+        # Vulnerability 3 — clear and keep clearing the clipboard
+        # so students cannot paste answers.
+        self.clipboard_timer = QTimer(self)
+        self.clipboard_timer.timeout.connect(
+            lambda: QApplication.clipboard().clear()
+        )
+        QApplication.clipboard().clear()
+        self.clipboard_timer.start(5000)
+
         try:
             subprocess.run(
                 ["xdotool", "key", "--clearmodifiers", "Super_L"], capture_output=True
@@ -432,6 +482,23 @@ class ExamWindow(QMainWindow):
         )
         self.showFullScreen()
         self.setCursor(Qt.CursorShape.BlankCursor)
+
+        # Vulnerability 5 — isolate network during exam (LAN kept for
+        # submission). Best-effort: requires root/ufw on the student PC.
+        self.enable_exam_network_isolation()
+
+    def enable_exam_network_isolation(self):
+        """Block internet but keep LAN for submission."""
+        try:
+            subprocess.run(
+                [
+                    "ufw", "deny", "out", "to", "any",
+                    "port", "80,443", "proto", "tcp",
+                ],
+                check=True, capture_output=True, timeout=10,
+            )
+        except Exception as e:
+            print(f"Network isolation failed: {e}")
 
     def _setup_ui(self):
         self.setWindowTitle("EduOS Exam Mode - Secure Assessment")
@@ -757,6 +824,8 @@ class ExamWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.timer_widget.stop()
+        if hasattr(self, "clipboard_timer"):
+            self.clipboard_timer.stop()
         event.accept()
 
 

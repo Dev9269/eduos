@@ -201,7 +201,7 @@ import requests
 
 def test_exam_submission(edos_vm):
     """Test complete exam flow: create, distribute, submit, grade."""
-    admin_token = authenticate("admin", "admin123")
+    admin_token = authenticate("admin", os.environ.get("EDUOS_ADMIN_PASSWORD"))
 
     # Create exam
     exam = create_exam(admin_token, {

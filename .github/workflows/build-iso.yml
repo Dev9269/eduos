@@ -12,7 +12,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y debootstrap xorriso squashfs-tools \
-            grub-pc-bin grub-efi-amd64-bin mtools isolinux
+            grub-pc-bin grub-efi-amd64-bin mtools isolinux syslinux-common
 
       - name: Bootstrap Debian base
         run: |
@@ -28,47 +28,84 @@ jobs:
 
       - name: Install EduOS packages inside chroot
         run: |
+          # Generate a strong random password for the student user
+          STUDENT_PW=$(openssl rand -base64 16 | tr -d '=/+' | cut -c1-16)
+          echo "::notice title=Student password::Generated random student password: ${STUDENT_PW} (saved to /etc/eduos/credentials.conf)"
           sudo chroot ./chroot bash -c "
             apt-get update
             apt-get install -y --no-install-recommends \
               python3 python3-pip python3-pyqt6 python3-flask \
               sqlite3 git curl wget ufw openssh-server \
-              linux-image-amd64 live-boot live-config systemd-sysv sudo \
+              linux-image-amd64 live-boot live-boot-initramfs-tools \
+              live-config live-config-systemd initramfs-tools busybox \
+              plymouth plymouth-themes \
+              fonts-noto fonts-noto-color-emoji fonts-liberation fonts-dejavu \
+              systemd-sysv sudo \
               kde-plasma-desktop plasma-workspace sddm sddm-theme-breeze \
               konsole dolphin firefox-esr
             pip3 install cryptography fastapi uvicorn --break-system-packages
-            echo 'root:root' | chpasswd
             useradd -m -s /bin/bash student
-            echo 'student:student123' | chpasswd
+            echo 'student:${STUDENT_PW}' | chpasswd
             echo 'student ALL=(ALL) ALL' >> /etc/sudoers.d/student
+            mkdir -p /etc/eduos
+            echo 'student_password=${STUDENT_PW}' > /etc/eduos/credentials.conf
+            chmod 600 /etc/eduos/credentials.conf
             mkdir -p /etc/sddm.conf.d
             printf '[Autologin]\nUser=student\nSession=plasma.desktop\n' > /etc/sddm.conf.d/autologin.conf
             systemctl enable sddm
-            sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
-            sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
-            printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' >> /etc/ssh/sshd_config
+            # SSH hardening: root login and password auth are DISABLED for student machines
             systemctl enable ssh
+            update-initramfs -u -k all
+          "
+
+      - name: Install EduOS branding into chroot
+        run: |
+          sudo chroot ./chroot bash -c "
+            mkdir -p /usr/share/wallpapers/EduOS
+            cp -r /opt/eduos/Branding/wallpaper/* /usr/share/wallpapers/EduOS/ 2>/dev/null || true
+            mkdir -p /usr/share/sddm/themes/eduos
+            cp -r /opt/eduos/Branding/sddm/* /usr/share/sddm/themes/eduos/ 2>/dev/null || true
+            mkdir -p /usr/share/plymouth/themes/eduos
+            cp -r /opt/eduos/Branding/plymouth/edos-plymouth-theme/* /usr/share/plymouth/themes/eduos/ 2>/dev/null || true
+            plymouth-set-default-theme eduos 2>/dev/null || true
+            update-initramfs -u -k all
           "
 
       - name: Build squashfs
         run: |
           sudo mksquashfs chroot filesystem.squashfs -comp xz -noappend
 
-      - name: Build ISO with xorriso
+      - name: Build ISO with xorriso (EFI + BIOS)
         run: |
-          mkdir -p isoroot/live isoroot/boot/grub
+          mkdir -p isoroot/live isoroot/boot/grub isoroot/isolinux
           sudo cp filesystem.squashfs isoroot/live/
           sudo cp chroot/boot/vmlinuz-* isoroot/live/vmlinuz
           sudo cp chroot/boot/initrd.img-* isoroot/live/initrd.img
+          # BIOS boot support (isolinux) alongside EFI (grub)
+          sudo cp /usr/lib/ISOLINUX/isolinux.bin isoroot/isolinux/ 2>/dev/null || \
+          sudo cp /usr/lib/syslinux/modules/bios/isolinux.bin isoroot/isolinux/ 2>/dev/null || true
+          sudo cp /usr/lib/syslinux/modules/bios/ldlinux.c32 isoroot/isolinux/ 2>/dev/null || true
+          cat > isoroot/isolinux/isolinux.cfg << 'EOF'
+          DEFAULT eduos
+          TIMEOUT 50
+          PROMPT 0
+          LABEL eduos
+            LINUX /live/vmlinuz
+            INITRD /live/initrd.img
+            APPEND boot=live components quiet splash username=student hostname=eduos toram nopersistence
+          EOF
           cat > isoroot/boot/grub/grub.cfg << 'EOF'
           set default=0
           set timeout=5
           menuentry "EduOS" {
-            linux /live/vmlinuz boot=live quiet splash username=student
+            linux /live/vmlinuz boot=live components quiet splash username=student hostname=eduos toram nopersistence
             initrd /live/initrd.img
           }
           EOF
-          sudo grub-mkrescue -o eduos.iso isoroot -- -volid EduOS
+          sudo grub-mkrescue \
+            --modules="part_gpt part_msdos fat iso9660 normal boot linux echo configfile search search_label" \
+            -o eduos.iso isoroot \
+            -- -volid EDUOS -J -r -cache-inodes
 
       - name: Upload ISO
         uses: actions/upload-artifact@v4

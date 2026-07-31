@@ -205,10 +205,24 @@ for user in student exam admin; do
     fi
 done
 
-echo "student:student123" | chpasswd 2>/dev/null
-echo "exam:exam123" | chpasswd 2>/dev/null
-echo "admin:admin123" | chpasswd 2>/dev/null
-log "Default passwords set"
+# Generate strong random passwords (no hardcoded credentials)
+STUDENT_PW=$(openssl rand -base64 16 | tr -d '=/+' | cut -c1-16)
+EXAM_PW=$(openssl rand -base64 16 | tr -d '=/+' | cut -c1-16)
+ADMIN_PW=$(openssl rand -base64 16 | tr -d '=/+' | cut -c1-16)
+echo "student:$STUDENT_PW" | chpasswd 2>/dev/null
+echo "exam:$EXAM_PW" | chpasswd 2>/dev/null
+echo "admin:$ADMIN_PW" | chpasswd 2>/dev/null
+
+# Persist generated credentials (owner-only) and print once for the admin
+mkdir -p /etc/eduos
+cat > /etc/eduos/credentials.conf << 'CREDEOF'
+# EduOS generated credentials — generated at install time
+student_password=$STUDENT_PW
+exam_password=$EXAM_PW
+admin_password=$ADMIN_PW
+CREDEOF
+chmod 600 /etc/eduos/credentials.conf
+log "Random passwords generated and saved to /etc/eduos/credentials.conf (chmod 600)"
 
 # =============================================================================
 # PHASE 8: Restore EduOS Modules (if backup exists)
@@ -248,9 +262,9 @@ echo -e "${GREEN}║      EduOS Installation Complete!            ║${NC}"
 echo -e "${GREEN}║  Please reboot to finish setup.              ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════╝${NC}"
 echo ""
-echo "  Users:   student / exam123"
-echo "           exam    / exam123"
-echo "           admin   / admin123"
+echo "  Users:   student / (generated — see /etc/eduos/credentials.conf)"
+echo "           exam    / (generated — see /etc/eduos/credentials.conf)"
+echo "           admin   / (generated — see /etc/eduos/credentials.conf)"
 echo ""
 echo "  After reboot, run:  eduos-info"
 echo ""

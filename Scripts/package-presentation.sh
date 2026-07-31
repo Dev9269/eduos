@@ -66,7 +66,7 @@ cat > "$PKG_DIR/PRESENTER_CHECKLIST.md" << 'CHECKLIST'
 
 ## VM / Software
 - [ ] VirtualBox 7+ installed
-- [ ] VM boots and login works (student/student123)
+- [ ] VM boots and login works (student / generated password)
 - [ ] Internet connected (Wi-Fi bridge mode for Docker pulls)
 - [ ] Docker is running: `sudo systemctl status docker`
 - [ ] Python deps installed: PyQt6, flask, cryptography, reportlab

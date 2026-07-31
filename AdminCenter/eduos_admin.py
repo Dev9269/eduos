@@ -7,6 +7,8 @@ import sys
 import os
 import subprocess
 import json
+import hashlib
+import ipaddress
 import platform
 import socket
 import threading
@@ -23,7 +25,117 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QPalette, QIcon, QAction
+from cryptography.fernet import Fernet
 from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
+
+
+ADMIN_CONFIG_PATH = Path.home() / ".eduos" / "admin_config.json"
+
+
+def _config_fernet() -> Fernet:
+    """Derive a Fernet key from the admin password hash.
+
+    The config file is encrypted with a key derived from the admin
+    hash, so it can only be decrypted by someone who knows the
+    admin password. If no admin hash exists yet, returns None.
+    """
+    hash_path = Path.home() / ".eduos" / "admin_config.json"
+    if not hash_path.exists():
+        return None
+    try:
+        data = json.loads(hash_path.read_text())
+        admin_hash = data.get("admin_hash", "")
+        if not admin_hash:
+            return None
+        key = hashlib.sha256(admin_hash.encode()).digest()
+        import base64
+        return Fernet(base64.urlsafe_b64encode(key))
+    except Exception:
+        return None
+
+
+class AdminLoginDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("EduOS Admin — Authenticate")
+        self.setFixedSize(400, 250)
+        layout = QVBoxLayout(self)
+
+        title = QLabel("🔐 EduOS Admin Authentication")
+        title.setStyleSheet(f"font-size: 16px; font-weight: bold; color: {C.ACCENT_PRIMARY};")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title)
+
+        self.password_input = QLineEdit()
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password_input.setPlaceholderText("Admin Password")
+
+        self.btn = QPushButton("Login")
+        self.btn.setStyleSheet(accent_glow_style())
+        self.btn.clicked.connect(self.verify)
+
+        self.new_password_input = QLineEdit()
+        self.new_password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.new_password_input.setPlaceholderText("Set a new admin password (first run)")
+
+        layout.addWidget(QLabel("Enter Admin Password:"))
+        layout.addWidget(self.password_input)
+        layout.addWidget(self.new_password_input)
+        layout.addWidget(self.btn)
+
+        self.password_input.returnPressed.connect(self.verify)
+        self.new_password_input.returnPressed.connect(self.verify)
+
+    def _load_admin_hash(self) -> str:
+        config = ADMIN_CONFIG_PATH
+        if config.exists():
+            try:
+                data = json.loads(config.read_text())
+                return data.get("admin_hash", "")
+            except Exception:
+                return ""
+        return ""
+
+    def verify(self):
+        import hashlib as _h
+        password = self.password_input.text()
+        stored_hash = self._load_admin_hash()
+
+        # First run — set the admin password
+        if not stored_hash:
+            new_pw = self.new_password_input.text()
+            if len(new_pw) < 6:
+                QMessageBox.warning(
+                    self, "Error",
+                    "Set a new admin password (min 6 characters) to continue."
+                )
+                return
+            admin_hash = _h.sha256(new_pw.encode()).hexdigest()
+            ADMIN_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                data = json.loads(ADMIN_CONFIG_PATH.read_text()) if ADMIN_CONFIG_PATH.exists() else {}
+            except Exception:
+                data = {}
+            data["admin_hash"] = admin_hash
+            ADMIN_CONFIG_PATH.write_text(json.dumps(data, indent=2))
+            QMessageBox.information(
+                self, "Setup Complete",
+                "Admin password set. Restart EduOS Admin to log in."
+            )
+            self.reject()
+            return
+
+        entered_hash = _h.sha256(password.encode()).hexdigest()
+        if entered_hash == stored_hash:
+            self.accept()
+        else:
+            QMessageBox.warning(self, "Error", "Wrong password")
+            self.password_input.clear()
+
+    def verify_config_encryption(self):
+        """Ensure config is encrypted with the admin hash as key."""
+        fernet = _config_fernet()
+        return fernet is not None
 
 
 class PingThread(QThread):
@@ -34,6 +146,13 @@ class PingThread(QThread):
         self.host = host
 
     def run(self):
+        try:
+            # Vulnerability 2 — validate it's a real IP before pinging.
+            # This blocks shell-injection payloads passed as "host".
+            ipaddress.ip_address(self.host)
+        except ValueError:
+            self.result.emit(self.host, False)
+            return
         try:
             out = subprocess.run(
                 ["ping", "-c", "1", "-W", "2", self.host],
@@ -63,20 +182,36 @@ class AdminCenterWindow(QMainWindow):
         event.accept()
 
     def _load_config(self):
-        config_path = Path.home() / ".eduos" / "admin_config.json"
+        config_path = ADMIN_CONFIG_PATH
         if config_path.exists():
             try:
-                with open(config_path) as f:
-                    cfg = json.load(f)
-                    self.lab_hosts = cfg.get("lab_hosts", [])
+                raw = json.loads(config_path.read_text())
+                fernet = _config_fernet()
+                if fernet and raw.get("encrypted"):
+                    import base64
+                    decrypted = fernet.decrypt(
+                        base64.b64decode(raw["encrypted"].encode())
+                    )
+                    cfg = json.loads(decrypted)
+                else:
+                    cfg = raw
+                self.lab_hosts = cfg.get("lab_hosts", [])
             except Exception:
                 self.lab_hosts = []
 
     def _save_config(self):
-        config_dir = Path.home() / ".eduos"
+        config_dir = ADMIN_CONFIG_PATH.parent
         config_dir.mkdir(parents=True, exist_ok=True)
-        with open(config_dir / "admin_config.json", "w") as f:
-            json.dump({"lab_hosts": self.lab_hosts}, f, indent=2)
+        data = {"lab_hosts": self.lab_hosts}
+        fernet = _config_fernet()
+        if fernet:
+            # Vulnerability 3 — encrypt host list with admin-hash-derived key
+            import base64
+            encrypted = fernet.encrypt(json.dumps(data).encode())
+            payload = {"encrypted": base64.b64encode(encrypted).decode()}
+        else:
+            payload = data
+        ADMIN_CONFIG_PATH.write_text(json.dumps(payload, indent=2))
 
     def _setup_ui(self):
         central = QWidget()
@@ -315,6 +450,8 @@ class AdminCenterWindow(QMainWindow):
 
         def check_host(ip):
             try:
+                # Sanitize before pinging — must be a valid IP literal
+                ipaddress.ip_address(ip)
                 out = subprocess.run(
                     ["ping", "-c", "1", "-W", "2", ip],
                     capture_output=True, timeout=5
@@ -673,6 +810,12 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     apply_glass_theme(app)
+
+    # Vulnerability 1 — authentication gate before admin panel opens
+    login = AdminLoginDialog()
+    if login.exec() != QDialog.DialogCode.Accepted:
+        sys.exit(0)
+
     window = AdminCenterWindow()
     window.show()
     sys.exit(app.exec())

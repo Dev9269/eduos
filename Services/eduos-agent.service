@@ -1,0 +1,19 @@
+[Unit]
+Description=EduOS Agent Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/eduos/Services/eduos-agent.py
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=0
+User=root
+KillMode=none
+# Prevents student from stopping via systemctl
+ProtectSystem=strict
+NoNewPrivileges=false
+
+[Install]
+WantedBy=multi-user.target

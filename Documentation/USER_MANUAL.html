@@ -42,12 +42,12 @@ footer { text-align: center; padding: 32px; color: #94a3b8; font-size: 13px; }
 
 <div class="card">
     <h3>Logging In</h3>
-    <p>EduOS boots to the SDDM login screen. Select your user and enter the password:</p>
+    <p>EduOS boots to the SDDM login screen. Select your user and enter the password. Passwords are generated randomly at install time — the lab admin can find them in <code>/etc/eduos/credentials.conf</code> (root-only).</p>
     <table>
         <tr><th>Username</th><th>Password</th><th>Purpose</th></tr>
-        <tr><td><code>student</code></td><td><code>student123</code></td><td>Daily learning and coursework</td></tr>
-        <tr><td><code>exam</code></td><td><code>exam123</code></td><td>Restricted examination environment</td></tr>
-        <tr><td><code>admin</code></td><td><code>admin123</code></td><td>Lab administration and management</td></tr>
+        <tr><td><code>student</code></td><td>generated (see credentials.conf)</td><td>Daily learning and coursework</td></tr>
+        <tr><td><code>exam</code></td><td>generated (see credentials.conf)</td><td>Restricted examination environment</td></tr>
+        <tr><td><code>admin</code></td><td>generated (see credentials.conf)</td><td>Lab administration and management</td></tr>
     </table>
 </div>
 

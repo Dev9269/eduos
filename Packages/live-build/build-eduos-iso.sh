@@ -241,8 +241,9 @@ if [ -f "$EDUOS_REPO/Branding/plasma/eduos.colors" ]; then
 fi
 
 # Plymouth theme
-if [ -d "$EDUOS_REPO/Branding/plymouth" ]; then
-    cp -r "$EDUOS_REPO/Branding/plymouth/"* config/includes.chroot/usr/share/plymouth/themes/eduos/ 2>/dev/null || true
+if [ -d "$EDUOS_REPO/Branding/plymouth/edos-plymouth-theme" ]; then
+    cp -r "$EDUOS_REPO/Branding/plymouth/edos-plymouth-theme/"* \
+       config/includes.chroot/usr/share/plymouth/themes/eduos/ 2>/dev/null || true
     echo "✅ Plymouth theme copied"
 fi
 
@@ -340,10 +341,25 @@ useradd -m -s /bin/bash student 2>/dev/null || true
 useradd -m -s /bin/bash admin 2>/dev/null || true
 useradd -m -s /usr/local/bin/eduos-exam-shell exam 2>/dev/null || true
 
-# Set passwords
-echo "student:student123" | chpasswd 2>/dev/null || true
-echo "admin:admin123" | chpasswd 2>/dev/null || true
-echo "exam:exam123" | chpasswd 2>/dev/null || true
+# Generate strong random passwords (no hardcoded credentials)
+STUDENT_PW=$(openssl rand -base64 16 | tr -d '=/+' | cut -c1-16)
+ADMIN_PW=$(openssl rand -base64 16 | tr -d '=/+' | cut -c1-16)
+EXAM_PW=$(openssl rand -base64 16 | tr -d '=/+' | cut -c1-16)
+echo "student:$STUDENT_PW" | chpasswd 2>/dev/null || true
+echo "admin:$ADMIN_PW" | chpasswd 2>/dev/null || true
+echo "exam:$EXAM_PW" | chpasswd 2>/dev/null || true
+
+# Persist generated credentials (owner-only) and print for the lab admin
+mkdir -p /etc/eduos
+cat > /etc/eduos/credentials.conf << 'CREDEOF'
+# EduOS generated credentials — generated at build time
+student_password=$STUDENT_PW
+admin_password=$ADMIN_PW
+exam_password=$EXAM_PW
+CREDEOF
+chmod 600 /etc/eduos/credentials.conf
+echo "EduOS build: generated credentials saved to /etc/eduos/credentials.conf (chmod 600)"
+echo "student password: $STUDENT_PW"
 
 # Sudo for admin
 usermod -aG sudo admin 2>/dev/null || true

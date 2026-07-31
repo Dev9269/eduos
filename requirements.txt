@@ -1,6 +1,5 @@
 # Core GUI
 PyQt6>=6.5
-PyQt5>=5.15
 
 # Web Framework (LearnHub)
 Flask>=3.0
@@ -23,3 +22,11 @@ pyjwt>=2.8
 
 # HTTP Client
 requests>=2.31
+
+# Agent/Server networking
+websockets>=12.0
+asyncio-mqtt>=0.16
+aiofiles>=23.0
+
+# System monitoring (Agent status)
+psutil>=5.9
