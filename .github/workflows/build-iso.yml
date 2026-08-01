@@ -45,10 +45,10 @@ jobs:
               konsole dolphin firefox-esr
             pip3 install cryptography fastapi uvicorn --break-system-packages
             useradd -m -s /bin/bash student
-            echo 'student:${STUDENT_PW}' | chpasswd
+            echo "student:${STUDENT_PW}" | chpasswd
             echo 'student ALL=(ALL) ALL' >> /etc/sudoers.d/student
             mkdir -p /etc/eduos
-            echo 'student_password=${STUDENT_PW}' > /etc/eduos/credentials.conf
+            echo "student_password=${STUDENT_PW}" > /etc/eduos/credentials.conf
             chmod 600 /etc/eduos/credentials.conf
             mkdir -p /etc/sddm.conf.d
             printf '[Autologin]\nUser=student\nSession=plasma.desktop\n' > /etc/sddm.conf.d/autologin.conf

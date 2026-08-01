@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# EduOS Agent — FreeBSD rc.d service
+# Place at: /usr/local/etc/rc.d/eduos_agent
+# Enable with: echo 'eduos_agent_enable="YES"' >> /etc/rc.conf
+#
+
+# PROVIDE: eduos_agent
+# REQUIRE: NETWORKING LOGIN
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="eduos_agent"
+rcvar="eduos_agent_enable"
+desc="EduOS Student PC Agent"
+
+command="/usr/local/bin/python3.11"
+command_args="/opt/eduos/Services/eduos-agent.py"
+pidfile="/var/run/${name}.pid"
+logfile="/var/log/eduos-agent.log"
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+
+eduos_agent_start()
+{
+    echo "Starting EduOS Agent..."
+    /usr/sbin/daemon \
+        -p "${pidfile}" \
+        -o "${logfile}" \
+        -r \
+        ${command} ${command_args}
+    echo "EduOS Agent started (PID: $(cat ${pidfile}))"
+}
+
+eduos_agent_stop()
+{
+    echo "Stopping EduOS Agent..."
+    if [ -f "${pidfile}" ]; then
+        kill $(cat "${pidfile}") 2>/dev/null || true
+        rm -f "${pidfile}"
+    fi
+    echo "EduOS Agent stopped"
+}
+
+load_rc_config $name
+: ${eduos_agent_enable:=YES}
+run_rc_command "$1"

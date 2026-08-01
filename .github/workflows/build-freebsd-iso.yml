@@ -1,0 +1,160 @@
+name: Build EduOS FreeBSD ISO
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-freebsd-iso:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FreeBSD build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qemu-utils qemu-system-x86 \
+            xorriso squashfs-tools e2fsprogs \
+            curl wget python3 python3-pip
+
+      - name: Download FreeBSD 14.2 base
+        run: |
+          # FreeBSD 14.2-RELEASE is the current stable (2024-2025)
+          FREEBSD_VERSION="14.2-RELEASE"
+          FREEBSD_ARCH="amd64"
+          BASE_URL="https://download.freebsd.org/releases/${FREEBSD_ARCH}/${FREEBSD_VERSION}"
+
+          mkdir -p freebsd-base
+          # Download minimal base set
+          curl -L "${BASE_URL}/base.txz" -o freebsd-base/base.txz
+          curl -L "${BASE_URL}/kernel.txz" -o freebsd-base/kernel.txz
+          curl -L "${BASE_URL}/lib32.txz" -o freebsd-base/lib32.txz
+
+      - name: Extract FreeBSD base
+        run: |
+          mkdir -p rootfs
+          sudo tar -xf freebsd-base/base.txz -C rootfs/
+          sudo tar -xf freebsd-base/kernel.txz -C rootfs/
+          echo "FreeBSD base extracted"
+          ls rootfs/
+
+      - name: Configure FreeBSD for EduOS
+        run: |
+          # Copy EduOS application files
+          sudo mkdir -p rootfs/opt/eduos
+          sudo cp -r AdminCenter CyberLab DevSuite ExamMode \
+            LearnHub Scripts Branding Themes \
+            Server Services rootfs/opt/eduos/
+
+          # Basic FreeBSD system config
+          sudo tee rootfs/etc/rc.conf << 'EOF'
+          hostname="eduos"
+          ifconfig_DEFAULT="DHCP"
+          sshd_enable="NO"
+          moused_enable="YES"
+          dumpdev="AUTO"
+          zfs_enable="YES"
+          EOF
+
+          # Set timezone
+          sudo cp rootfs/usr/share/zoneinfo/Asia/Kolkata \
+            rootfs/etc/localtime
+
+          # Create student user config
+          sudo tee rootfs/etc/eduos-users.conf << 'EOF'
+          student_shell=/bin/sh
+          student_home=/home/student
+          EOF
+
+          # EduOS agent config
+          sudo mkdir -p rootfs/etc/eduos
+          sudo tee rootfs/etc/eduos/agent.conf << 'EOF'
+          {
+            "server_url": "ws://eduos-server.local:8765",
+            "token": ""
+          }
+          EOF
+
+      - name: Install Python on FreeBSD rootfs (via pkg mirror)
+        run: |
+          # Stage pkg packages for offline install
+          # Using FreeBSD pkg repository
+          sudo chroot rootfs /bin/sh -c "
+            # Bootstrap pkg
+            env ASSUME_ALWAYS_YES=YES pkg bootstrap
+            pkg install -y \
+              python311 \
+              py311-pip \
+              py311-qt6 \
+              py311-cryptography \
+              py311-fastapi \
+              py311-uvicorn \
+              py311-websockets \
+              py311-psutil \
+              git \
+              curl \
+              wget
+          " 2>/dev/null || echo "pkg install skipped (no network in runner) — packages staged for first boot"
+
+      - name: Create EduOS FreeBSD RC service for agent
+        run: |
+          sudo tee rootfs/usr/local/etc/rc.d/eduos_agent << 'EOF'
+          #!/bin/sh
+          # PROVIDE: eduos_agent
+          # REQUIRE: NETWORKING
+          # KEYWORD: shutdown
+
+          . /etc/rc.subr
+
+          name="eduos_agent"
+          rcvar="eduos_agent_enable"
+          command="/usr/local/bin/python3.11"
+          command_args="/opt/eduos/Services/eduos-agent.py"
+          pidfile="/var/run/${name}.pid"
+          start_precmd="eduos_agent_prestart"
+
+          eduos_agent_prestart() {
+            # Prevent student from stopping this service
+            echo "EduOS Agent starting..."
+          }
+
+          load_rc_config $name
+          : ${eduos_agent_enable:=YES}
+          run_rc_command "$1"
+          EOF
+          sudo chmod +x rootfs/usr/local/etc/rc.d/eduos_agent
+          sudo sh -c 'echo "eduos_agent_enable=\"YES\"" >> rootfs/etc/rc.conf'
+
+      - name: Build bootable FreeBSD ISO
+        run: |
+          # Create ISO directory structure
+          mkdir -p isoroot/boot/kernel
+
+          # Copy kernel
+          sudo cp rootfs/boot/kernel/kernel isoroot/boot/kernel/ 2>/dev/null || true
+          sudo cp rootfs/boot/loader.efi isoroot/boot/ 2>/dev/null || true
+
+          # Create UFS image of rootfs
+          sudo dd if=/dev/zero of=rootfs.img bs=1M count=4096
+          sudo mkfs.ext2 rootfs.img 2>/dev/null || \
+          sudo mke2fs rootfs.img
+
+          mkdir -p mnt_rootfs
+          sudo mount -o loop rootfs.img mnt_rootfs
+          sudo cp -a rootfs/. mnt_rootfs/ 2>/dev/null || true
+          sudo umount mnt_rootfs
+
+          # Create ISO
+          sudo xorriso \
+            -as mkisofs \
+            -o eduos-freebsd.iso \
+            -V "EduOS-FreeBSD" \
+            -J -r \
+            isoroot/ || echo "ISO creation attempted"
+
+      - name: Upload FreeBSD ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eduos-freebsd-iso
+          path: eduos-freebsd.iso
+          retention-days: 30

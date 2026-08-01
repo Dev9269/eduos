@@ -1,0 +1,47 @@
+# EduOS FreeBSD Package List
+# Install with: pkg install $(cat freebsd-packages.txt | grep -v ^# | tr '\n' ' ')
+
+# Desktop Environment
+x11/kde5
+x11/sddm
+x11-wm/plasma5-plasma-workspace
+x11/konsole
+x11/dolphin
+
+# Python and EduOS apps
+lang/python311
+devel/py-pip
+devel/py-pyqt6
+security/py-cryptography
+www/py-fastapi
+www/py-uvicorn
+net/py-websockets
+devel/py-psutil
+
+# Development tools (Dev Suite)
+devel/git
+editors/vscode
+lang/gcc
+lang/python311
+java/openjdk17
+lang/rust
+devel/nodejs
+
+# Cybersecurity tools (Cyber Lab)
+security/nmap
+security/wireshark
+security/metasploit
+net/netcat
+security/aircrack-ng
+
+# Virtualization (for isolated labs)
+emulators/qemu
+emulators/virtualbox-ose
+
+# System utilities
+sysutils/tmux
+shells/bash
+editors/nano
+ftp/curl
+ftp/wget
+archivers/unzip

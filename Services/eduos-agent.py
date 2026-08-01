@@ -19,7 +19,10 @@ import websockets
 log = logging.getLogger(__name__)
 
 CONFIG_FILE = Path('/etc/eduos/agent.conf')
-DEFAULT_SERVER = 'ws://192.168.1.10:8765'
+# Also check local config for development/testing
+LOCAL_CONFIG = Path.home() / '.eduos' / 'agent.conf'
+
+FALLBACK_SERVER = 'ws://eduos-server.local:8765'
 
 
 def _log_file_path() -> str:
@@ -43,9 +46,48 @@ def _log_file_path() -> str:
 
 
 def load_config():
-    if CONFIG_FILE.exists():
-        return json.loads(CONFIG_FILE.read_text())
-    return {'server_url': DEFAULT_SERVER, 'token': ''}
+    """Load config from env var, then system path, then local path."""
+    # Environment variable takes highest priority
+    env_server = os.environ.get('EDUOS_SERVER_URL')
+    if env_server:
+        return {'server_url': env_server,
+                'token': os.environ.get('EDUOS_TOKEN', '')}
+
+    # System config (production), then local config (dev/testing)
+    for config_path in [CONFIG_FILE, LOCAL_CONFIG]:
+        if config_path.exists():
+            try:
+                return json.loads(config_path.read_text())
+            except Exception:
+                continue
+
+    # Default fallback — mDNS discovery, then standard hostname
+    return {
+        'server_url': discover_server_mdns(),
+        'token': '',
+    }
+
+
+def discover_server_mdns() -> str:
+    """Try to find EduOS server on local network via hostname."""
+    import socket
+    try:
+        # Try standard hostname first
+        ip = socket.gethostbyname('eduos-server.local')
+        return f'ws://{ip}:8765'
+    except socket.gaierror:
+        pass
+    try:
+        # Try common local hostnames
+        for hostname in ['eduos-server', 'eduos-admin', 'admin']:
+            try:
+                ip = socket.gethostbyname(hostname)
+                return f'ws://{ip}:8765'
+            except socket.gaierror:
+                continue
+    except Exception:
+        pass
+    return FALLBACK_SERVER
 
 
 logging.basicConfig(

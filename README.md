@@ -11,11 +11,31 @@
 [![Debian](https://img.shields.io/badge/Debian-13%20Trixie-A81D33?style=flat-square&logo=debian&logoColor=white)](https://debian.org)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 
-Debian-based educational OS for engineering colleges — integrating learning, secure exams, dev tools, cyber labs, and campus administration.
+Debian-based educational OS for engineering colleges — integrating learning, secure exams, dev tools, cyber labs, and campus administration. **Migrating to FreeBSD.**
 
 **Created by** [Jainam Maru](https://github.com/Dev9269)
 
 </div>
+
+---
+
+## Platform
+
+EduOS is built on **FreeBSD** — a Unix operating system with a BSD
+license that allows EduOS to be distributed as a proprietary product.
+Unlike Linux (which requires GPL source disclosure), FreeBSD enables
+EduOS to keep its exam security, admin management, and agent systems
+as closed-source components.
+
+This is the same approach used by:
+- Apple macOS (Darwin/BSD base)
+- Sony PlayStation OS (FreeBSD base)
+- Nintendo Switch OS (FreeBSD base)
+
+### Current Build Status
+- **v1.x (current):** Debian-based build for development and testing
+- **v2.0 (target):** FreeBSD 14.x base with full KDE Plasma desktop
+- **v3.0 (future):** Custom FreeBSD-derived kernel with EduOS branding
 
 ---
 

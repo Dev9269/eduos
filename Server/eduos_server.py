@@ -19,12 +19,48 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uvicorn
 import jwt
 
-SECRET_KEY = os.environ.get('EDUOS_SECRET', 'change-this-in-production')
-DB_PATH = Path(os.environ.get('EDUOS_DB_PATH', '/var/lib/eduos/server.db'))
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
+
+SECRET_KEY_FILE = Path('/etc/eduos/server.key')
+LOCAL_KEY_FILE = Path.home() / '.eduos' / 'server.key'
+
+
+def load_or_generate_secret() -> str:
+    """Load existing secret key or generate a new one."""
+    import secrets
+
+    # Environment variable takes priority
+    env_key = os.environ.get('EDUOS_SECRET')
+    if env_key and len(env_key) >= 32:
+        return env_key
+
+    # Try to load from file
+    for key_file in [SECRET_KEY_FILE, LOCAL_KEY_FILE]:
+        if key_file.exists():
+            try:
+                key = key_file.read_text().strip()
+                if len(key) >= 32:
+                    return key
+            except Exception:
+                continue
+
+    # Generate new key and save it
+    new_key = secrets.token_hex(32)
+    save_path = LOCAL_KEY_FILE
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    save_path.write_text(new_key)
+    save_path.chmod(0o600)
+    log.info(f"Generated new secret key saved to {save_path}")
+    return new_key
+
+
+SECRET_KEY = load_or_generate_secret()
+DB_PATH = Path(os.environ.get(
+    'EDUOS_DB_PATH',
+    str(Path.home() / '.eduos' / 'server.db')  # default to home
+))
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="EduOS Server", version="1.0.0")
 security = HTTPBearer()
