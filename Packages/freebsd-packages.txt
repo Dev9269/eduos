@@ -4,14 +4,14 @@
 # Desktop Environment
 x11/kde5
 x11/sddm
+x11-wm/plasma5-plasma-desktop
 x11-wm/plasma5-plasma-workspace
-x11/konsole
-x11/dolphin
+x11/konsole5
+x11-fm/dolphin
 
-# Python and EduOS apps
+# Python and EduOS apps (PyQt6 via pip: pip3.11 install PyQt6)
 lang/python311
 devel/py-pip
-devel/py-pyqt6
 security/py-cryptography
 www/py-fastapi
 www/py-uvicorn
@@ -25,7 +25,8 @@ lang/gcc
 lang/python311
 java/openjdk17
 lang/rust
-devel/nodejs
+www/node
+lang/go122
 
 # Cybersecurity tools (Cyber Lab)
 security/nmap

@@ -40,71 +40,70 @@ jobs:
 
       - name: Configure FreeBSD for EduOS
         run: |
-          # Copy EduOS application files
-          sudo mkdir -p rootfs/opt/eduos
+          sudo mkdir -p rootfs/opt/eduos rootfs/etc/eduos
+
           sudo cp -r AdminCenter CyberLab DevSuite ExamMode \
             LearnHub Scripts Branding Themes \
             Server Services rootfs/opt/eduos/
 
-          # Basic FreeBSD system config
-          sudo tee rootfs/etc/rc.conf << 'EOF'
+          # Write rc.conf (content indented same as command — YAML strips it)
+          sudo tee rootfs/etc/rc.conf > /dev/null << 'RCEOF'
           hostname="eduos"
           ifconfig_DEFAULT="DHCP"
           sshd_enable="NO"
           moused_enable="YES"
           dumpdev="AUTO"
-          zfs_enable="YES"
-          EOF
+          zfs_enable="NO"
+          dbus_enable="YES"
+          eduos_firstboot_enable="YES"
+          RCEOF
 
-          # Set timezone
           sudo cp rootfs/usr/share/zoneinfo/Asia/Kolkata \
-            rootfs/etc/localtime
+            rootfs/etc/localtime 2>/dev/null || true
 
-          # Create student user config
-          sudo tee rootfs/etc/eduos-users.conf << 'EOF'
+          sudo tee rootfs/etc/eduos-users.conf > /dev/null << 'UEOF'
           student_shell=/bin/sh
           student_home=/home/student
-          EOF
+          UEOF
 
-          # EduOS agent config
           sudo mkdir -p rootfs/etc/eduos
-          sudo tee rootfs/etc/eduos/agent.conf << 'EOF'
+          sudo tee rootfs/etc/eduos/agent.conf > /dev/null << 'AEOF'
           {
             "server_url": "ws://eduos-server.local:8765",
             "token": ""
           }
-          EOF
+          AEOF
 
       - name: Configure FreeBSD bootloader
         run: |
           sudo mkdir -p rootfs/boot
-          sudo tee rootfs/boot/loader.conf << 'EOF'
-          # EduOS FreeBSD Boot Configuration
+
+          sudo tee rootfs/boot/loader.conf > /dev/null << 'LEOF'
           geom_label_load="YES"
-          zfs_load="YES"
+          zfs_load="NO"
           kern.vty=vt
           autoboot_delay="3"
           beastie_disable="YES"
           loader_logo="none"
-          EOF
+          LEOF
 
-          # FreeBSD fstab
-          sudo tee rootfs/etc/fstab << 'EOF'
+          sudo tee rootfs/etc/fstab > /dev/null << 'FEOF'
           # EduOS FreeBSD fstab
-          # Device        Mountpoint  FStype  Options  Dump  Pass
-          /dev/ada0s1a    /           ufs     rw       1     1
-          /dev/ada0s1b    none        swap    sw       0     0
-          tmpfs           /tmp        tmpfs   rw,mode=1777  0  0
-          EOF
+          /dev/ada0s1a    /       ufs     rw      1  1
+          /dev/ada0s1b    none    swap    sw      0  0
+          tmpfs           /tmp    tmpfs   rw,mode=1777  0  0
+          FEOF
 
-          echo "FreeBSD bootloader configured"
+          echo "Bootloader configured"
 
       - name: Stage first-boot package installer
         run: |
-          sudo tee rootfs/etc/rc.d/eduos_firstboot << 'RCEOF'
+          sudo mkdir -p rootfs/etc/rc.d
+
+          sudo tee rootfs/etc/rc.d/eduos_firstboot > /dev/null << 'RCEOF'
           #!/bin/sh
           # PROVIDE: eduos_firstboot
-          # REQUIRE: NETWORKING pkg
+          # REQUIRE: NETWORKING
           # BEFORE: LOGIN
           # KEYWORD: firstboot
 
@@ -112,40 +111,34 @@ jobs:
           name="eduos_firstboot"
           start_cmd="eduos_firstboot_run"
 
-          eduos_firstboot_run() {
-            echo "[EduOS] Running first-boot setup..."
-
-            # Install required packages
-            env ASSUME_ALWAYS_YES=YES pkg update
-            pkg install -y \
-              python311 \
-              py311-pip \
-              py311-websockets \
-              py311-psutil \
-              git curl wget bash nano
-
-            # Install Python packages
-            pip3.11 install cryptography fastapi uvicorn pyjwt
-
-            # Install EduOS agent service
-            cp /opt/eduos/Services/freebsd/eduos_agent \
-              /usr/local/etc/rc.d/eduos_agent
-            chmod +x /usr/local/etc/rc.d/eduos_agent
-            sysrc eduos_agent_enable="YES"
-            service eduos_agent start
-
-            # Self-disable after first boot
-            sysrc eduos_firstboot_enable="NO"
-            rm -f /etc/rc.d/eduos_firstboot
-            echo "[EduOS] First-boot setup complete."
+          eduos_firstboot_run()
+          {
+          echo "[EduOS] First-boot setup starting..."
+          env ASSUME_ALWAYS_YES=YES pkg update -q
+          pkg install -y \
+            python311 \
+            py311-pip \
+            py311-websockets \
+            py311-psutil \
+            git curl wget bash nano
+          pip3.11 install --quiet \
+            cryptography fastapi uvicorn pyjwt
+          cp /opt/eduos/Services/freebsd/eduos_agent \
+            /usr/local/etc/rc.d/eduos_agent
+          chmod +x /usr/local/etc/rc.d/eduos_agent
+          sysrc eduos_agent_enable="YES"
+          service eduos_agent start || true
+          sysrc eduos_firstboot_enable="NO"
+          rm -f /etc/rc.d/eduos_firstboot
+          echo "[EduOS] First-boot complete."
           }
 
           load_rc_config $name
           : ${eduos_firstboot_enable:=YES}
           run_rc_command "$1"
           RCEOF
+
           sudo chmod +x rootfs/etc/rc.d/eduos_firstboot
-          sudo sh -c 'echo "eduos_firstboot_enable=\"YES\"" >> rootfs/etc/rc.conf'
           echo "First-boot script staged"
 
       - name: Build bootable FreeBSD ISO
@@ -167,12 +160,12 @@ jobs:
           sudo cp -r rootfs/etc/rc.d/ isoroot/etc/ 2>/dev/null || true
 
           # FreeBSD loader config
-          sudo tee isoroot/boot/loader.conf << 'EOF'
+          sudo tee isoroot/boot/loader.conf > /dev/null << 'LEOF'
           geom_label_load="YES"
           kern.geom.label.disk_ident.enable="0"
           kern.geom.label.gptid.enable="0"
-          zfs_load="YES"
-          EOF
+          zfs_load="NO"
+          LEOF
 
           # Create the ISO using makefs + mkisofs approach
           sudo xorriso \

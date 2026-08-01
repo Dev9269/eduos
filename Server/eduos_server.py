@@ -92,6 +92,24 @@ def init_db():
         created_at TEXT,
         status TEXT DEFAULT "pending"
     )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS submissions (
+        id INTEGER PRIMARY KEY,
+        exam_id INTEGER,
+        student_id TEXT NOT NULL,
+        hostname TEXT,
+        answers TEXT NOT NULL,
+        submitted_at TEXT NOT NULL,
+        checksum TEXT,
+        status TEXT DEFAULT "received"
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS updates (
+        id INTEGER PRIMARY KEY,
+        version TEXT,
+        description TEXT,
+        files TEXT,
+        pushed_at TEXT,
+        recipients INTEGER
+    )''')
     conn.commit()
     conn.close()
 
@@ -153,6 +171,179 @@ async def push_exam(exam_data: dict, user=Depends(verify_token)):
             log.error(f"Failed to push exam to {host}: {e}")
 
     return {"status": "pushed", "recipients": len(connected_agents)}
+
+
+@app.post("/exam/submit")
+async def submit_exam(submission: dict, user=Depends(verify_token)):
+    """Receive exam submission from a student PC agent"""
+    import hashlib
+    required = ['exam_id', 'student_id', 'answers']
+    for field in required:
+        if field not in submission:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Missing field: {field}"
+            )
+
+    answers_json = json.dumps(submission['answers'])
+    checksum = hashlib.sha256(answers_json.encode()).hexdigest()
+
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute(
+            """INSERT INTO submissions
+               (exam_id, student_id, hostname, answers,
+                submitted_at, checksum)
+               VALUES (?,?,?,?,?,?)""",
+            (
+                submission['exam_id'],
+                submission['student_id'],
+                submission.get('hostname', 'unknown'),
+                answers_json,
+                datetime.now().isoformat(),
+                checksum
+            )
+        )
+        conn.commit()
+        log.info(
+            f"Submission received: student={submission['student_id']} "
+            f"exam={submission['exam_id']} checksum={checksum[:8]}..."
+        )
+        return {
+            "status": "received",
+            "checksum": checksum,
+            "submitted_at": datetime.now().isoformat()
+        }
+    except sqlite3.IntegrityError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    finally:
+        conn.close()
+
+
+@app.get("/exam/submissions/{exam_id}")
+async def get_submissions(exam_id: int, user=Depends(verify_token)):
+    """Get all submissions for a specific exam"""
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute(
+        """SELECT id, student_id, hostname, submitted_at,
+                  checksum, status
+           FROM submissions WHERE exam_id=?
+           ORDER BY submitted_at ASC""",
+        (exam_id,)
+    ).fetchall()
+    conn.close()
+    return {
+        "exam_id": exam_id,
+        "total": len(rows),
+        "submissions": [
+            {
+                "id": r[0], "student_id": r[1],
+                "hostname": r[2], "submitted_at": r[3],
+                "checksum": r[4], "status": r[5]
+            }
+            for r in rows
+        ]
+    }
+
+
+@app.get("/exam/submissions/{exam_id}/export")
+async def export_submissions(exam_id: int, user=Depends(verify_token)):
+    """Export all submissions with full answers for grading"""
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute(
+        "SELECT * FROM submissions WHERE exam_id=?",
+        (exam_id,)
+    ).fetchall()
+    conn.close()
+    return {
+        "exam_id": exam_id,
+        "exported_at": datetime.now().isoformat(),
+        "submissions": [
+            {
+                "id": r[0], "exam_id": r[1],
+                "student_id": r[2], "hostname": r[3],
+                "answers": json.loads(r[4]),
+                "submitted_at": r[5],
+                "checksum": r[6], "status": r[7]
+            }
+            for r in rows
+        ]
+    }
+
+
+@app.post("/update/push")
+async def push_update(update_data: dict, user=Depends(verify_token)):
+    """
+    Push a software update to all connected student PCs.
+    update_data: {
+      "version": "1.2.3",
+      "description": "Security patch",
+      "files": [
+        {"path": "relative/path/file.py", "content_b64": "base64..."}
+      ],
+      "restart_agent": false
+    }
+    """
+    version = update_data.get('version', 'unknown')
+    files = update_data.get('files', [])
+
+    if not files:
+        raise HTTPException(
+            status_code=400,
+            detail="No files in update package"
+        )
+
+    # Store update in DB
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute(
+        "INSERT INTO updates (version,description,files,pushed_at,recipients) VALUES (?,?,?,?,?)",
+        (version, update_data.get('description', ''),
+         json.dumps(files), datetime.now().isoformat(),
+         len(connected_agents))
+    )
+    conn.commit()
+    conn.close()
+
+    # Broadcast to all agents
+    command = {
+        'action': 'apply_update',
+        'version': version,
+        'files': files,
+        'restart_agent': update_data.get('restart_agent', False)
+    }
+
+    results = {}
+    for host, ws in connected_agents.items():
+        try:
+            await ws.send_text(json.dumps(command))
+            results[host] = 'sent'
+        except Exception as e:
+            results[host] = f'failed: {e}'
+
+    log.info(f"Update v{version} pushed to {len(results)} agents")
+    return {
+        "status": "pushed",
+        "version": version,
+        "recipients": results
+    }
+
+
+@app.get("/update/history")
+async def update_history(user=Depends(verify_token)):
+    """List all pushed updates"""
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        rows = conn.execute(
+            "SELECT id,version,description,pushed_at,recipients FROM updates ORDER BY id DESC"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        rows = []
+    conn.close()
+    return {"updates": [
+        {"id": r[0], "version": r[1], "description": r[2],
+         "pushed_at": r[3], "recipients": r[4]}
+        for r in rows
+    ]}
 
 
 @app.websocket("/ws/agent")

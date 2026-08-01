@@ -6,6 +6,7 @@ Supports FreeBSD (rc.d) and Linux (systemd) deployments.
 """
 
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -201,6 +202,80 @@ async def handle_command(command: dict) -> dict:
             ], check=False)
             subprocess.run(['service', 'devd', 'restart'], check=False)
         return {'status': 'usb_unlocked'}
+
+    elif cmd == 'submit_exam':
+        """Forward student's exam answers to server"""
+        import urllib.request
+        import hashlib
+        config = load_config()
+        server_http = config['server_url'].replace('ws://', 'http://')
+        token = config.get('token', '')
+
+        answers = command.get('answers', {})
+        answers_json = json.dumps(answers)
+        checksum = hashlib.sha256(answers_json.encode()).hexdigest()
+
+        payload = json.dumps({
+            'exam_id': command.get('exam_id'),
+            'student_id': command.get('student_id'),
+            'hostname': platform.node(),
+            'answers': answers,
+            'checksum': checksum
+        }).encode()
+
+        req = urllib.request.Request(
+            f"{server_http}/exam/submit",
+            data=payload,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {token}'
+            }
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read())
+            return {'status': 'submitted', 'server_response': result}
+        except Exception as e:
+            return {'status': 'submit_failed', 'error': str(e)}
+
+    elif cmd == 'apply_update':
+        """Apply files pushed from admin server"""
+        files = command.get('files', [])
+        version = command.get('version', 'unknown')
+        base_path = Path('/opt/eduos')
+        applied = []
+        errors = []
+
+        for file_entry in files:
+            try:
+                rel_path = file_entry['path']
+                content = base64.b64decode(file_entry['content_b64'])
+                target = base_path / rel_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(content)
+                applied.append(rel_path)
+                log.info(f"Update applied: {rel_path}")
+            except Exception as e:
+                errors.append(f"{file_entry.get('path','?')}: {e}")
+                log.error(f"Update failed for {file_entry.get('path')}: {e}")
+
+        result = {
+            'status': 'update_applied',
+            'version': version,
+            'applied': applied,
+            'errors': errors
+        }
+
+        if command.get('restart_agent'):
+            log.info("Restarting agent after update...")
+            import threading
+            def restart():
+                import time
+                time.sleep(2)
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+            threading.Thread(target=restart, daemon=True).start()
+
+        return result
 
     return {'status': 'unknown_command', 'cmd': cmd}
 

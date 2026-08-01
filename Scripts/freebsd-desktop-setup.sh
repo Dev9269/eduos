@@ -13,13 +13,11 @@ echo "╚═══════════════════════�
 echo "[1/6] Installing KDE Plasma desktop..."
 env ASSUME_ALWAYS_YES=YES pkg update
 pkg install -y \
-    xorg \
     kde5 \
     sddm \
-    konsole \
-    dolphin \
-    plasma5-plasma-desktop \
-    plasma5-plasma-workspace
+    konsole5 \
+    git \
+    python311
 
 # 2. Enable display manager
 echo "[2/6] Enabling SDDM..."
@@ -27,10 +25,9 @@ sysrc sddm_enable="YES"
 sysrc dbus_enable="YES"
 sysrc hald_enable="YES"
 
-# 3. Install Python and EduOS dependencies
+# 3. Install Python and EduOS dependencies (via pip, more reliable)
 echo "[3/6] Installing Python stack..."
-pkg install -y python311 py311-pip
-pip3.11 install \
+pip3.11 install --quiet \
     PyQt6 \
     cryptography \
     fastapi \
@@ -43,17 +40,14 @@ pip3.11 install \
 # 4. Install development tools (Dev Suite)
 echo "[4/6] Installing development tools..."
 pkg install -y \
-    git \
     gcc \
-    python311 \
     openjdk17 \
-    nodejs \
-    npm \
+    node \
     rust \
-    go \
-    nano \
+    go122 \
     vim \
-    tmux
+    tmux \
+    nano
 
 # 5. Apply EduOS branding
 echo "[5/6] Applying EduOS branding..."
