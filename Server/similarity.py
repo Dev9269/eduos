@@ -52,6 +52,21 @@ def similarity_score(code_a: str, code_b: str) -> float:
     return intersection / union if union > 0 else 0.0
 
 
+def answers_to_code(answers) -> str:
+    """Extract the code text from an answers dict.
+    Prefers 'code', then common code keys (q2, answer, source, program),
+    then the longest string value."""
+    if not isinstance(answers, dict):
+        return str(answers) if answers else ''
+    if 'code' in answers:
+        return str(answers['code'])
+    for key in ('q2', 'answer', 'source', 'program'):
+        if key in answers and answers[key]:
+            return str(answers[key])
+    vals = [str(v) for v in answers.values() if isinstance(v, str) and v]
+    return max(vals, key=len) if vals else ''
+
+
 def check_submissions_for_similarity(
     submissions: list,
     threshold: float = 0.7
@@ -62,8 +77,8 @@ def check_submissions_for_similarity(
     """
     suspicious = []
     for a, b in combinations(submissions, 2):
-        a_code = a.get('answers', {}).get('code', '')
-        b_code = b.get('answers', {}).get('code', '')
+        a_code = answers_to_code(a.get('answers', {}))
+        b_code = answers_to_code(b.get('answers', {}))
         if not a_code or not b_code:
             continue
         score = similarity_score(a_code, b_code)
