@@ -346,6 +346,31 @@ async def update_history(user=Depends(verify_token)):
     ]}
 
 
+@app.get("/exam/submissions/{exam_id}/similarity")
+async def check_similarity(exam_id: int, user=Depends(verify_token)):
+    """Check all submissions for code similarity"""
+    from Server.similarity import check_submissions_for_similarity
+
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute(
+        "SELECT student_id, answers FROM submissions WHERE exam_id=?",
+        (exam_id,)
+    ).fetchall()
+    conn.close()
+
+    subs = [
+        {'student_id': r[0], 'answers': json.loads(r[1])}
+        for r in rows
+    ]
+    suspicious = check_submissions_for_similarity(subs)
+    return {
+        "exam_id": exam_id,
+        "total_checked": len(subs),
+        "suspicious_pairs": len(suspicious),
+        "results": suspicious
+    }
+
+
 @app.websocket("/ws/agent")
 async def agent_websocket(websocket: WebSocket):
     await websocket.accept()

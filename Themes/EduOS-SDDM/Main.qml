@@ -1,303 +1,211 @@
 import QtQuick 2.15
-import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15
-import QtGraphicalEffects 1.15
+import QtQuick.Layouts 1.15
+import SddmComponents 2.0
 
 Rectangle {
     id: root
     width: 1920
     height: 1080
-    color: "#0a0a14"
+    color: "#0A1628"
 
-    property color accentPrimary: "#6c63ff"
-    property color accentSecondary: "#4fc3f7"
-    property color glassCard: Qt.rgba(255/255, 255/255, 255/255, 0.04)
-    property color glassBorder: Qt.rgba(255/255, 255/255, 255/255, 0.08)
-    property color textPrimary: Qt.rgba(255/255, 255/255, 255/255, 0.92)
-    property color textSecondary: Qt.rgba(255/255, 255/255, 255/255, 0.65)
-    property string backgroundImage: config.background || ""
-
-    // ── Animated gradient background ──
+    // Background gradient
     Rectangle {
-        id: bgCanvas
         anchors.fill: parent
-        color: "#0a0a14"
-
-        AnimatedGradient {
-            anchors.fill: parent
-            color1: "#0a0a14"
-            color2: "#0f0f1e"
-            color3: "#151530"
-            duration: 8000
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: "#0F2044" }
+            GradientStop { position: 1.0; color: "#0A1628" }
         }
     }
 
-    // ── Background image overlay if set ──
-    Image {
-        id: bgImage
-        anchors.fill: parent
-        source: backgroundImage
-        fillMode: Image.PreserveAspectCrop
-        opacity: 0.3
-        visible: backgroundImage !== ""
-    }
+    // SDDM data models
+    TextConstants { id: textConstants }
 
-    // ── Glass blur overlay ──
+    // Login panel
     Rectangle {
-        anchors.fill: parent
-        color: Qt.rgba(10/255, 10/255, 20/255, 0.3)
-    }
-
-    // ── Login card (centered) ──
-    Item {
-        anchors.centerIn: parent
+        id: loginPanel
         width: 420
-        height: mainColumn.height + 80
+        height: 480
+        anchors.centerIn: parent
+        color: "#0D1B2E"
+        radius: 16
+        border.color: "#1E3A5F"
+        border.width: 1
 
-        RectangularGlow {
-            anchors.fill: loginCard
-            glowRadius: 40
-            spread: 0.1
-            color: Qt.rgba(108/255, 99/255, 255/255, 0.08)
-            cornerRadius: 24
-        }
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 40
+            spacing: 20
 
-        Rectangle {
-            id: loginCard
-            anchors.centerIn: parent
-            width: 420
-            height: mainColumn.height + 80
-            radius: 24
-            color: Qt.rgba(15/255, 15/255, 30/255, 0.95)
+            // Logo / Title
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: "EduOS"
+                font.pixelSize: 36
+                font.bold: true
+                color: "#4A9EFF"
+            }
 
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: "Engineering Education Platform"
+                font.pixelSize: 13
+                color: "#8BA3C0"
+            }
+
+            // Divider
             Rectangle {
-                anchors.fill: parent
-                radius: 24
-                color: "transparent"
-                border.width: 1
-                border.color: Qt.rgba(108/255, 99/255, 255/255, 0.15)
+                Layout.fillWidth: true
+                height: 1
+                color: "#1E3A5F"
             }
 
-            ColumnLayout {
-                id: mainColumn
-                anchors.centerIn: parent
-                width: parent.width - 80
-                spacing: 20
+            // Username field
+            TextField {
+                id: userField
+                Layout.fillWidth: true
+                height: 48
+                placeholderText: "Username"
+                text: userModel.lastUser
+                font.pixelSize: 14
+                color: "#E8F0FE"
+                background: Rectangle {
+                    color: "#162030"
+                    radius: 8
+                    border.color: userField.activeFocus ? "#4A9EFF" : "#1E3A5F"
+                    border.width: 1
+                }
+                leftPadding: 16
+                Keys.onTabPressed: passwordField.forceActiveFocus()
+                Keys.onReturnPressed: passwordField.forceActiveFocus()
+            }
 
-                // ── Logo area ──
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 4
+            // Password field
+            TextField {
+                id: passwordField
+                Layout.fillWidth: true
+                height: 48
+                placeholderText: "Password"
+                echoMode: TextInput.Password
+                font.pixelSize: 14
+                color: "#E8F0FE"
+                background: Rectangle {
+                    color: "#162030"
+                    radius: 8
+                    border.color: passwordField.activeFocus ? "#4A9EFF" : "#1E3A5F"
+                    border.width: 1
+                }
+                leftPadding: 16
+                Keys.onReturnPressed: loginBtn.clicked()
+            }
 
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: "◆"
-                        font.pixelSize: 48
-                        color: accentPrimary
-                        font.bold: true
-                    }
+            // Error message
+            Text {
+                id: errorMsg
+                Layout.fillWidth: true
+                text: ""
+                color: "#FF6B6B"
+                font.pixelSize: 12
+                wrapMode: Text.WordWrap
+                visible: text !== ""
+            }
 
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: "EduOS"
-                        font.pixelSize: 28
-                        font.weight: Font.Bold
-                        color: textPrimary
-                        letterSpacing: -0.5
-                    }
+            // Login button
+            Button {
+                id: loginBtn
+                Layout.fillWidth: true
+                height: 48
+                text: "Login"
+                font.pixelSize: 15
+                font.bold: true
 
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: config.institution || "Educational Operating System"
-                        font.pixelSize: 12
-                        color: textSecondary
-                        visible: true
-                    }
+                background: Rectangle {
+                    color: loginBtn.pressed ? "#2563EB" :
+                           loginBtn.hovered ? "#3B82F6" : "#4A9EFF"
+                    radius: 8
+                }
+                contentItem: Text {
+                    text: loginBtn.text
+                    font: loginBtn.font
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
 
-                // ── Spacing ──
-                Item { height: 8; width: 1 }
-
-                // ── Username field ──
-                TextField {
-                    id: userField
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 48
-                    placeholderText: "Username"
-                    font.pixelSize: 14
-                    color: textPrimary
-                    leftPadding: 16
-                    rightPadding: 16
-
-                    background: Rectangle {
-                        radius: 12
-                        color: Qt.rgba(255/255, 255/255, 255/255, 0.04)
-                        border.width: 1
-                        border.color: userField.activeFocus ? accentPrimary : glassBorder
-
-                        Behavior on border.color {
-                            ColorAnimation { duration: 200 }
-                        }
+                onClicked: {
+                    errorMsg.text = ""
+                    if (userField.text === "") {
+                        errorMsg.text = "Please enter your username"
+                        return
                     }
+                    sddm.login(userField.text, passwordField.text, sessionModel.index(0, 0))
                 }
+            }
 
-                // ── Password field ──
-                TextField {
-                    id: passField
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 48
-                    placeholderText: "Password"
-                    font.pixelSize: 14
-                    color: textPrimary
-                    echoMode: TextInput.Password
-                    leftPadding: 16
-                    rightPadding: 16
-
-                    background: Rectangle {
-                        radius: 12
-                        color: Qt.rgba(255/255, 255/255, 255/255, 0.04)
-                        border.width: 1
-                        border.color: passField.activeFocus ? accentPrimary : glassBorder
-
-                        Behavior on border.color {
-                            ColorAnimation { duration: 200 }
-                        }
-                    }
-
-                    Keys.onReturnPressed: loginAction()
+            // Session selector
+            ComboBox {
+                id: sessionSelect
+                Layout.fillWidth: true
+                height: 36
+                model: sessionModel
+                textRole: "name"
+                font.pixelSize: 12
+                background: Rectangle {
+                    color: "#162030"
+                    radius: 6
+                    border.color: "#1E3A5F"
                 }
-
-                // ── Login button ──
-                Button {
-                    id: loginBtn
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 48
-                    text: "Sign In"
-
-                    contentItem: Text {
-                        text: parent.text
-                        font.pixelSize: 14
-                        font.weight: Font.Bold
-                        color: "#ffffff"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    background: Rectangle {
-                        radius: 12
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: accentPrimary }
-                            GradientStop { position: 1.0; color: accentSecondary }
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            radius: 12
-                            color: Qt.rgba(255/255, 255/255, 255/255, 0.1)
-                            opacity: parent.parent.hovered ? 1.0 : 0.0
-
-                            Behavior on opacity {
-                                NumberAnimation { duration: 200 }
-                            }
-                        }
-                    }
-
-                    onClicked: loginAction()
+                contentItem: Text {
+                    leftPadding: 12
+                    text: sessionSelect.displayText
+                    color: "#8BA3C0"
+                    verticalAlignment: Text.AlignVCenter
                 }
-
-                // ── Session selector ──
-                ComboBox {
-                    id: sessionSelect
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 40
-                    model: sessionModel
-                    currentIndex: sessionModel.lastIndex
-                    textRole: "name"
-                    visible: sessionModel.count > 1
-
-                    background: Rectangle {
-                        radius: 10
-                        color: Qt.rgba(255/255, 255/255, 255/255, 0.03)
-                        border.width: 1
-                        border.color: glassBorder
-                    }
-
-                    contentItem: Text {
-                        text: sessionSelect.currentText
-                        font.pixelSize: 12
-                        color: textSecondary
-                        leftPadding: 12
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    indicator: Text {
-                        anchors.right: parent.right
-                        anchors.rightMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "▼"
-                        font.pixelSize: 8
-                        color: textSecondary
-                    }
-                }
-
-                // ── Virtual keyboard toggle (hidden by default) ──
-                Item { height: 1; width: 1; visible: false }
             }
         }
     }
 
-    // ── Clock ──
-    Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        y: parent.height - 60
-        text: Qt.formatDateTime(new Date(), "hh:mm AP")
-        font.pixelSize: 16
-        font.weight: Font.Medium
-        color: textSecondary
-        font.letterSpacing: 2
-    }
+    // Bottom info bar
+    Rectangle {
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 40
+        color: "#060E1A"
 
-    // ── Functions ──
-    function loginAction() {
-        sddm.login(userField.text, passField.text, sessionSelect.currentIndex);
-    }
-}
+        Row {
+            anchors.centerIn: parent
+            spacing: 20
 
-// ── AnimatedGradient component ──
-Item {
-    id: animatedGradient
-    property color color1: "#0a0a14"
-    property color color2: "#0f0f1e"
-    property color color3: "#151530"
-    property int duration: 6000
-
-    ShaderEffect {
-        anchors.fill: parent
-        property color fromColor: animatedGradient.color1
-        property color toColor: animatedGradient.color2
-        property color accentColor: animatedGradient.color3
-        property real time: 0.0
-
-        NumberAnimation on time {
-            from: 0; to: 1.0; duration: animatedGradient.duration
-            loops: Animation.Infinite
-        }
-
-        fragmentShader: "
-            varying highp vec2 qt_TexCoord0;
-            uniform highp float time;
-            uniform highp vec4 fromColor;
-            uniform highp vec4 toColor;
-            uniform highp vec4 accentColor;
-            void main() {
-                highp vec2 uv = qt_TexCoord0;
-                highp float t = sin(time * 3.14159 * 2.0) * 0.5 + 0.5;
-                highp float t2 = sin(time * 3.14159 * 2.0 + 1.5) * 0.5 + 0.5;
-                highp vec3 color1 = mix(fromColor.rgb, toColor.rgb, uv.y * 0.6 + t * 0.4);
-                highp vec3 color2 = mix(toColor.rgb, accentColor.rgb, uv.x * 0.3 + t2 * 0.3);
-                highp vec3 finalColor = mix(color1, color2, 0.3 + uv.x * 0.2);
-                gl_FragColor = vec4(finalColor, 1.0);
+            Text {
+                text: "EduOS v2.0 — FreeBSD Edition"
+                color: "#4A7A9B"
+                font.pixelSize: 11
             }
-        "
+
+            Text {
+                text: "©2025 EduOS Project"
+                color: "#4A7A9B"
+                font.pixelSize: 11
+            }
+        }
+    }
+
+    // Handle login result
+    Connections {
+        target: sddm
+        function onLoginFailed() {
+            errorMsg.text = "Invalid username or password"
+            passwordField.text = ""
+            passwordField.forceActiveFocus()
+        }
+    }
+
+    Component.onCompleted: {
+        if (userField.text === "") {
+            userField.forceActiveFocus()
+        } else {
+            passwordField.forceActiveFocus()
+        }
     }
 }

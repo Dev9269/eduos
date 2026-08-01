@@ -172,6 +172,7 @@ class AdminCenterWindow(QMainWindow):
         self.server_host = "eduos-server.local"
         self.server_port = 8765
         self.auth_token = ""
+        self._load_server_settings()
         self._load_config()
         self._setup_ui()
         self._load_system_info()
@@ -180,9 +181,76 @@ class AdminCenterWindow(QMainWindow):
         self._timer.start(5000)
         self._ping_lock = threading.Lock()
 
+        if not self.auth_token:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self, "No Auth Token",
+                "No server auth token configured.\n"
+                "Go to Server Settings and paste your token\n"
+                "from Server/generate-admin-token.py"
+            )
+
     def closeEvent(self, event):
         self._timer.stop()
         event.accept()
+
+    def _load_server_settings(self):
+        """Load saved server settings on startup"""
+        CONFIG_FILE = Path.home() / '.eduos' / 'admin_settings.json'
+        if CONFIG_FILE.exists():
+            try:
+                data = json.loads(CONFIG_FILE.read_text())
+                self.server_host = data.get('server_host', 'eduos-server.local')
+                self.server_port = data.get('server_port', 8765)
+                self.auth_token = data.get('auth_token', '')
+            except Exception:
+                pass
+
+    def _open_server_settings(self):
+        """Configure server connection and auth token"""
+        CONFIG_FILE = Path.home() / '.eduos' / 'admin_settings.json'
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Server Settings")
+        dlg.setFixedSize(500, 300)
+        layout = QVBoxLayout(dlg)
+
+        layout.addWidget(QLabel(
+            "Configure connection to EduOS Server.\n"
+            "Run Server/generate-admin-token.py on the server machine\n"
+            "to get your auth token."
+        ))
+
+        form = QFormLayout()
+        host_input = QLineEdit(self.server_host)
+        port_input = QLineEdit(str(self.server_port))
+        token_input = QLineEdit(self.auth_token)
+        token_input.setEchoMode(QLineEdit.EchoMode.Password)
+        token_input.setPlaceholderText("Paste token from generate-admin-token.py")
+
+        form.addRow("Server Host:", host_input)
+        form.addRow("Server Port:", port_input)
+        form.addRow("Auth Token:", token_input)
+        layout.addLayout(form)
+
+        def save():
+            self.server_host = host_input.text().strip()
+            self.server_port = int(port_input.text().strip() or '8765')
+            self.auth_token = token_input.text().strip()
+
+            CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+            CONFIG_FILE.write_text(json.dumps({
+                'server_host': self.server_host,
+                'server_port': self.server_port,
+                'auth_token': self.auth_token,
+            }))
+            QMessageBox.information(dlg, "Saved", "Server settings saved.")
+            dlg.accept()
+
+        save_btn = QPushButton("Save & Connect")
+        save_btn.clicked.connect(save)
+        layout.addWidget(save_btn)
+        dlg.exec()
 
     def _load_config(self):
         config_path = ADMIN_CONFIG_PATH
@@ -239,6 +307,11 @@ class AdminCenterWindow(QMainWindow):
         hlayout.addWidget(self.platform_badge)
 
         hlayout.addStretch()
+
+        settings_btn = QPushButton("⚙ Server Settings")
+        settings_btn.setStyleSheet(glass_button_style())
+        settings_btn.clicked.connect(self._open_server_settings)
+        hlayout.addWidget(settings_btn)
 
         self.host_label = QLabel()
         self.host_label.setStyleSheet(f"font-size: 12px; color: {C.TEXT_MUTED};")
@@ -636,6 +709,78 @@ class AdminCenterWindow(QMainWindow):
         layout.addWidget(push_btn)
         dlg.exec()
 
+    def _connected_hosts(self):
+        return list(getattr(self, '_ping_results', {}).keys())
+
+    def _open_exam_monitor(self):
+        """Live monitor showing active exam sessions across all machines"""
+        import urllib.request
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Live Exam Monitor")
+        dlg.resize(1000, 600)
+        layout = QVBoxLayout(dlg)
+
+        status_label = QLabel("Fetching exam status...")
+        layout.addWidget(status_label)
+
+        table = QTableWidget()
+        table.setColumnCount(6)
+        table.setHorizontalHeaderLabels([
+            "Machine", "Student ID", "Exam", "Status",
+            "Submitted At", "Checksum"
+        ])
+        table.horizontalHeader().setStretchLastSection(True)
+        layout.addWidget(table)
+
+        def refresh():
+            try:
+                req = urllib.request.Request(
+                    f"http://{self.server_host}:{self.server_port}"
+                    f"/exam/submissions/1",
+                    headers={'Authorization': f'Bearer {self.auth_token}'}
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read())
+
+                subs = data.get('submissions', [])
+                table.setRowCount(len(subs))
+                for i, s in enumerate(subs):
+                    table.setItem(i, 0, QTableWidgetItem(s.get('hostname', '')))
+                    table.setItem(i, 1, QTableWidgetItem(s.get('student_id', '')))
+                    table.setItem(i, 2, QTableWidgetItem(str(s.get('exam_id', ''))))
+                    table.setItem(i, 3, QTableWidgetItem("Submitted ✅"))
+                    table.setItem(i, 4, QTableWidgetItem(s.get('submitted_at', '')))
+                    table.setItem(i, 5, QTableWidgetItem(
+                        s.get('checksum', '')[:12] + "..."
+                    ))
+
+                status_label.setText(
+                    f"Total submissions: {data.get('total', 0)} | "
+                    f"Connected machines: {len(self._connected_hosts())} | "
+                    f"Last refresh: {datetime.now().strftime('%H:%M:%S')}"
+                )
+            except Exception as e:
+                status_label.setText(f"Cannot reach server: {e}")
+
+        # Auto-refresh every 10 seconds
+        timer = QTimer(dlg)
+        timer.timeout.connect(refresh)
+        timer.start(10000)
+        refresh()  # Immediate first load
+
+        btn_row = QHBoxLayout()
+        refresh_btn = QPushButton("Refresh Now")
+        refresh_btn.clicked.connect(refresh)
+        btn_row.addWidget(refresh_btn)
+
+        export_btn = QPushButton("Export All Submissions")
+        export_btn.clicked.connect(lambda: self._view_submissions(1))
+        btn_row.addWidget(export_btn)
+
+        layout.addLayout(btn_row)
+        dlg.exec()
+
     def _view_submissions(self, exam_id: int = 1):
         """Open dialog showing all exam submissions"""
         import urllib.request
@@ -791,11 +936,12 @@ class AdminCenterWindow(QMainWindow):
             ("■ Stop All Exams", "#dc2626", self._stop_exams),
             ("⏸ Pause All", "#f59e0b", self._pause_exams),
             ("📋 View Active Exams", "#2563eb", self._view_active_exams),
+            ("👁 Live Monitor", "#0891b2", self._open_exam_monitor),
             ("📥 View Submissions", "#7c3aed", self._view_submissions),
         ]
         for text, color, handler in btn_configs:
             btn = QPushButton(text)
-            btn.setStyleSheet(accent_glow_style() if color == "#2563eb" else glass_success_button_style() if color == "#16a34a" else glass_danger_button_style() if color == "#dc2626" else glass_warning_button_style() if color == "#f59e0b" else glass_button_style())
+            btn.setStyleSheet(accent_glow_style() if color == "#2563eb" else glass_success_button_style() if color == "#16a34a" else glass_danger_button_style() if color == "#dc2626" else glass_warning_button_style() if color in ("#f59e0b", "#0891b2") else glass_button_style())
             btn.clicked.connect(handler)
             exam_actions.addWidget(btn)
         exam_actions.addStretch()

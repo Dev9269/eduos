@@ -11,10 +11,14 @@ import json
 import base64
 import hashlib
 import signal
+import socket
 import stat
 import subprocess
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -699,9 +703,64 @@ class ExamWindow(QMainWindow):
         self.submit_btn.setEnabled(False)
 
         answers = self._collect_answers()
+
+        result_data = {
+            "exam_id": self.exam_config.get("exam_id", 1),
+            "student_id": self.credentials.get("student_id", "unknown"),
+            "student_name": self.credentials.get("name", "Unknown"),
+            "answers": answers,
+            "submitted_at": datetime.now().isoformat(),
+            "time_taken_seconds": self.timer_widget.get_elapsed(),
+        }
+
         self._encrypt_and_save(answers)
         self._generate_result(answers)
+        self._submit_to_server(result_data)
         self._show_completion()
+
+    def _submit_to_server(self, result_data: dict):
+        """Send submission to EduOS server via HTTP"""
+        import urllib.request
+
+        config_path = Path('/etc/eduos/agent.conf')
+        local_config = Path.home() / '.eduos' / 'agent.conf'
+
+        config = {'server_url': 'ws://eduos-server.local:8765', 'token': ''}
+        for p in [config_path, local_config]:
+            if p.exists():
+                try:
+                    config = json.loads(p.read_text())
+                    break
+                except Exception:
+                    continue
+
+        server_http = config['server_url'].replace('ws://', 'http://')
+        token = config.get('token', '')
+
+        payload = json.dumps({
+            'exam_id': result_data['exam_id'],
+            'student_id': result_data['student_id'],
+            'hostname': socket.gethostname(),
+            'answers': result_data['answers']
+        }).encode()
+
+        try:
+            req = urllib.request.Request(
+                f"{server_http}/exam/submit",
+                data=payload,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {token}'
+                }
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                response = json.loads(resp.read())
+            log.info(
+                f"Submission sent to server: {response.get('checksum','')[:8]}"
+            )
+        except Exception as e:
+            # Local save already done — server failure is non-fatal
+            log.warning(f"Server submission failed (local copy saved): {e}")
 
     def _encrypt_and_save(self, answers: dict):
         password = self.exam_config.get(

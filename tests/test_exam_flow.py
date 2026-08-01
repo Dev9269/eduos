@@ -92,3 +92,23 @@ def test_unauthenticated_submit():
         'answers': {}
     })
     assert resp.status_code in [401, 403]
+
+
+def test_similarity_identical():
+    from Server.similarity import similarity_score
+    code = "def add(a, b):\n    return a + b\nprint(add(1,2))"
+    score = similarity_score(code, code)
+    assert score == 1.0
+
+
+def test_similarity_different():
+    from Server.similarity import similarity_score
+    a = "def add(a, b):\n    return a + b"
+    b = "x = int(input())\nprint(x * 2)"
+    score = similarity_score(a, b)
+    assert score < 0.3
+
+
+def test_similarity_empty():
+    from Server.similarity import similarity_score
+    assert similarity_score("", "some code") == 0.0

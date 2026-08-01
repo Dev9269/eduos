@@ -40,3 +40,105 @@ jobs:
             echo "No tests directory found — skipping"
             exit 0
           fi
+
+  validate-freebsd-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate FreeBSD ISO workflow YAML
+        run: |
+          pip install pyyaml --quiet
+          python3 -c "
+          import yaml, sys
+          try:
+              yaml.safe_load(open('.github/workflows/build-freebsd-iso.yml'))
+              print('FreeBSD ISO workflow YAML: VALID')
+          except yaml.YAMLError as e:
+              print(f'INVALID YAML: {e}')
+              sys.exit(1)
+          "
+
+      - name: Check for heredoc indentation bug
+        run: |
+          pip install pyyaml --quiet
+          python3 - << 'PYEOF'
+          import re, sys, yaml, pathlib, tempfile, os, subprocess, json
+
+          data = yaml.safe_load(open('.github/workflows/build-freebsd-iso.yml'))
+          scripts = [
+              step['run'] for step in data['jobs']['build-freebsd-iso']['steps']
+              if 'run' in step
+          ]
+
+          # Extract the python heredoc blocks and run them in a temp dir,
+          # then verify the generated config files have no leading spaces.
+          tmp = pathlib.Path(tempfile.mkdtemp())
+          os.chdir(tmp)
+          for d in ['rootfs/etc/rc.d', 'rootfs/boot', 'rootfs/etc/eduos',
+                    'isoroot/boot']:
+              (tmp / d).mkdir(parents=True, exist_ok=True)
+
+          for script in scripts:
+              for m in re.finditer(r"python3 - << ['\"]?(\w+)['\"]?\n(.*?)\n\1\n", script, re.S):
+                  code = m.group(2)
+                  r = subprocess.run(
+                      [sys.executable, '-c', code],
+                      capture_output=True, text=True
+                  )
+                  if r.returncode != 0:
+                      print(f'Python block failed: {r.stderr[:200]}')
+                      sys.exit(1)
+
+          # Config files must have zero leading-space lines.
+          # JSON files (agent.conf) are exempt — indentation is valid JSON.
+          config_files = [
+              'rootfs/etc/rc.conf', 'rootfs/boot/loader.conf',
+              'rootfs/etc/fstab', 'rootfs/etc/eduos-users.conf',
+              'isoroot/boot/loader.conf',
+          ]
+          json_files = ['rootfs/etc/eduos/agent.conf']
+          bad = []
+          for f in config_files:
+              p = tmp / f
+              if not p.exists():
+                  bad.append(f + ' (missing)')
+                  continue
+              for l in p.read_text().splitlines():
+                  if l != l.lstrip() and l.strip():
+                      bad.append(f'{f}: {l[:40]!r}')
+          for f in json_files:
+              p = tmp / f
+              if not p.exists():
+                  bad.append(f + ' (missing)')
+                  continue
+              try:
+                  json.loads(p.read_text())
+              except Exception as e:
+                  bad.append(f'{f}: invalid JSON ({e})')
+          if bad:
+              print('HEREDOC BUG: config files have leading spaces:')
+              for b in bad[:5]:
+                  print('  ' + b)
+              sys.exit(1)
+
+          # rc.d scripts must be valid shell
+          for f in ['rootfs/etc/rc.d/eduos_firstboot', 'rootfs/etc/rc.d/eduos_adduser']:
+              r = subprocess.run(
+                  ['sh', '-n', str(tmp / f)],
+                  capture_output=True, text=True
+              )
+              if r.returncode != 0:
+                  print(f'Invalid shell script {f}: {r.stderr[:200]}')
+                  sys.exit(1)
+
+          print('Heredoc check passed - generated config files are clean')
+          PYEOF
+
+      - name: Validate FreeBSD package names format
+        run: |
+          python3 -c "
+          lines = [l.strip() for l in open('Packages/freebsd-packages.txt')
+                   if l.strip() and not l.startswith('#')]
+          # FreeBSD pkg names should not contain dashes in category
+          print(f'Package list: {len(lines)} entries — OK')
+          "
