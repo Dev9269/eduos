@@ -169,6 +169,9 @@ class AdminCenterWindow(QMainWindow):
         self.setWindowTitle("EduOS Admin Center - Campus Management Console")
         self.setGeometry(50, 50, 1400, 850)
         self.lab_hosts = []
+        self.server_host = "eduos-server.local"
+        self.server_port = 8765
+        self.auth_token = ""
         self._load_config()
         self._setup_ui()
         self._load_system_info()
@@ -540,6 +543,159 @@ class AdminCenterWindow(QMainWindow):
         dlg = FreeBSDSetupDialog(self)
         dlg.exec()
 
+    def _push_update(self):
+        """Open dialog to push an update package to all machines"""
+        import base64
+        import urllib.request
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Push Update to All Machines")
+        dlg.setFixedSize(700, 500)
+        layout = QVBoxLayout(dlg)
+
+        layout.addWidget(QLabel("Version:"))
+        version_input = QLineEdit()
+        version_input.setPlaceholderText("e.g. 1.2.3")
+        layout.addWidget(version_input)
+
+        layout.addWidget(QLabel("Description:"))
+        desc_input = QLineEdit()
+        desc_input.setPlaceholderText("What does this update fix?")
+        layout.addWidget(desc_input)
+
+        layout.addWidget(QLabel("Files to push:"))
+        file_list = QListWidget()
+        layout.addWidget(file_list)
+
+        selected_files = []
+
+        def add_files():
+            paths, _ = QFileDialog.getOpenFileNames(
+                dlg, "Select files to push"
+            )
+            for path in paths:
+                selected_files.append(path)
+                file_list.addItem(path)
+
+        add_btn = QPushButton("Add Files...")
+        add_btn.clicked.connect(add_files)
+        layout.addWidget(add_btn)
+
+        def do_push():
+            if not version_input.text():
+                QMessageBox.warning(dlg, "Error", "Enter a version number")
+                return
+            if not selected_files:
+                QMessageBox.warning(dlg, "Error", "Add at least one file")
+                return
+
+            files_payload = []
+            for path in selected_files:
+                try:
+                    with open(path, 'rb') as f:
+                        content = base64.b64encode(f.read()).decode()
+                    rel_path = Path(path).name
+                    files_payload.append({
+                        'path': rel_path,
+                        'content_b64': content
+                    })
+                except Exception as e:
+                    QMessageBox.warning(
+                        dlg, "Error", f"Cannot read {path}: {e}"
+                    )
+                    return
+
+            payload = json.dumps({
+                'version': version_input.text(),
+                'description': desc_input.text(),
+                'files': files_payload
+            }).encode()
+
+            try:
+                req = urllib.request.Request(
+                    f"http://{self.server_host}:{self.server_port}/update/push",
+                    data=payload,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Authorization': f'Bearer {self.auth_token}'
+                    }
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    result = json.loads(resp.read())
+                QMessageBox.information(
+                    dlg, "Update Pushed",
+                    f"Version {version_input.text()} pushed to "
+                    f"{len(result.get('recipients', {}))} machines"
+                )
+                dlg.accept()
+            except Exception as e:
+                QMessageBox.critical(dlg, "Push Failed", str(e))
+
+        push_btn = QPushButton("Push Update to All Machines")
+        push_btn.clicked.connect(do_push)
+        layout.addWidget(push_btn)
+        dlg.exec()
+
+    def _view_submissions(self, exam_id: int = 1):
+        """Open dialog showing all exam submissions"""
+        import urllib.request
+        import csv
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle(f"Exam {exam_id} — Submissions")
+        dlg.resize(900, 600)
+        layout = QVBoxLayout(dlg)
+
+        table = QTableWidget()
+        table.setColumnCount(5)
+        table.setHorizontalHeaderLabels([
+            "ID", "Student ID", "Machine", "Submitted At", "Checksum"
+        ])
+        layout.addWidget(table)
+
+        try:
+            req = urllib.request.Request(
+                f"http://{self.server_host}:{self.server_port}"
+                f"/exam/submissions/{exam_id}",
+                headers={'Authorization': f'Bearer {self.auth_token}'}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read())
+
+            subs = data.get('submissions', [])
+            table.setRowCount(len(subs))
+            for i, s in enumerate(subs):
+                table.setItem(i, 0, QTableWidgetItem(str(s['id'])))
+                table.setItem(i, 1, QTableWidgetItem(s['student_id']))
+                table.setItem(i, 2, QTableWidgetItem(s['hostname']))
+                table.setItem(i, 3, QTableWidgetItem(s['submitted_at']))
+                table.setItem(i, 4, QTableWidgetItem(s['checksum'][:16]))
+
+        except Exception as e:
+            table.setRowCount(1)
+            table.setItem(0, 0, QTableWidgetItem(""))
+            layout.addWidget(QLabel(f"Could not fetch submissions: {e}"))
+
+        def export_csv():
+            path, _ = QFileDialog.getSaveFileName(
+                dlg, "Export CSV", f"exam_{exam_id}_submissions.csv",
+                "CSV Files (*.csv)"
+            )
+            if path:
+                with open(path, 'w', newline='') as f:
+                    w = csv.writer(f)
+                    w.writerow(["ID","Student","Machine","Time","Checksum"])
+                    for r in range(table.rowCount()):
+                        w.writerow([
+                            table.item(r, c).text()
+                            for c in range(table.columnCount())
+                        ])
+
+        export_btn = QPushButton("Export to CSV")
+        export_btn.clicked.connect(export_csv)
+        layout.addWidget(export_btn)
+        dlg.exec()
+
     def _build_software_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
@@ -635,10 +791,11 @@ class AdminCenterWindow(QMainWindow):
             ("■ Stop All Exams", "#dc2626", self._stop_exams),
             ("⏸ Pause All", "#f59e0b", self._pause_exams),
             ("📋 View Active Exams", "#2563eb", self._view_active_exams),
+            ("📥 View Submissions", "#7c3aed", self._view_submissions),
         ]
         for text, color, handler in btn_configs:
             btn = QPushButton(text)
-            btn.setStyleSheet(accent_glow_style() if color == "#2563eb" else glass_success_button_style() if color == "#16a34a" else glass_danger_button_style() if color == "#dc2626" else glass_warning_button_style())
+            btn.setStyleSheet(accent_glow_style() if color == "#2563eb" else glass_success_button_style() if color == "#16a34a" else glass_danger_button_style() if color == "#dc2626" else glass_warning_button_style() if color == "#f59e0b" else glass_button_style())
             btn.clicked.connect(handler)
             exam_actions.addWidget(btn)
         exam_actions.addStretch()
@@ -756,6 +913,7 @@ class AdminCenterWindow(QMainWindow):
         dc_layout.addWidget(QLabel("Push software updates to all connected lab machines."))
         push_btn = QPushButton("📤 Push to All Labs")
         push_btn.setStyleSheet(glass_success_button_style())
+        push_btn.clicked.connect(self._push_update)
         dc_layout.addWidget(push_btn)
         update_grid.addWidget(dist_card)
 
