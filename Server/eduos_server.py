@@ -293,10 +293,12 @@ async def schedule_exam(schedule: dict, user=Depends(verify_token)):
     """Schedule an exam to be pushed automatically at a future time.
     schedule: {"name": "Midterm 1", "scheduled_at": "2025-06-01T09:00:00",
                "exam": {...exam data...}}
+    (alternate keys: exam_name / activate_at / exam_config / exam_id)
     """
-    name = schedule.get('name')
-    scheduled_at = schedule.get('scheduled_at')
-    exam_data = schedule.get('exam', {})
+    name = schedule.get('name') or schedule.get('exam_name')
+    scheduled_at = schedule.get('scheduled_at') or schedule.get('activate_at')
+    exam_data = schedule.get('exam') or schedule.get('exam_config') or {}
+    exam_id = schedule.get('exam_id')
 
     if not name or not scheduled_at:
         raise HTTPException(status_code=400,
@@ -314,13 +316,33 @@ async def schedule_exam(schedule: dict, user=Depends(verify_token)):
         raise HTTPException(status_code=400,
                             detail="scheduled_at must be in the future")
 
+    if isinstance(exam_data, dict) and name:
+        exam_data.setdefault('name', name)
+    if exam_id and isinstance(exam_data, dict):
+        exam_data.setdefault('exam_id', exam_id)
+
     conn = sqlite3.connect(DB_PATH)
-    cursor = conn.execute(
-        "INSERT INTO exam_schedules (name, data, scheduled_at, created_at) "
-        "VALUES (?,?,?,?)",
-        (name, json.dumps(exam_data), when.isoformat(),
-         datetime.now().isoformat())
-    )
+    if exam_id is not None:
+        existing = conn.execute(
+            "SELECT id FROM exam_schedules WHERE id=?", (exam_id,)
+        ).fetchone()
+        if existing:
+            conn.close()
+            raise HTTPException(status_code=409,
+                                detail=f"Schedule {exam_id} already exists")
+        cursor = conn.execute(
+            "INSERT INTO exam_schedules (id, name, data, scheduled_at, "
+            "created_at) VALUES (?,?,?,?,?)",
+            (exam_id, name, json.dumps(exam_data), when.isoformat(),
+             datetime.now().isoformat())
+        )
+    else:
+        cursor = conn.execute(
+            "INSERT INTO exam_schedules (name, data, scheduled_at, created_at) "
+            "VALUES (?,?,?,?)",
+            (name, json.dumps(exam_data), when.isoformat(),
+             datetime.now().isoformat())
+        )
     schedule_id = cursor.lastrowid
     conn.commit()
     conn.close()
@@ -334,7 +356,8 @@ async def schedule_exam(schedule: dict, user=Depends(verify_token)):
         f"(in {delay:.0f}s), schedule id={schedule_id}"
     )
     return {"status": "scheduled", "schedule_id": schedule_id,
-            "scheduled_at": when.isoformat()}
+            "scheduled_at": when.isoformat(),
+            "seconds_until_activation": int(delay)}
 
 
 @app.delete("/exam/schedule/{schedule_id}")
@@ -430,6 +453,52 @@ async def roster_remove(student_id: str, user=Depends(verify_token)):
     return {"status": "removed", "student_id": student_id}
 
 
+@app.post("/roster/bulk")
+async def roster_bulk(payload: dict, user=Depends(verify_token)):
+    """Bulk-add students to the roster.
+    payload: {"students": [{"student_id": "...", "name": "...", ...}]}
+    """
+    students = payload.get('students', [])
+    if not students:
+        raise HTTPException(status_code=400,
+                            detail="No students in payload")
+
+    added = 0
+    errors = []
+    now = datetime.now().isoformat()
+    conn = sqlite3.connect(DB_PATH)
+    for s in students:
+        student_id = (s.get('student_id') or '').strip()
+        name = (s.get('name') or '').strip()
+        if not student_id or not name:
+            errors.append(f"{student_id or '(empty)'}: missing id or name")
+            continue
+        try:
+            conn.execute(
+                """INSERT OR IGNORE INTO roster
+                   (student_id, name, email, course, added_at)
+                   VALUES (?,?,?,?,?)""",
+                (student_id, name,
+                 (s.get('email') or '').strip(),
+                 (s.get('department') or s.get('course') or '').strip(),
+                 now)
+            )
+            conn.commit()
+            entry = {'student_id': student_id, 'name': name,
+                     'email': (s.get('email') or '').strip(),
+                     'course': (s.get('department')
+                                or s.get('course') or '').strip(),
+                     'status': 'active'}
+            roster.setdefault(student_id, entry)
+            added += 1
+        except Exception as e:
+            errors.append(f"{student_id}: {e}")
+    conn.close()
+    log.info(f"Roster bulk import: {added}/{len(students)} added")
+    return {"status": "imported", "added": added,
+            "total": len(students), "errors": errors}
+
+
 @app.post("/roster/validate")
 async def roster_validate(payload: dict, user=Depends(verify_token)):
     """Validate a student_id format (and check registry if required).
@@ -452,6 +521,17 @@ async def roster_validate(payload: dict, user=Depends(verify_token)):
     else:
         result['valid'] = validation['valid']
     return result
+
+
+@app.get("/roster/validate/{student_id}")
+async def roster_validate_by_id(student_id: str, user=Depends(verify_token)):
+    """Validate a student_id against the roster (used by the exam app).
+    Returns student details if registered, 404 if not found."""
+    entry = roster.get(student_id.strip())
+    if entry is None:
+        raise HTTPException(status_code=404,
+                            detail=f"{student_id} not found in roster")
+    return entry
 
 
 @app.get("/devices")

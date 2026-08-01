@@ -6,6 +6,7 @@ Manages Docker/Podman containers for safe security labs.
 
 import sys
 import subprocess
+import shutil
 import json
 from pathlib import Path
 from datetime import datetime
@@ -40,6 +41,7 @@ LABS = {
         "description": "Practice web application pentesting with OWASP Juice Shop.",
         "docker": "bkimminich/juice-shop",
         "command": "docker run -d -p 3000:3000 bkimminich/juice-shop",
+        "port": "3000:3000",
         "tools": ["burpsuite", "sqlmap", "nmap"],
         "difficulty": "Intermediate"
     },
@@ -66,8 +68,23 @@ LABS = {
         "command": "foremost -h",
         "tools": ["foremost", "binwalk", "strings", "hexdump"],
         "difficulty": "Advanced"
+    },
+    "freebsd_jail_basics": {
+        "name": "FreeBSD Jail Basics",
+        "description": "Native FreeBSD jail security lab.",
+        "docker": None,
+        "command": "jail -c path=/jails/eduos-lab hostname=eduos-lab command=/bin/sh",
+        "tools": ["jail", "jls", "jexec"],
+        "freebsd_only": True,
     }
 }
+
+
+def _get_container_runtime() -> str:
+    for runtime in ['podman', 'docker']:
+        if shutil.which(runtime):
+            return runtime
+    return None
 
 
 class CyberLabWindow(QMainWindow):
@@ -187,24 +204,84 @@ class CyberLabWindow(QMainWindow):
         lab = LABS[lab_ids[index]]
 
         self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] 🚀 Launching: {lab['name']}")
-        self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] Pulling image: {lab['docker']}...")
 
+        # FreeBSD-native jail lab — no container runtime needed
+        if lab.get('freebsd_only') or not lab.get('docker'):
+            self.console.append(
+                f"[{datetime.now().strftime('%H:%M:%S')}] Using native jail: "
+                f"{lab['command']}"
+            )
+            try:
+                result = subprocess.run(
+                    ["sudo", "-A", "sh", "-c", lab['command']],
+                    capture_output=True, text=True, timeout=120,
+                    env={"SUDO_ASKPASS": "/bin/false"}
+                )
+                if result.returncode == 0:
+                    self.console.append(
+                        f"[{datetime.now().strftime('%H:%M:%S')}] ✅ Jail lab ready!"
+                    )
+                    self.console.append(
+                        f"[{datetime.now().strftime('%H:%M:%S')}] 💡 Try: "
+                        f"{lab['command'].replace('command=', 'jexec eduos-lab ')}"
+                    )
+                else:
+                    self.console.append(
+                        f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Error: "
+                        f"{result.stderr}"
+                    )
+            except Exception as e:
+                self.console.append(
+                    f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Error: {e}"
+                )
+            return
+
+        if self._run_lab_container(lab):
+            self.console.append(
+                f"[{datetime.now().strftime('%H:%M:%S')}] 💡 Try running: {lab['command']}"
+            )
+
+    def _run_lab_container(self, lab: dict) -> bool:
+        runtime = _get_container_runtime()
+        if runtime is None:
+            self.console.append(
+                "[ERROR] No container runtime found.\n"
+                "FreeBSD: pkg install podman\nLinux: apt-get install docker.io"
+            )
+            return False
+
+        image = lab.get('docker', '')
+        self.console.append(
+            f"[{datetime.now().strftime('%H:%M:%S')}] Pulling image: {image}..."
+        )
+        args = [runtime, 'run', '--rm', '-d', '--network', 'none']
+        port_map = lab.get('port', '')
+        if port_map:
+            args += ['-p', port_map]
+        args.append(image)
+        args += ["sh", "-c", "sleep 3600"]
+
+        self.console.append(f"Starting lab via {runtime}: {image}...")
         try:
             result = subprocess.run(
-                ["sudo", "-A", "docker", "run", "--rm", "-d", "--network", "none", lab["docker"],
-                 "sh", "-c", "sleep 3600"],
+                args,
                 capture_output=True, text=True, timeout=120,
                 env={"SUDO_ASKPASS": "/bin/false"}
             )
             if result.returncode == 0:
                 container_id = result.stdout.strip()[:12]
-                self.active_containers[lab["name"]] = container_id
-                self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ Lab ready! Container: {container_id}")
-                self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] 💡 Try running: {lab['command']}")
+                self.active_containers[lab['name']] = container_id
+                self.console.append(
+                    f"[{datetime.now().strftime('%H:%M:%S')}] ✅ Lab ready! "
+                    f"Container: {container_id}"
+                )
+                return True
             else:
-                self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Error: {result.stderr}")
+                self.console.append(f"[ERROR] {result.stderr.strip()}")
+                return False
         except Exception as e:
-            self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Error: {e}")
+            self.console.append(f"[ERROR] {e}")
+            return False
 
     def _run_command(self):
         cmd = self.cmd_input.text().strip()
@@ -230,10 +307,12 @@ class CyberLabWindow(QMainWindow):
             self.console.append(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Error: {e}")
 
     def closeEvent(self, event):
-        for name, cid in self.active_containers.items():
-            subprocess.run(["sudo", "-A", "docker", "rm", "-f", cid],
-                           capture_output=True,
-                           env={"SUDO_ASKPASS": "/bin/false"})
+        runtime = _get_container_runtime()
+        if runtime:
+            for name, cid in self.active_containers.items():
+                subprocess.run(["sudo", "-A", runtime, "rm", "-f", cid],
+                               capture_output=True,
+                               env={"SUDO_ASKPASS": "/bin/false"})
         event.accept()
 
 

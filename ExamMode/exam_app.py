@@ -189,7 +189,7 @@ class SecurityKeyDialog(QDialog):
         btn_layout = QHBoxLayout()
         self.auth_btn = QPushButton("🔑 Authenticate & Start Exam")
         self.auth_btn.setStyleSheet(accent_glow_style())
-        self.auth_btn.clicked.connect(self.accept)
+        self.auth_btn.clicked.connect(self._on_start_exam_clicked)
         btn_layout.addWidget(self.auth_btn)
 
         cancel_btn = QPushButton("Cancel")
@@ -200,6 +200,69 @@ class SecurityKeyDialog(QDialog):
 
         self.key_input.returnPressed.connect(self.auth_btn.click)
         self.student_name.returnPressed.connect(self.auth_btn.click)
+
+    def _validate_student_with_server(self, student_id: str) -> dict:
+        import urllib.request
+        import urllib.error
+
+        config = {'server_url': 'ws://eduos-server.local:8765', 'token': ''}
+        for p in [Path('/etc/eduos/agent.conf'), Path.home() / '.eduos' / 'agent.conf']:
+            if p.exists():
+                try:
+                    config = json.loads(p.read_text())
+                    break
+                except Exception:
+                    continue
+
+        server_http = config['server_url'].replace('ws://', 'http://')
+        token = config.get('token', '')
+
+        try:
+            req = urllib.request.Request(
+                f"{server_http}/roster/validate/{student_id}",
+                headers={'Authorization': f'Bearer {token}'}
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return {'valid': False, 'reason': 'Student ID not found in roster'}
+            return {'valid': False, 'reason': f'Server error: {e.code}'}
+        except Exception as e:
+            log.warning(f"Roster server unreachable: {e}")
+            return {'valid': True, 'offline': True,
+                    'reason': 'Server unreachable — offline mode'}
+
+    def _on_start_exam_clicked(self):
+        student_id = self.student_id.text().strip()
+        student_name = self.student_name.text().strip()
+
+        if not student_id or not student_name:
+            QMessageBox.warning(
+                self, "Missing Info",
+                "Please enter your name and Student ID"
+            )
+            return
+
+        result = self._validate_student_with_server(student_id)
+
+        if not result.get('valid'):
+            QMessageBox.critical(
+                self, "Not Authorized",
+                f"Student ID '{student_id}' is not registered for this exam.\n"
+                f"Reason: {result.get('reason', 'Unknown')}\n\n"
+                "Contact your invigilator."
+            )
+            return
+
+        if result.get('offline'):
+            QMessageBox.warning(
+                self, "Offline Mode",
+                "Could not reach server to verify your ID.\n"
+                "Your exam will be saved locally and submitted when connected."
+            )
+
+        self.accept()
 
     def get_credentials(self):
         return {

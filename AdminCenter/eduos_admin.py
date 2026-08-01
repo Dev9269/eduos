@@ -318,6 +318,16 @@ class AdminCenterWindow(QMainWindow):
         settings_btn.clicked.connect(self._open_server_settings)
         hlayout.addWidget(settings_btn)
 
+        roster_btn = QPushButton("👥 Import Roster")
+        roster_btn.setStyleSheet(glass_button_style())
+        roster_btn.clicked.connect(self._import_roster)
+        hlayout.addWidget(roster_btn)
+
+        history_btn = QPushButton("📋 Update History")
+        history_btn.setStyleSheet(glass_button_style())
+        history_btn.clicked.connect(self._view_update_history)
+        hlayout.addWidget(history_btn)
+
         self.host_label = QLabel()
         self.host_label.setStyleSheet(f"font-size: 12px; color: {C.TEXT_MUTED};")
         hlayout.addWidget(self.host_label)
@@ -794,6 +804,183 @@ class AdminCenterWindow(QMainWindow):
 
         buttons.accepted.connect(do_schedule)
         buttons.rejected.connect(dlg.reject)
+        dlg.exec()
+
+    def _import_roster(self):
+        from PyQt6.QtWidgets import (
+            QDialog, QVBoxLayout, QLabel, QPushButton,
+            QFileDialog, QProgressBar, QTextEdit, QMessageBox
+        )
+        import csv, urllib.request
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Import Student Roster")
+        dlg.setFixedSize(600, 420)
+        layout = QVBoxLayout(dlg)
+
+        layout.addWidget(QLabel(
+            "Import students from CSV.\n"
+            "Required columns: student_id, name\n"
+            "Optional: roll_number, department, semester"
+        ))
+
+        log_box = QTextEdit()
+        log_box.setReadOnly(True)
+        log_box.setFixedHeight(160)
+        layout.addWidget(log_box)
+
+        progress = QProgressBar()
+        progress.setVisible(False)
+        layout.addWidget(progress)
+
+        def pick_and_import():
+            path, _ = QFileDialog.getOpenFileName(
+                dlg, "Select CSV", "", "CSV Files (*.csv)"
+            )
+            if not path:
+                return
+            students, errors = [], []
+            try:
+                with open(path, newline='', encoding='utf-8') as f:
+                    for i, row in enumerate(csv.DictReader(f), 1):
+                        sid = (row.get('student_id')
+                               or row.get('studentId') or '').strip()
+                        name = row.get('name', '').strip()
+                        if not sid or not name:
+                            errors.append(f"Row {i}: missing id or name")
+                            continue
+                        students.append({
+                            'student_id': sid, 'name': name,
+                            'roll_number': row.get('roll_number', '').strip(),
+                            'department': row.get('department', '').strip(),
+                            'semester': row.get('semester', '').strip(),
+                        })
+            except Exception as e:
+                QMessageBox.critical(dlg, "CSV Error", str(e))
+                return
+
+            log_box.append(
+                f"Found {len(students)} students ({len(errors)} skipped)"
+            )
+            if not students:
+                return
+
+            progress.setVisible(True)
+            try:
+                payload = json.dumps({'students': students}).encode()
+                req = urllib.request.Request(
+                    f"http://{self.server_host}:{self.server_port}/roster/bulk",
+                    data=payload,
+                    headers={'Content-Type': 'application/json',
+                             'Authorization': f'Bearer {self.auth_token}'}
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    result = json.loads(resp.read())
+                progress.setValue(progress.maximum())
+                log_box.append(f"Imported {result['added']}/{result['total']}")
+                if result.get('errors'):
+                    log_box.append(
+                        f"Errors: {'; '.join(result['errors'][:3])}"
+                    )
+            except Exception as e:
+                log_box.append(f"Upload failed: {e}")
+
+        btn = QPushButton("📂 Choose CSV and Import")
+        btn.clicked.connect(pick_and_import)
+        layout.addWidget(btn)
+        dlg.exec()
+
+    def _view_update_history(self):
+        from PyQt6.QtWidgets import (
+            QDialog, QVBoxLayout, QTableWidget, QTableWidgetItem,
+            QPushButton, QHBoxLayout, QMessageBox, QInputDialog
+        )
+        import urllib.request
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Update History & Rollback")
+        dlg.resize(800, 500)
+        layout = QVBoxLayout(dlg)
+
+        table = QTableWidget()
+        table.setColumnCount(5)
+        table.setHorizontalHeaderLabels(
+            ["ID", "Version", "Description", "Pushed At", "Recipients"]
+        )
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        layout.addWidget(table)
+        history = []
+
+        def load_history():
+            nonlocal history
+            try:
+                req = urllib.request.Request(
+                    f"http://{self.server_host}:{self.server_port}/update/history",
+                    headers={'Authorization': f'Bearer {self.auth_token}'}
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read())
+                history = data.get('updates', [])
+                table.setRowCount(len(history))
+                for i, u in enumerate(history):
+                    for j, val in enumerate(
+                        [str(u['id']), u['version'],
+                         u.get('description', ''), u['pushed_at'],
+                         str(u.get('recipients', ''))]
+                    ):
+                        table.setItem(i, j, QTableWidgetItem(val))
+            except Exception as e:
+                table.setRowCount(1)
+                table.setItem(0, 0, QTableWidgetItem(f"Error: {e}"))
+
+        def rollback_selected():
+            row = table.currentRow()
+            if row < 0 or row >= len(history):
+                QMessageBox.warning(dlg, "Select", "Select an update first")
+                return
+            version = history[row]['version']
+            host, ok = QInputDialog.getText(
+                dlg, "Rollback Target",
+                f"Rollback to v{version} on which machine? "
+                "(hostname or 'all')", text="all"
+            )
+            if not ok or not host.strip():
+                return
+            confirm = QMessageBox.question(
+                dlg, "Confirm",
+                f"Rollback {host.strip()} to v{version}?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if confirm != QMessageBox.StandardButton.Yes:
+                return
+            try:
+                payload = json.dumps({'version': version}).encode()
+                req = urllib.request.Request(
+                    f"http://{self.server_host}:{self.server_port}"
+                    f"/update/rollback/{host.strip()}",
+                    data=payload,
+                    headers={'Content-Type': 'application/json',
+                             'Authorization': f'Bearer {self.auth_token}'}
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    json.loads(resp.read())
+                QMessageBox.information(
+                    dlg, "Sent",
+                    f"Rollback to v{version} sent to {host.strip()}"
+                )
+            except Exception as e:
+                QMessageBox.critical(dlg, "Failed", str(e))
+
+        btn_row = QHBoxLayout()
+        for label, fn in [
+            ("🔄 Refresh", load_history),
+            ("⏪ Rollback Selected", rollback_selected),
+        ]:
+            b = QPushButton(label)
+            b.clicked.connect(fn)
+            btn_row.addWidget(b)
+        layout.addLayout(btn_row)
+        load_history()
         dlg.exec()
 
     def _connected_hosts(self):

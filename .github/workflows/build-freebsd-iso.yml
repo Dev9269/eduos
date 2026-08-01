@@ -136,7 +136,11 @@ jobs:
                 echo "[EduOS] First-boot setup starting..."
                 env ASSUME_ALWAYS_YES=YES pkg update -q || true
                 pkg install -y python311 py311-pip git curl wget bash nano || true
-                pip3.11 install --quiet cryptography fastapi uvicorn pyjwt websockets psutil || true
+                if [ -f /opt/eduos-packages/install-offline.sh ]; then
+                  sh /opt/eduos-packages/install-offline.sh
+                else
+                  pip3.11 install --quiet cryptography fastapi uvicorn pyjwt websockets psutil || true
+                fi
                 if [ -f /opt/eduos/Services/freebsd/eduos_agent ]; then
                   cp /opt/eduos/Services/freebsd/eduos_agent /usr/local/etc/rc.d/eduos_agent
                   chmod +x /usr/local/etc/rc.d/eduos_agent
@@ -207,6 +211,48 @@ jobs:
           print("Student user script written OK — first line:", adduser_script.split("\n")[0])
           PYEOF
 
+      - name: Bundle Python packages offline cache
+        run: |
+          mkdir -p rootfs/opt/eduos-packages/wheels
+
+          pip download \
+            cryptography fastapi uvicorn websockets psutil pyjwt bcrypt slowapi \
+            --dest rootfs/opt/eduos-packages/wheels/ \
+            --only-binary=:all: \
+            --platform manylinux_2_17_x86_64 \
+            --python-version 311 \
+            --implementation cp \
+            --abi cp311 2>/dev/null || \
+          pip download \
+            cryptography fastapi uvicorn websockets psutil pyjwt bcrypt \
+            --dest rootfs/opt/eduos-packages/wheels/ 2>/dev/null || true
+
+          echo "Cached wheels: $(ls rootfs/opt/eduos-packages/wheels/ | wc -l)"
+
+          sudo python3 - << 'PYEOF'
+          import pathlib, stat, textwrap
+
+          install_script = textwrap.dedent("""
+              #!/bin/sh
+              WHEEL_DIR="/opt/eduos-packages/wheels"
+              if [ -d "$WHEEL_DIR" ] && [ "$(ls $WHEEL_DIR | wc -l)" -gt "0" ]; then
+                echo "[EduOS] Installing from local cache..."
+                pip3.11 install --no-index --find-links="$WHEEL_DIR" \
+                  cryptography fastapi uvicorn websockets psutil pyjwt bcrypt 2>/dev/null || \
+                pip3.11 install "$WHEEL_DIR"/*.whl 2>/dev/null || true
+              else
+                echo "[EduOS] No cache, trying internet..."
+                pip3.11 install cryptography fastapi uvicorn websockets psutil pyjwt bcrypt
+              fi
+          """).lstrip()
+
+          script = pathlib.Path("rootfs/opt/eduos-packages/install-offline.sh")
+          script.parent.mkdir(parents=True, exist_ok=True)
+          script.write_text(install_script)
+          script.chmod(script.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+          print("Offline install script created")
+          PYEOF
+
       - name: Build bootable FreeBSD ISO
         run: |
           mkdir -p isoroot/boot/kernel
@@ -221,6 +267,7 @@ jobs:
 
           # Copy EduOS app files directly into ISO
           sudo cp -r rootfs/opt/eduos/ isoroot/opt/ 2>/dev/null || true
+          sudo cp -r rootfs/opt/eduos-packages/ isoroot/opt/ 2>/dev/null || true
           sudo cp -r rootfs/etc/eduos isoroot/etc/ 2>/dev/null || true
           sudo cp rootfs/etc/rc.conf isoroot/etc/ 2>/dev/null || true
           sudo cp -r rootfs/etc/rc.d/ isoroot/etc/ 2>/dev/null || true
