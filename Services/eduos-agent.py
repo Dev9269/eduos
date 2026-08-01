@@ -239,18 +239,34 @@ async def handle_command(command: dict) -> dict:
             return {'status': 'submit_failed', 'error': str(e)}
 
     elif cmd == 'apply_update':
-        """Apply files pushed from admin server"""
+        """Apply files pushed from admin server.
+        Existing files are backed up to /opt/eduos/.backups/<version>/
+        so a failed update can be rolled back."""
         files = command.get('files', [])
         version = command.get('version', 'unknown')
         base_path = Path('/opt/eduos')
         applied = []
         errors = []
 
+        backup_dir = base_path / '.backups' / version
+        if files:
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            manifest = []
+
         for file_entry in files:
             try:
                 rel_path = file_entry['path']
                 content = base64.b64decode(file_entry['content_b64'])
                 target = base_path / rel_path
+
+                # Back up the previous version of the file (if any)
+                if target.exists():
+                    backup_file = backup_dir / rel_path
+                    backup_file.parent.mkdir(parents=True, exist_ok=True)
+                    backup_file.write_bytes(target.read_bytes())
+                    manifest.append(rel_path)
+                    log.info(f"Backed up {rel_path} -> {backup_file}")
+
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(content)
                 applied.append(rel_path)
@@ -258,6 +274,15 @@ async def handle_command(command: dict) -> dict:
             except Exception as e:
                 errors.append(f"{file_entry.get('path','?')}: {e}")
                 log.error(f"Update failed for {file_entry.get('path')}: {e}")
+
+        if files:
+            # Write a manifest so rollback knows exactly what to restore
+            manifest_path = backup_dir / 'manifest.json'
+            manifest_path.write_text(json.dumps({
+                'version': version,
+                'applied': applied,
+                'files': [f['path'] for f in files],
+            }, indent=2))
 
         result = {
             'status': 'update_applied',
@@ -276,6 +301,87 @@ async def handle_command(command: dict) -> dict:
             threading.Thread(target=restart, daemon=True).start()
 
         return result
+
+    elif cmd == 'rollback':
+        """Restore files from the most recent update backup.
+        command: {"version": "1.2.3"} or omitted for latest backup."""
+        base_path = Path('/opt/eduos')
+        backup_root = base_path / '.backups'
+
+        version = command.get('version')
+        if not version:
+            if not backup_root.exists():
+                return {'status': 'rollback_failed',
+                        'error': 'no backups found'}
+            versions = sorted(
+                [p for p in backup_root.iterdir() if p.is_dir()],
+                key=lambda p: p.stat().st_mtime,
+                reverse=True
+            )
+            if not versions:
+                return {'status': 'rollback_failed',
+                        'error': 'no backups found'}
+            version = versions[0].name
+
+        backup_dir = backup_root / version
+        if not backup_dir.is_dir():
+            return {'status': 'rollback_failed',
+                    'error': f'no backup for version {version}'}
+
+        manifest_path = backup_dir / 'manifest.json'
+        files_to_restore = []
+        if manifest_path.exists():
+            try:
+                manifest = json.loads(manifest_path.read_text())
+                files_to_restore = manifest.get('files', [])
+            except (json.JSONDecodeError, OSError):
+                files_to_restore = []
+
+        restored = []
+        removed = []
+        errors = []
+
+        # Restore from backup copies
+        if files_to_restore:
+            for rel_path in files_to_restore:
+                backup_file = backup_dir / rel_path
+                target = base_path / rel_path
+                try:
+                    if backup_file.exists():
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        target.write_bytes(backup_file.read_bytes())
+                        restored.append(rel_path)
+                        log.info(f"Rolled back {rel_path} from v{version}")
+                    else:
+                        # File was new in the update - remove it
+                        if target.exists():
+                            target.unlink()
+                            removed.append(rel_path)
+                except Exception as e:
+                    errors.append(f"{rel_path}: {e}")
+        else:
+            # No manifest - restore every backup file we have
+            for backup_file in backup_dir.rglob('*'):
+                if not backup_file.is_file() or backup_file.name == 'manifest.json':
+                    continue
+                rel_path = backup_file.relative_to(backup_dir)
+                target = base_path / rel_path
+                try:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(backup_file.read_bytes())
+                    restored.append(str(rel_path))
+                except Exception as e:
+                    errors.append(f"{rel_path}: {e}")
+
+        log.info(f"Rollback to v{version} complete: "
+                 f"{len(restored)} restored, {len(removed)} removed")
+        return {
+            'status': 'rolled_back',
+            'version': version,
+            'restored': restored,
+            'removed': removed,
+            'errors': errors
+        }
 
     return {'status': 'unknown_command', 'cmd': cmd}
 

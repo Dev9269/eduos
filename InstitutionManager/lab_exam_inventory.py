@@ -2,6 +2,12 @@
 EduOS Institution Manager — Lab, Exam & Device Inventory Tabs
 """
 
+import sys
+from pathlib import Path
+_DIR = Path(__file__).parent
+if str(_DIR) not in sys.path:
+    sys.path.insert(0, str(_DIR))
+
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTabWidget,
     QMessageBox, QFrame

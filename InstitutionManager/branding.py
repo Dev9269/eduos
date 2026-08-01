@@ -3,6 +3,12 @@ EduOS Institution Manager — Branding Configuration
 Allows institutions to customize logo, name, wallpaper, login screen, and welcome screen.
 """
 
+import sys
+from pathlib import Path
+_DIR = Path(__file__).parent
+if str(_DIR) not in sys.path:
+    sys.path.insert(0, str(_DIR))
+
 import json
 from pathlib import Path
 

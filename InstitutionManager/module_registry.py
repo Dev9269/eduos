@@ -3,6 +3,12 @@ EduOS Institution Manager — Module Registry
 Central system for enabling, disabling, installing, removing, and configuring modules.
 """
 
+import sys
+from pathlib import Path
+_DIR = Path(__file__).parent
+if str(_DIR) not in sys.path:
+    sys.path.insert(0, str(_DIR))
+
 import json
 from datetime import datetime
 from config import load_json, save_json, PATHS, log_activity

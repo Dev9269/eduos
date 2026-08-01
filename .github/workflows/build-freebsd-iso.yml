@@ -48,20 +48,23 @@ jobs:
 
           # Use Python to write config files - avoids heredoc indent issues
           sudo python3 - << 'PYEOF'
-          import pathlib
+          import pathlib, textwrap
+
+          rc_conf = textwrap.dedent("""
+              hostname="eduos"
+              ifconfig_DEFAULT="DHCP"
+              sshd_enable="NO"
+              moused_enable="YES"
+              dbus_enable="YES"
+              hald_enable="YES"
+              dumpdev="AUTO"
+              zfs_enable="NO"
+              eduos_firstboot_enable="YES"
+              eduos_agent_enable="YES"
+          """).lstrip()
 
           rc = pathlib.Path("rootfs/etc/rc.conf")
-          rc.write_text("""hostname="eduos"
-          ifconfig_DEFAULT="DHCP"
-          sshd_enable="NO"
-          moused_enable="YES"
-          dbus_enable="YES"
-          hald_enable="YES"
-          dumpdev="AUTO"
-          zfs_enable="NO"
-          eduos_firstboot_enable="YES"
-          eduos_agent_enable="YES"
-          """)
+          rc.write_text(rc_conf)
 
           users = pathlib.Path("rootfs/etc/eduos-users.conf")
           users.parent.mkdir(parents=True, exist_ok=True)
@@ -83,23 +86,29 @@ jobs:
           sudo mkdir -p rootfs/boot
 
           sudo python3 - << 'PYEOF'
-          import pathlib
+          import pathlib, textwrap
+
+          lc_conf = textwrap.dedent("""
+              geom_label_load="YES"
+              zfs_load="NO"
+              kern.vty=vt
+              autoboot_delay="3"
+              beastie_disable="YES"
+              loader_logo="none"
+          """).lstrip()
 
           lc = pathlib.Path("rootfs/boot/loader.conf")
-          lc.write_text("""geom_label_load="YES"
-          zfs_load="NO"
-          kern.vty=vt
-          autoboot_delay="3"
-          beastie_disable="YES"
-          loader_logo="none"
-          """)
+          lc.write_text(lc_conf)
+
+          fstab_conf = textwrap.dedent("""
+              # EduOS FreeBSD fstab
+              /dev/ada0s1a\t/\tufs\trw\t1\t1
+              /dev/ada0s1b\tnone\tswap\tsw\t0\t0
+              tmpfs\t/tmp\ttmpfs\trw,mode=1777\t0\t0
+          """).lstrip()
 
           fstab = pathlib.Path("rootfs/etc/fstab")
-          fstab.write_text("""# EduOS FreeBSD fstab
-          /dev/ada0s1a\t/\tufs\trw\t1\t1
-          /dev/ada0s1b\tnone\tswap\tsw\t0\t0
-          tmpfs\t/tmp\ttmpfs\trw,mode=1777\t0\t0
-          """)
+          fstab.write_text(fstab_conf)
 
           print("Bootloader config written OK")
           PYEOF
@@ -109,40 +118,43 @@ jobs:
           sudo mkdir -p rootfs/etc/rc.d
 
           sudo python3 - << 'PYEOF'
-          import pathlib, stat
+          import pathlib, stat, textwrap
+
+          firstboot_script = textwrap.dedent("""
+              #!/bin/sh
+              # PROVIDE: eduos_firstboot
+              # REQUIRE: NETWORKING
+              # BEFORE: LOGIN
+              # KEYWORD: firstboot
+
+              . /etc/rc.subr
+              name="eduos_firstboot"
+              start_cmd="eduos_firstboot_run"
+
+              eduos_firstboot_run()
+              {
+                echo "[EduOS] First-boot setup starting..."
+                env ASSUME_ALWAYS_YES=YES pkg update -q || true
+                pkg install -y python311 py311-pip git curl wget bash nano || true
+                pip3.11 install --quiet cryptography fastapi uvicorn pyjwt websockets psutil || true
+                if [ -f /opt/eduos/Services/freebsd/eduos_agent ]; then
+                  cp /opt/eduos/Services/freebsd/eduos_agent /usr/local/etc/rc.d/eduos_agent
+                  chmod +x /usr/local/etc/rc.d/eduos_agent
+                  sysrc eduos_agent_enable="YES"
+                  service eduos_agent start || true
+                fi
+                sysrc eduos_firstboot_enable="NO"
+                rm -f /etc/rc.d/eduos_firstboot
+                echo "[EduOS] First-boot complete."
+              }
+
+              load_rc_config $name
+              : ${eduos_firstboot_enable:=YES}
+              run_rc_command "$1"
+          """).lstrip()
 
           script = pathlib.Path("rootfs/etc/rc.d/eduos_firstboot")
-          script.write_text("""#!/bin/sh
-          # PROVIDE: eduos_firstboot
-          # REQUIRE: NETWORKING
-          # BEFORE: LOGIN
-          # KEYWORD: firstboot
-
-          . /etc/rc.subr
-          name="eduos_firstboot"
-          start_cmd="eduos_firstboot_run"
-
-          eduos_firstboot_run()
-          {
-            echo "[EduOS] First-boot setup starting..."
-            env ASSUME_ALWAYS_YES=YES pkg update -q || true
-            pkg install -y python311 py311-pip git curl wget bash nano || true
-            pip3.11 install --quiet cryptography fastapi uvicorn pyjwt websockets psutil || true
-            if [ -f /opt/eduos/Services/freebsd/eduos_agent ]; then
-              cp /opt/eduos/Services/freebsd/eduos_agent /usr/local/etc/rc.d/eduos_agent
-              chmod +x /usr/local/etc/rc.d/eduos_agent
-              sysrc eduos_agent_enable="YES"
-              service eduos_agent start || true
-            fi
-            sysrc eduos_firstboot_enable="NO"
-            rm -f /etc/rc.d/eduos_firstboot
-            echo "[EduOS] First-boot complete."
-          }
-
-          load_rc_config $name
-          : ${eduos_firstboot_enable:=YES}
-          run_rc_command "$1"
-          """)
+          script.write_text(firstboot_script)
           script.chmod(script.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
           print("First-boot script written OK")
           PYEOF
@@ -150,43 +162,49 @@ jobs:
       - name: Create student user
         run: |
           sudo python3 - << 'PYEOF'
-          import pathlib, stat
+          import pathlib, stat, textwrap
+
+          adduser_script = textwrap.dedent("""
+              #!/bin/sh
+              # PROVIDE: eduos_adduser
+              # REQUIRE: NETWORKING eduos_firstboot
+              # BEFORE: LOGIN
+              # KEYWORD: firstboot
+
+              . /etc/rc.subr
+              name="eduos_adduser"
+              start_cmd="eduos_adduser_run"
+
+              eduos_adduser_run()
+              {
+                if ! id student >/dev/null 2>&1; then
+                  pw useradd student -m -s /bin/sh -c "EduOS Student"
+                  echo "eduos2025" | pw usermod student -h 0
+                  echo "[EduOS] Student user created"
+                fi
+                sysrc eduos_adduser_enable="NO"
+                rm -f /etc/rc.d/eduos_adduser
+              }
+
+              load_rc_config $name
+              : ${eduos_adduser_enable:=YES}
+              run_rc_command "$1"
+          """).lstrip()
 
           adduser = pathlib.Path("rootfs/etc/rc.d/eduos_adduser")
-          adduser.write_text("""#!/bin/sh
-          # PROVIDE: eduos_adduser
-          # REQUIRE: NETWORKING eduos_firstboot
-          # BEFORE: LOGIN
-          # KEYWORD: firstboot
-
-          . /etc/rc.subr
-          name="eduos_adduser"
-          start_cmd="eduos_adduser_run"
-
-          eduos_adduser_run()
-          {
-            if ! id student >/dev/null 2>&1; then
-              pw useradd student -m -s /bin/sh -c "EduOS Student"
-              echo "student:eduos2025" | chpass -p $(echo "eduos2025" | sha512) student 2>/dev/null || \
-              echo "eduos2025" | pw usermod student -h 0
-              echo "[EduOS] Student user created"
-            fi
-            sysrc eduos_adduser_enable="NO"
-            rm -f /etc/rc.d/eduos_adduser
-          }
-
-          load_rc_config $name
-          : ${eduos_adduser_enable:=YES}
-          run_rc_command "$1"
-          """)
+          adduser.parent.mkdir(parents=True, exist_ok=True)
+          adduser.write_text(adduser_script)
           adduser.chmod(adduser.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
           rc = pathlib.Path("rootfs/etc/rc.conf")
-          current = rc.read_text()
-          if "eduos_adduser" not in current:
-              rc.write_text(current + 'eduos_adduser_enable="YES"\n')
+          if rc.exists():
+              current = rc.read_text()
+              if "eduos_adduser" not in current:
+                  rc.write_text(current + 'eduos_adduser_enable="YES"\n')
+          else:
+              rc.write_text('eduos_adduser_enable="YES"\n')
 
-          print("Student user creation script staged")
+          print("Student user script written OK — first line:", adduser_script.split("\n")[0])
           PYEOF
 
       - name: Build bootable FreeBSD ISO
@@ -209,13 +227,17 @@ jobs:
 
           # FreeBSD loader config (Python write — no heredoc indent issues)
           sudo python3 - << 'PYEOF'
-          import pathlib
+          import pathlib, textwrap
+
+          iso_lc_conf = textwrap.dedent("""
+              geom_label_load="YES"
+              kern.geom.label.disk_ident.enable="0"
+              kern.geom.label.gptid.enable="0"
+              zfs_load="NO"
+          """).lstrip()
+
           lc = pathlib.Path("isoroot/boot/loader.conf")
-          lc.write_text("""geom_label_load="YES"
-          kern.geom.label.disk_ident.enable="0"
-          kern.geom.label.gptid.enable="0"
-          zfs_load="NO"
-          """)
+          lc.write_text(iso_lc_conf)
           print("ISO loader.conf written OK")
           PYEOF
 

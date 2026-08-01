@@ -26,6 +26,11 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QColor, QPalette, QIcon, QAction
 from cryptography.fernet import Fernet
+
+_ROOT_DIR = str(Path(__file__).resolve().parent.parent)
+if _ROOT_DIR not in sys.path:
+    sys.path.insert(0, _ROOT_DIR)
+
 from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
 
 
@@ -709,6 +714,88 @@ class AdminCenterWindow(QMainWindow):
         layout.addWidget(push_btn)
         dlg.exec()
 
+    def _schedule_exam(self):
+        """Open dialog to schedule an exam for automatic push at a future time."""
+        import urllib.request
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Schedule Exam")
+        dlg.setFixedSize(480, 300)
+        layout = QVBoxLayout(dlg)
+
+        layout.addWidget(QLabel("Exam name:"))
+        name_input = QLineEdit()
+        name_input.setPlaceholderText("e.g. Midterm 1")
+        layout.addWidget(name_input)
+
+        layout.addWidget(QLabel("Start time (YYYY-MM-DDTHH:MM):"))
+        time_input = QLineEdit()
+        time_input.setPlaceholderText("e.g. 2026-08-03T09:30")
+        layout.addWidget(time_input)
+
+        layout.addWidget(QLabel("Exam JSON (optional — merged with the name):"))
+        exam_input = QLineEdit()
+        exam_input.setPlaceholderText('{"duration_minutes": 60, "questions": []}')
+        layout.addWidget(exam_input)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        layout.addWidget(buttons)
+
+        def do_schedule():
+            name = name_input.text().strip()
+            scheduled_at = time_input.text().strip()
+            if not name or not scheduled_at:
+                QMessageBox.warning(
+                    dlg, "Error",
+                    "Exam name and start time are required"
+                )
+                return
+            exam_data = {"name": name}
+            if exam_input.text().strip():
+                try:
+                    extra = json.loads(exam_input.text().strip())
+                    if isinstance(extra, dict):
+                        exam_data.update(extra)
+                except json.JSONDecodeError:
+                    QMessageBox.warning(
+                        dlg, "Error", "Exam JSON is not valid"
+                    )
+                    return
+
+            payload = json.dumps({
+                'name': name,
+                'scheduled_at': scheduled_at,
+                'exam': exam_data
+            }).encode()
+
+            try:
+                req = urllib.request.Request(
+                    f"http://{self.server_host}:{self.server_port}/exam/schedule",
+                    data=payload,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Authorization': f'Bearer {self.auth_token}'
+                    }
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    result = json.loads(resp.read())
+                QMessageBox.information(
+                    dlg, "Exam Scheduled",
+                    f"'{name}' scheduled for {result.get('scheduled_at')}\n"
+                    f"Schedule id: {result.get('schedule_id')}\n"
+                    "It will be pushed to all machines automatically."
+                )
+                dlg.accept()
+            except Exception as e:
+                QMessageBox.critical(dlg, "Schedule Failed", str(e))
+
+        buttons.accepted.connect(do_schedule)
+        buttons.rejected.connect(dlg.reject)
+        dlg.exec()
+
     def _connected_hosts(self):
         return list(getattr(self, '_ping_results', {}).keys())
 
@@ -935,13 +1022,21 @@ class AdminCenterWindow(QMainWindow):
             ("▶ Start Exam Mode", "#16a34a", self._start_exam),
             ("■ Stop All Exams", "#dc2626", self._stop_exams),
             ("⏸ Pause All", "#f59e0b", self._pause_exams),
+            ("⏰ Schedule Exam", "#0d9488", self._schedule_exam),
             ("📋 View Active Exams", "#2563eb", self._view_active_exams),
             ("👁 Live Monitor", "#0891b2", self._open_exam_monitor),
             ("📥 View Submissions", "#7c3aed", self._view_submissions),
         ]
         for text, color, handler in btn_configs:
             btn = QPushButton(text)
-            btn.setStyleSheet(accent_glow_style() if color == "#2563eb" else glass_success_button_style() if color == "#16a34a" else glass_danger_button_style() if color == "#dc2626" else glass_warning_button_style() if color in ("#f59e0b", "#0891b2") else glass_button_style())
+            if color == "#0d9488":
+                style = glass_button_style().replace(
+                    "border: 1px solid rgba(255, 255, 255, 0.12)",
+                    "border: 1px solid #0d9488; color: #2dd4bf"
+                )
+            else:
+                style = accent_glow_style() if color == "#2563eb" else glass_success_button_style() if color == "#16a34a" else glass_danger_button_style() if color == "#dc2626" else glass_warning_button_style() if color in ("#f59e0b", "#0891b2") else glass_button_style()
+            btn.setStyleSheet(style)
             btn.clicked.connect(handler)
             exam_actions.addWidget(btn)
         exam_actions.addStretch()

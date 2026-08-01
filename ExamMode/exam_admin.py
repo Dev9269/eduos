@@ -39,6 +39,11 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QColor, QPalette
+
+_ROOT_DIR = str(Path(__file__).resolve().parent.parent)
+if _ROOT_DIR not in sys.path:
+    sys.path.insert(0, _ROOT_DIR)
+
 from design_system import (
     EduOSColors as C,
     apply_glass_theme,

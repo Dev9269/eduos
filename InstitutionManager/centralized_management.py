@@ -9,6 +9,12 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 
+import sys
+from pathlib import Path
+_DIR = Path(__file__).parent
+if str(_DIR) not in sys.path:
+    sys.path.insert(0, str(_DIR))
+
 from styles import *
 from ui_components import Card, SectionTitle, StatCard, StatusBadge, btn_primary, btn_outline
 from config import load_json, save_json, PATHS, log_activity

@@ -17,6 +17,10 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QColor
 
+_ROOT_DIR = str(Path(__file__).resolve().parent.parent)
+if _ROOT_DIR not in sys.path:
+    sys.path.insert(0, _ROOT_DIR)
+
 from data_gen import generate_all, DATA_DIR
 
 from design_system import (

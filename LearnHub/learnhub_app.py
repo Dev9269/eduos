@@ -12,6 +12,10 @@ import uuid
 from datetime import datetime, date
 from pathlib import Path
 
+_ROOT_DIR = str(Path(__file__).resolve().parent.parent)
+if _ROOT_DIR not in sys.path:
+    sys.path.insert(0, _ROOT_DIR)
+
 from flask import (
     Flask,
     render_template_string,

@@ -3,6 +3,12 @@ EduOS Institution Manager — Demo Mode
 Guided demonstration of the complete EduOS ecosystem for startup interviews and presentations.
 """
 
+import sys
+from pathlib import Path
+_DIR = Path(__file__).parent
+if str(_DIR) not in sys.path:
+    sys.path.insert(0, str(_DIR))
+
 import json
 import os
 from datetime import datetime

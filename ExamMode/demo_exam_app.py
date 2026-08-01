@@ -33,6 +33,11 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QEvent, QObject
 from PyQt6.QtGui import (
     QColor, QFont, QTextCharFormat, QSyntaxHighlighter
 )
+
+_ROOT_DIR = str(Path(__file__).resolve().parent.parent)
+if _ROOT_DIR not in sys.path:
+    sys.path.insert(0, _ROOT_DIR)
+
 from design_system import EduOSColors as C, apply_glass_theme, glass_card_style, glass_button_style, accent_glow_style, glass_success_button_style, glass_danger_button_style, glass_warning_button_style, status_badge_style, StatusBadge, SectionTitle, glass_stat_card_style, glass_banner_style
 
 from demo_exam_config import (

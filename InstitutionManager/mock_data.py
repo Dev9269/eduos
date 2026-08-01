@@ -3,6 +3,12 @@ EduOS Institution Manager — Mock Data Generator
 Generates realistic sample data for demonstration and testing.
 """
 
+import sys
+from pathlib import Path
+_DIR = Path(__file__).parent
+if str(_DIR) not in sys.path:
+    sys.path.insert(0, str(_DIR))
+
 import random
 import json
 from datetime import datetime, timedelta
