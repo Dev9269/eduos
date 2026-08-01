@@ -42,3 +42,29 @@ def test_command_unknown():
     spec.loader.exec_module(module)
     result = asyncio.run(module.handle_command({'action': 'nope'}))
     assert result['status'] == 'unknown_command'
+
+
+def test_command_get_status():
+    import asyncio
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "agent", "Services/eduos-agent.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    result = asyncio.run(module.handle_command({'action': 'get_status'}))
+    assert result['status'] == 'ok'
+    assert 'hostname' in result
+    assert 'platform' in result
+    assert 'cpu_percent' in result
+    assert 'ram_percent' in result
+
+
+def test_agent_platform_detection():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "agent", "Services/eduos-agent.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert callable(module._is_freebsd)
+    assert callable(module._is_linux)
+    assert not (module._is_freebsd() and module._is_linux())

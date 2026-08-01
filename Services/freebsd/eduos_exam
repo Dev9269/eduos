@@ -1,0 +1,74 @@
+#!/bin/sh
+#
+# EduOS Exam Lockdown — FreeBSD rc.d service
+# Activated remotely by admin during examinations
+# Place at: /usr/local/etc/rc.d/eduos_exam
+#
+
+# PROVIDE: eduos_exam
+# REQUIRE: NETWORKING eduos_agent
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="eduos_exam"
+rcvar="eduos_exam_enable"
+desc="EduOS Exam Mode Lockdown"
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+
+eduos_exam_start()
+{
+    echo "[EduOS] Activating Exam Mode..."
+
+    # 1. Block USB storage devices via devd
+    cat > /etc/devd/eduos-exam-usblock.conf << 'DEVD'
+nomatch "ugen[0-9]* at *" {
+    action "logger EduOS: USB device blocked during exam";
+};
+DEVD
+    service devd restart 2>/dev/null || true
+
+    # 2. Block internet (keep LAN for submission)
+    # Allow only the EduOS server subnet
+    ipfw add 1000 deny tcp from any to any dst-port 80 2>/dev/null || true
+    ipfw add 1001 deny tcp from any to any dst-port 443 2>/dev/null || true
+
+    # 3. Kill common escape applications
+    for app in firefox chromium vlc; do
+        pkill -f "$app" 2>/dev/null || true
+    done
+
+    # 4. Launch exam app
+    if [ -f /opt/eduos/ExamMode/exam_app.py ]; then
+        su -l student -c \
+            "DISPLAY=:0 python3.11 /opt/eduos/ExamMode/exam_app.py &"
+    fi
+
+    sysrc eduos_exam_enable="YES"
+    echo "[EduOS] Exam Mode ACTIVE"
+}
+
+eduos_exam_stop()
+{
+    echo "[EduOS] Deactivating Exam Mode..."
+
+    # Remove USB block
+    rm -f /etc/devd/eduos-exam-usblock.conf
+    service devd restart 2>/dev/null || true
+
+    # Remove firewall rules
+    ipfw delete 1000 2>/dev/null || true
+    ipfw delete 1001 2>/dev/null || true
+
+    # Kill exam app
+    pkill -f exam_app.py 2>/dev/null || true
+
+    sysrc eduos_exam_enable="NO"
+    echo "[EduOS] Exam Mode DEACTIVATED"
+}
+
+load_rc_config $name
+: ${eduos_exam_enable:=NO}
+run_rc_command "$1"

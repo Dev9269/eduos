@@ -231,6 +231,10 @@ class AdminCenterWindow(QMainWindow):
         self.status_label.setStyleSheet(f"color: {C.ACCENT_GREEN}; font-size: 13px; background: {C.GLASS_CARD}; padding: 4px 12px; border-radius: 12px;")
         hlayout.addWidget(self.status_label)
 
+        self.platform_badge = QLabel()
+        self.platform_badge.setStyleSheet(f"font-size: 12px; font-weight: bold; color: {C.ACCENT_PRIMARY}; background: {C.GLASS_CARD}; padding: 4px 12px; border-radius: 12px;")
+        hlayout.addWidget(self.platform_badge)
+
         hlayout.addStretch()
 
         self.host_label = QLabel()
@@ -532,6 +536,10 @@ class AdminCenterWindow(QMainWindow):
         except Exception:
             QMessageBox.warning(self, "Error", f"Could not open SSH session to {host}.")
 
+    def _open_freebsd_setup(self):
+        dlg = FreeBSDSetupDialog(self)
+        dlg.exec()
+
     def _build_software_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
@@ -572,6 +580,11 @@ class AdminCenterWindow(QMainWindow):
         deploy_btn = QPushButton("🚀 Deploy to All Labs")
         deploy_btn.setStyleSheet(glass_button_style())
         actions_layout.addWidget(deploy_btn)
+
+        freebsd_btn = QPushButton("🅵 Setup FreeBSD Desktop")
+        freebsd_btn.setStyleSheet(glass_warning_button_style())
+        freebsd_btn.clicked.connect(self._open_freebsd_setup)
+        actions_layout.addWidget(freebsd_btn)
 
         actions_layout.addStretch()
         sw_layout.addLayout(actions_layout)
@@ -774,6 +787,15 @@ class AdminCenterWindow(QMainWindow):
             f"🖥 {platform.node()} | {platform.system()} {platform.release()} | {platform.machine()}"
         )
 
+        sys_name = platform.system()
+        if sys_name == "FreeBSD":
+            self.platform_badge.setText("🅵 FreeBSD")
+            self.platform_badge.setStyleSheet(f"font-size: 12px; font-weight: bold; color: {C.ACCENT_AMBER}; background: {C.GLASS_CARD}; padding: 4px 12px; border-radius: 12px;")
+        elif sys_name == "Linux":
+            self.platform_badge.setText("🐧 Linux")
+        else:
+            self.platform_badge.setText(sys_name)
+
         self.systems_table.setRowCount(0)
 
         row = self.systems_table.rowCount()
@@ -804,6 +826,61 @@ class AdminCenterWindow(QMainWindow):
                     row, col,
                     QTableWidgetItem("—" if not is_online else "Awaiting data")
                 )
+
+
+class FreeBSDSetupDialog(QDialog):
+    """Instructions + provisioning commands for FreeBSD lab machines."""
+
+    SCRIPT_PATH = "Scripts/freebsd-desktop-setup.sh"
+    USAGE = (
+        "On the target FreeBSD machine (as root):\n\n"
+        "  # 1. Copy the repo to the machine\n"
+        "  git clone https://github.com/Dev9269/eduos /opt/eduos\n\n"
+        "  # 2. Run the desktop setup script\n"
+        "  sh /opt/eduos/Scripts/freebsd-desktop-setup.sh\n\n"
+        "  # 3. After reboot, install the agent\n"
+        "  sh /opt/eduos/Services/freebsd/install-agent-freebsd.sh\n\n"
+        "The setup script installs KDE Plasma + SDDM, the Python stack,\n"
+        "dev tools, EduOS branding, and registers the eduos_agent rc.d\n"
+        "service. Exam lockdown is handled by the eduos_exam rc.d\n"
+        "service, controlled remotely from the Exam Control tab."
+    )
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("🅵 FreeBSD Desktop Setup")
+        self.setMinimumSize(620, 480)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+
+        intro = QLabel("Provision a FreeBSD 14.x lab machine with the EduOS desktop environment.")
+        intro.setWordWrap(True)
+        intro.setStyleSheet(f"font-size: 13px; color: {C.TEXT_SECONDARY}; padding: 12px; background: {C.GLASS_CARD}; border-radius: 8px;")
+        layout.addWidget(intro)
+
+        self.script_text = QTextEdit()
+        self.script_text.setReadOnly(True)
+        self.script_text.setStyleSheet(f"font-size: 12px; background: {C.BG_MID}; color: {C.ACCENT_SECONDARY}; border-radius: 8px; padding: 8px;")
+        self.script_text.setPlainText(self.USAGE)
+        layout.addWidget(self.script_text)
+
+        btn_row = QHBoxLayout()
+        copy_btn = QPushButton("📋 Copy Instructions")
+        copy_btn.setStyleSheet(glass_button_style())
+        copy_btn.clicked.connect(self._copy_to_clipboard)
+        btn_row.addWidget(copy_btn)
+        btn_row.addStretch()
+
+        close_btn = QPushButton("Close")
+        close_btn.setStyleSheet(glass_danger_button_style())
+        close_btn.clicked.connect(self.accept)
+        btn_row.addWidget(close_btn)
+        layout.addLayout(btn_row)
+
+    def _copy_to_clipboard(self):
+        QApplication.clipboard().setText(self.script_text.toPlainText())
+        self.script_text.append("\n✅ Instructions copied to clipboard.")
 
 
 def main():

@@ -1,7 +1,8 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-EduOS Agent — runs on every student PC as a systemd service.
-Connects to the admin server and executes commands.
+EduOS Agent â€” runs on every student PC.
+Connects to the EduOS admin server and executes commands.
+Supports FreeBSD (rc.d) and Linux (systemd) deployments.
 """
 
 import asyncio
@@ -26,7 +27,7 @@ FALLBACK_SERVER = 'ws://eduos-server.local:8765'
 
 
 def _log_file_path() -> str:
-    """Return a writable log path — falls back if /var/log is unavailable."""
+    """Return a writable log path â€” falls back if /var/log is unavailable."""
     candidates = [
         os.environ.get('EDUOS_AGENT_LOG', ''),
         '/var/log/eduos-agent.log',
@@ -61,7 +62,7 @@ def load_config():
             except Exception:
                 continue
 
-    # Default fallback — mDNS discovery, then standard hostname
+    # Default fallback â€” mDNS discovery, then standard hostname
     return {
         'server_url': discover_server_mdns(),
         'token': '',
@@ -100,26 +101,68 @@ logging.basicConfig(
 )
 
 
+def _is_freebsd() -> bool:
+    return platform.system() == 'FreeBSD'
+
+
+def _is_linux() -> bool:
+    return platform.system() == 'Linux'
+
+
 async def handle_command(command: dict) -> dict:
     """Execute a command from the admin server"""
     cmd = command.get('action', '')
     log.info(f"Received command: {cmd}")
 
     if cmd == 'ping':
-        return {'status': 'pong', 'hostname': platform.node()}
+        return {
+            'status': 'pong',
+            'hostname': platform.node(),
+            'platform': platform.system(),
+            'eduos_version': '2.0-freebsd'
+        }
 
     elif cmd == 'exam_mode_on':
-        subprocess.run(['systemctl', 'start', 'eduos-exam-lock'],
-                       check=False)
-        return {'status': 'exam_mode_activated'}
+        if _is_freebsd():
+            # FreeBSD: use rc.d service
+            result = subprocess.run(
+                ['service', 'eduos_exam', 'start'],
+                capture_output=True, text=True
+            )
+        else:
+            # Linux fallback
+            result = subprocess.run(
+                ['systemctl', 'start', 'eduos-exam-lock'],
+                capture_output=True, text=True
+            )
+        return {
+            'status': 'exam_mode_activated',
+            'output': result.stdout,
+            'platform': platform.system()
+        }
 
     elif cmd == 'exam_mode_off':
-        subprocess.run(['systemctl', 'stop', 'eduos-exam-lock'],
-                       check=False)
-        return {'status': 'exam_mode_deactivated'}
+        if _is_freebsd():
+            result = subprocess.run(
+                ['service', 'eduos_exam', 'stop'],
+                capture_output=True, text=True
+            )
+        else:
+            result = subprocess.run(
+                ['systemctl', 'stop', 'eduos-exam-lock'],
+                capture_output=True, text=True
+            )
+        return {
+            'status': 'exam_mode_deactivated',
+            'platform': platform.system()
+        }
 
     elif cmd == 'lock_screen':
-        subprocess.run(['loginctl', 'lock-sessions'], check=False)
+        if _is_freebsd():
+            # FreeBSD/KDE: use xscreensaver or xdg-screensaver
+            subprocess.run(['xdg-screensaver', 'lock'], check=False)
+        else:
+            subprocess.run(['loginctl', 'lock-sessions'], check=False)
         return {'status': 'screen_locked'}
 
     elif cmd == 'restart':
@@ -127,7 +170,7 @@ async def handle_command(command: dict) -> dict:
         return {'status': 'restarting'}
 
     elif cmd == 'shutdown':
-        subprocess.run(['shutdown', '-h', 'now'], check=False)
+        subprocess.run(['shutdown', '-p', 'now'], check=False)
         return {'status': 'shutting_down'}
 
     elif cmd == 'get_status':
@@ -135,10 +178,29 @@ async def handle_command(command: dict) -> dict:
         return {
             'status': 'ok',
             'hostname': platform.node(),
+            'platform': platform.system(),
             'cpu_percent': psutil.cpu_percent(interval=1),
             'ram_percent': psutil.virtual_memory().percent,
             'disk_percent': psutil.disk_usage('/').percent,
         }
+
+    elif cmd == 'usb_lock':
+        if _is_freebsd():
+            # FreeBSD: disable USB storage via devd rules
+            subprocess.run([
+                'sh', '-c',
+                'echo \'nomatch "ugen[0-9]* at *"\' > /etc/devd/eduos-usblock.conf'
+            ], check=False)
+            subprocess.run(['service', 'devd', 'restart'], check=False)
+        return {'status': 'usb_locked', 'platform': platform.system()}
+
+    elif cmd == 'usb_unlock':
+        if _is_freebsd():
+            subprocess.run([
+                'rm', '-f', '/etc/devd/eduos-usblock.conf'
+            ], check=False)
+            subprocess.run(['service', 'devd', 'restart'], check=False)
+        return {'status': 'usb_unlocked'}
 
     return {'status': 'unknown_command', 'cmd': cmd}
 
@@ -192,7 +254,7 @@ def get_mac_address():
 
 
 if __name__ == '__main__':
-    # Block termination signals — agent must not be killable by student
+    # Block termination signals â€” agent must not be killable by student
     signal.signal(signal.SIGTERM, lambda s, f: log.warning("SIGTERM blocked"))
     signal.signal(signal.SIGHUP, lambda s, f: log.warning("SIGHUP blocked"))
     asyncio.run(agent_loop())

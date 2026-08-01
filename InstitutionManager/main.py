@@ -6,6 +6,12 @@ Flagship application for managing educational institution deployments.
 
 import sys
 import os
+from pathlib import Path
+
+# Ensure InstitutionManager directory is in path
+_IM_DIR = Path(__file__).parent
+if str(_IM_DIR) not in sys.path:
+    sys.path.insert(0, str(_IM_DIR))
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,

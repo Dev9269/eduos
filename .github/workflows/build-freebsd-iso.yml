@@ -75,82 +75,120 @@ jobs:
           }
           EOF
 
-      - name: Install Python on FreeBSD rootfs (via pkg mirror)
+      - name: Configure FreeBSD bootloader
         run: |
-          # Stage pkg packages for offline install
-          # Using FreeBSD pkg repository
-          sudo chroot rootfs /bin/sh -c "
-            # Bootstrap pkg
-            env ASSUME_ALWAYS_YES=YES pkg bootstrap
+          sudo mkdir -p rootfs/boot
+          sudo tee rootfs/boot/loader.conf << 'EOF'
+          # EduOS FreeBSD Boot Configuration
+          geom_label_load="YES"
+          zfs_load="YES"
+          kern.vty=vt
+          autoboot_delay="3"
+          beastie_disable="YES"
+          loader_logo="none"
+          EOF
+
+          # FreeBSD fstab
+          sudo tee rootfs/etc/fstab << 'EOF'
+          # EduOS FreeBSD fstab
+          # Device        Mountpoint  FStype  Options  Dump  Pass
+          /dev/ada0s1a    /           ufs     rw       1     1
+          /dev/ada0s1b    none        swap    sw       0     0
+          tmpfs           /tmp        tmpfs   rw,mode=1777  0  0
+          EOF
+
+          echo "FreeBSD bootloader configured"
+
+      - name: Stage first-boot package installer
+        run: |
+          sudo tee rootfs/etc/rc.d/eduos_firstboot << 'RCEOF'
+          #!/bin/sh
+          # PROVIDE: eduos_firstboot
+          # REQUIRE: NETWORKING pkg
+          # BEFORE: LOGIN
+          # KEYWORD: firstboot
+
+          . /etc/rc.subr
+          name="eduos_firstboot"
+          start_cmd="eduos_firstboot_run"
+
+          eduos_firstboot_run() {
+            echo "[EduOS] Running first-boot setup..."
+
+            # Install required packages
+            env ASSUME_ALWAYS_YES=YES pkg update
             pkg install -y \
               python311 \
               py311-pip \
-              py311-qt6 \
-              py311-cryptography \
-              py311-fastapi \
-              py311-uvicorn \
               py311-websockets \
               py311-psutil \
-              git \
-              curl \
-              wget
-          " 2>/dev/null || echo "pkg install skipped (no network in runner) — packages staged for first boot"
+              git curl wget bash nano
 
-      - name: Create EduOS FreeBSD RC service for agent
-        run: |
-          sudo tee rootfs/usr/local/etc/rc.d/eduos_agent << 'EOF'
-          #!/bin/sh
-          # PROVIDE: eduos_agent
-          # REQUIRE: NETWORKING
-          # KEYWORD: shutdown
+            # Install Python packages
+            pip3.11 install cryptography fastapi uvicorn pyjwt
 
-          . /etc/rc.subr
+            # Install EduOS agent service
+            cp /opt/eduos/Services/freebsd/eduos_agent \
+              /usr/local/etc/rc.d/eduos_agent
+            chmod +x /usr/local/etc/rc.d/eduos_agent
+            sysrc eduos_agent_enable="YES"
+            service eduos_agent start
 
-          name="eduos_agent"
-          rcvar="eduos_agent_enable"
-          command="/usr/local/bin/python3.11"
-          command_args="/opt/eduos/Services/eduos-agent.py"
-          pidfile="/var/run/${name}.pid"
-          start_precmd="eduos_agent_prestart"
-
-          eduos_agent_prestart() {
-            # Prevent student from stopping this service
-            echo "EduOS Agent starting..."
+            # Self-disable after first boot
+            sysrc eduos_firstboot_enable="NO"
+            rm -f /etc/rc.d/eduos_firstboot
+            echo "[EduOS] First-boot setup complete."
           }
 
           load_rc_config $name
-          : ${eduos_agent_enable:=YES}
+          : ${eduos_firstboot_enable:=YES}
           run_rc_command "$1"
-          EOF
-          sudo chmod +x rootfs/usr/local/etc/rc.d/eduos_agent
-          sudo sh -c 'echo "eduos_agent_enable=\"YES\"" >> rootfs/etc/rc.conf'
+          RCEOF
+          sudo chmod +x rootfs/etc/rc.d/eduos_firstboot
+          sudo sh -c 'echo "eduos_firstboot_enable=\"YES\"" >> rootfs/etc/rc.conf'
+          echo "First-boot script staged"
 
       - name: Build bootable FreeBSD ISO
         run: |
-          # Create ISO directory structure
           mkdir -p isoroot/boot/kernel
+          mkdir -p isoroot/etc
+          mkdir -p isoroot/opt/eduos
 
-          # Copy kernel
-          sudo cp rootfs/boot/kernel/kernel isoroot/boot/kernel/ 2>/dev/null || true
+          # Copy FreeBSD kernel files
+          sudo cp -r rootfs/boot/kernel/ isoroot/boot/ 2>/dev/null || true
           sudo cp rootfs/boot/loader.efi isoroot/boot/ 2>/dev/null || true
+          sudo cp rootfs/boot/loader isoroot/boot/ 2>/dev/null || true
+          sudo cp rootfs/boot/boot isoroot/boot/ 2>/dev/null || true
 
-          # Create UFS image of rootfs
-          sudo dd if=/dev/zero of=rootfs.img bs=1M count=4096
-          sudo mkfs.ext2 rootfs.img 2>/dev/null || \
-          sudo mke2fs rootfs.img
+          # Copy EduOS app files directly into ISO
+          sudo cp -r rootfs/opt/eduos/ isoroot/opt/ 2>/dev/null || true
+          sudo cp -r rootfs/etc/eduos isoroot/etc/ 2>/dev/null || true
+          sudo cp rootfs/etc/rc.conf isoroot/etc/ 2>/dev/null || true
+          sudo cp -r rootfs/etc/rc.d/ isoroot/etc/ 2>/dev/null || true
 
-          mkdir -p mnt_rootfs
-          sudo mount -o loop rootfs.img mnt_rootfs
-          sudo cp -a rootfs/. mnt_rootfs/ 2>/dev/null || true
-          sudo umount mnt_rootfs
+          # FreeBSD loader config
+          sudo tee isoroot/boot/loader.conf << 'EOF'
+          geom_label_load="YES"
+          kern.geom.label.disk_ident.enable="0"
+          kern.geom.label.gptid.enable="0"
+          zfs_load="YES"
+          EOF
 
-          # Create ISO
+          # Create the ISO using makefs + mkisofs approach
           sudo xorriso \
             -as mkisofs \
             -o eduos-freebsd.iso \
-            -V "EduOS-FreeBSD" \
+            -V "EduOS-FreeBSD-14" \
             -J -r \
-            isoroot/ || echo "ISO creation attempted"
+            --no-emul-boot \
+            isoroot/ 2>/dev/null || \
+          sudo xorriso \
+            -as mkisofs \
+            -o eduos-freebsd.iso \
+            -V "EduOS-FreeBSD-14" \
+            -J -r \
+            isoroot/
+          echo "ISO created: $(ls -lh eduos-freebsd.iso)"
 
       - name: Upload FreeBSD ISO artifact
         uses: actions/upload-artifact@v4
