@@ -9,6 +9,7 @@ import os
 import json
 import sqlite3
 import uuid
+import urllib.request
 from datetime import datetime, date
 from pathlib import Path
 
@@ -178,6 +179,10 @@ def init_db():
             id INTEGER PRIMARY KEY, title TEXT, type TEXT,
             datetime TEXT, location TEXT
         );
+        CREATE TABLE IF NOT EXISTS courses (
+            id INTEGER PRIMARY KEY, name TEXT, description TEXT,
+            code TEXT, synced_at TEXT
+        );
         INSERT OR IGNORE INTO assignments VALUES
             (1, 'Data Structures Assignment 3', 'CS201', 'Implement a binary search tree with insertion, deletion, and traversal operations.', '2026-06-20', 0),
             (2, 'Python Lab Report', 'CS101', 'Complete the lab exercise on functions and file handling. Include screenshots and code.', '2026-06-22', 0),
@@ -199,6 +204,95 @@ def init_db():
     """)
     conn.commit()
     conn.close()
+
+
+def get_db_connection():
+    """Open a connection to the LearnHub database"""
+    conn = sqlite3.connect(str(DATA_DIR / "learnhub.db"))
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+EDUOS_CONFIG = Path.home() / '.eduos' / 'agent.conf'
+
+
+def get_server_config():
+    """Load EduOS server connection config"""
+    if EDUOS_CONFIG.exists():
+        try:
+            return json.loads(EDUOS_CONFIG.read_text())
+        except Exception:
+            pass
+    return {'server_url': 'ws://eduos-server.local:8765', 'token': ''}
+
+
+def sync_from_server():
+    """Pull course materials and assignments from EduOS server"""
+    config = get_server_config()
+    server_http = config['server_url'].replace('ws://', 'http://')
+    token = config.get('token', '')
+
+    results = {'courses': 0, 'exams': 0, 'errors': []}
+
+    try:
+        # Fetch courses
+        req = urllib.request.Request(
+            f"{server_http}/api/courses",
+            headers={'Authorization': f'Bearer {token}'}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+
+        conn = get_db_connection()
+        for course in data.get('courses', []):
+            try:
+                conn.execute(
+                    """INSERT OR REPLACE INTO courses
+                       (id, name, description, code, synced_at)
+                       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                    (course.get('id'), course['name'],
+                     course.get('description', ''),
+                     course.get('code', ''))
+                )
+                results['courses'] += 1
+            except Exception as e:
+                results['errors'].append(f"Course {course.get('name')}: {e}")
+        conn.commit()
+        conn.close()
+
+    except Exception as e:
+        results['errors'].append(f"Server connection: {e}")
+
+    return results
+
+
+@app.route("/api/sync", methods=["POST"])
+def api_sync():
+    """Trigger sync from EduOS server"""
+    results = sync_from_server()
+    return jsonify({
+        "status": "synced" if not results['errors'] else "partial",
+        "courses_synced": results['courses'],
+        "errors": results['errors']
+    })
+
+
+@app.route("/api/sync/status")
+def sync_status():
+    """Check when last sync happened"""
+    conn = get_db_connection()
+    try:
+        last = conn.execute(
+            "SELECT MAX(synced_at) as last FROM courses WHERE synced_at IS NOT NULL"
+        ).fetchone()
+        conn.close()
+        return jsonify({
+            "last_sync": last["last"] if last else None,
+            "server": get_server_config().get('server_url', 'not configured')
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/")
@@ -295,7 +389,34 @@ def dashboard():
         </div>
     </div>
     <div class="section"><h2>📋 Recent Assignments</h2>{assignment_html}</div>
-    <div class="section"><h2>📢 Latest Announcements</h2>{ann_html}</div>"""
+    <div class="section"><h2>📢 Latest Announcements</h2>{ann_html}</div>
+    <div class="section">
+        <div class="list-card" style="cursor:pointer" onclick="syncFromServer()">
+            <div class="icon">🔄</div>
+            <div class="info">
+                <h4>Sync with EduOS Server</h4>
+                <p>Pull courses pushed centrally by your institution</p>
+            </div>
+            <span class="badge" id="sync-result">Click to sync</span>
+        </div>
+    </div>
+    <script>
+    function syncFromServer() {{
+        const el = document.getElementById('sync-result');
+        el.textContent = 'Syncing...';
+        el.className = 'badge';
+        fetch('/api/sync', {{method: 'POST'}})
+            .then(r => r.json())
+            .then(d => {{
+                el.textContent = 'Synced ' + d.courses_synced + ' courses';
+                el.className = d.status === 'synced' ? 'badge badge-done' : 'badge badge-pending';
+            }})
+            .catch(() => {{
+                el.textContent = 'Sync failed';
+                el.className = 'badge badge-pending';
+            }});
+    }}
+    </script>"""
 
     return BASE.format(user=user) + body + FOOTER
 

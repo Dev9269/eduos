@@ -784,7 +784,155 @@ class ExamWindow(QMainWindow):
         self._encrypt_and_save(answers)
         self._generate_result(answers)
         self._submit_to_server(result_data)
+        try:
+            # Add checksum to result_data if returned by server
+            slip_path = self._generate_result_slip(result_data)
+            log.info(f"Result slip saved: {slip_path}")
+            import subprocess
+            subprocess.Popen(['xdg-open', slip_path])
+        except Exception as e:
+            log.warning(f"Could not generate result slip: {e}")
         self._show_completion()
+
+    def _generate_result_slip(self, result_data: dict) -> str:
+        """Generate a PDF result slip for the student"""
+        from pathlib import Path
+        from datetime import datetime
+
+        # Try fpdf2 first, then reportlab, then plain text fallback
+        try:
+            from fpdf import FPDF
+            return self._generate_pdf_fpdf(result_data)
+        except ImportError:
+            pass
+
+        try:
+            from reportlab.pdfgen import canvas
+            return self._generate_pdf_reportlab(result_data)
+        except ImportError:
+            pass
+
+        # Fallback: plain text receipt
+        return self._generate_text_receipt(result_data)
+
+    def _generate_pdf_fpdf(self, result_data: dict) -> str:
+        """Generate PDF using fpdf2"""
+        from fpdf import FPDF
+        from pathlib import Path
+
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
+
+        # Header
+        pdf.set_fill_color(10, 22, 40)
+        pdf.rect(0, 0, 210, 45, 'F')
+        pdf.set_font("Helvetica", "B", 24)
+        pdf.set_text_color(74, 158, 255)
+        pdf.cell(0, 15, "EduOS", ln=True, align="C")
+        pdf.set_font("Helvetica", "", 12)
+        pdf.set_text_color(200, 216, 232)
+        pdf.cell(0, 8, "Examination Submission Receipt", ln=True, align="C")
+        pdf.set_text_color(139, 163, 192)
+        pdf.cell(0, 6, "Engineering Education Platform", ln=True, align="C")
+        pdf.ln(15)
+
+        # Student details
+        pdf.set_text_color(30, 30, 30)
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 10, "Submission Confirmed", ln=True)
+        pdf.set_draw_color(74, 158, 255)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(5)
+
+        fields = [
+            ("Student Name", result_data.get("student_name", "Unknown")),
+            ("Student ID", result_data.get("student_id", "Unknown")),
+            ("Exam ID", str(result_data.get("exam_id", ""))),
+            ("Machine", result_data.get("hostname", "Unknown")),
+            ("Submitted At", result_data.get("submitted_at", "")[:19]),
+            ("Checksum", result_data.get("checksum", "N/A")[:16] + "..."),
+        ]
+
+        pdf.set_font("Helvetica", "", 12)
+        for label, value in fields:
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.cell(60, 9, f"{label}:", border=0)
+            pdf.set_font("Helvetica", "", 11)
+            pdf.cell(0, 9, str(value), ln=True)
+
+        # Status box
+        pdf.ln(10)
+        pdf.set_fill_color(16, 185, 129)
+        pdf.set_text_color(255, 255, 255)
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 14, "✓  SUBMISSION RECEIVED", ln=True, align="C", fill=True)
+
+        # Footer
+        pdf.ln(10)
+        pdf.set_font("Helvetica", "I", 9)
+        pdf.set_text_color(150, 150, 150)
+        pdf.cell(0, 6, "Keep this receipt as proof of submission.", ln=True, align="C")
+        pdf.cell(0, 6, "Contact your invigilator if you have any questions.", ln=True, align="C")
+
+        # Save
+        slip_dir = Path.home() / ".eduos" / "receipts"
+        slip_dir.mkdir(parents=True, exist_ok=True)
+        filename = slip_dir / f"receipt_{result_data.get('student_id','unknown')}_{result_data.get('exam_id','')}.pdf"
+        pdf.output(str(filename))
+        return str(filename)
+
+    def _generate_pdf_reportlab(self, result_data: dict) -> str:
+        """Generate PDF using reportlab (fallback)"""
+        from reportlab.pdfgen import canvas
+        from pathlib import Path
+
+        slip_dir = Path.home() / ".eduos" / "receipts"
+        slip_dir.mkdir(parents=True, exist_ok=True)
+        filename = slip_dir / f"receipt_{result_data.get('student_id','unknown')}_{result_data.get('exam_id','')}.pdf"
+
+        c = canvas.Canvas(str(filename))
+        c.setFont("Helvetica-Bold", 20)
+        c.drawCentredString(297.5, 780, "EduOS — Submission Receipt")
+        c.setFont("Helvetica", 12)
+        fields = [
+            ("Student Name", result_data.get("student_name", "Unknown")),
+            ("Student ID", result_data.get("student_id", "Unknown")),
+            ("Exam ID", str(result_data.get("exam_id", ""))),
+            ("Submitted At", result_data.get("submitted_at", "")[:19]),
+            ("Checksum", result_data.get("checksum", "N/A")[:16] + "..."),
+        ]
+        y = 740
+        for label, value in fields:
+            c.drawString(60, y, f"{label}: {value}")
+            y -= 24
+        c.setFillColorRGB(0, 0.6, 0.3)
+        c.setFont("Helvetica-Bold", 14)
+        c.drawCentredString(297.5, y - 30, "SUBMISSION RECEIVED")
+        c.save()
+        return str(filename)
+
+    def _generate_text_receipt(self, result_data: dict) -> str:
+        """Fallback: plain text receipt"""
+        from pathlib import Path
+        slip_dir = Path.home() / ".eduos" / "receipts"
+        slip_dir.mkdir(parents=True, exist_ok=True)
+        filename = slip_dir / f"receipt_{result_data.get('student_id','unknown')}.txt"
+        content = f"""
+EduOS — Examination Submission Receipt
+=======================================
+Student Name:  {result_data.get('student_name')}
+Student ID:    {result_data.get('student_id')}
+Exam ID:       {result_data.get('exam_id')}
+Submitted At:  {result_data.get('submitted_at', '')[:19]}
+Checksum:      {result_data.get('checksum', 'N/A')[:16]}...
+
+STATUS: SUBMISSION RECEIVED ✓
+
+Keep this receipt as proof of submission.
+    """.strip()
+        filename.write_text(content)
+        return str(filename)
 
     def _submit_to_server(self, result_data: dict):
         """Send submission to EduOS server via HTTP"""
@@ -826,6 +974,7 @@ class ExamWindow(QMainWindow):
             log.info(
                 f"Submission sent to server: {response.get('checksum','')[:8]}"
             )
+            result_data['checksum'] = response.get('checksum', '')
         except Exception as e:
             # Local save already done — server failure is non-fatal
             log.warning(f"Server submission failed (local copy saved): {e}")

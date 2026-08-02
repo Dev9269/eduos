@@ -147,6 +147,10 @@ jobs:
                   sysrc eduos_agent_enable="YES"
                   service eduos_agent start || true
                 fi
+                # Stage welcome autostart for student user
+                mkdir -p /home/student/.config/autostart 2>/dev/null || true
+                cp /opt/eduos/Branding/autostart/eduos-welcome.desktop \
+                   /home/student/.config/autostart/ 2>/dev/null || true
                 sysrc eduos_firstboot_enable="NO"
                 rm -f /etc/rc.d/eduos_firstboot
                 echo "[EduOS] First-boot complete."

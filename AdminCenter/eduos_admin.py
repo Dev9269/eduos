@@ -340,6 +340,7 @@ class AdminCenterWindow(QMainWindow):
             QTabBar::tab:selected {{ background: {C.ACCENT_PRIMARY}; color: white; border-radius: 8px 8px 0 0; }}
         """)
 
+        tabs.addTab(self._build_dashboard_tab(), "🏠 Home")
         tabs.addTab(self._build_dashboard(), "📊 Dashboard")
         tabs.addTab(self._build_systems_tab(), "💻 Lab Systems")
         tabs.addTab(self._build_software_tab(), "📦 Software Management")
@@ -378,6 +379,140 @@ class AdminCenterWindow(QMainWindow):
         layout.addWidget(self.monitor_tree)
 
         return tab
+
+    def _build_dashboard_tab(self) -> QWidget:
+        """Build the home dashboard tab"""
+        from PyQt6.QtWidgets import (
+            QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
+            QLabel, QPushButton, QFrame
+        )
+
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(16)
+
+        # Header
+        header = QLabel("🖥  EduOS Admin Dashboard")
+        header.setStyleSheet("font-size: 22px; font-weight: bold; color: #4A9EFF;")
+        layout.addWidget(header)
+
+        # Stat cards grid
+        grid = QGridLayout()
+        grid.setSpacing(12)
+
+        self._stat_labels = {}
+
+        stats = [
+            ("connected_machines", "💻 Connected", "0 / 0", "#4A9EFF"),
+            ("active_exams", "📝 Active Exams", "0", "#10B981"),
+            ("pending_submissions", "📬 Pending Submissions", "0", "#F59E0B"),
+            ("server_status", "🌐 Server", "Checking...", "#8B5CF6"),
+        ]
+
+        for i, (key, title, default, color) in enumerate(stats):
+            card = QFrame()
+            card.setStyleSheet(f"""
+                QFrame {{
+                    background: #0D1B2E;
+                    border: 1px solid {color}44;
+                    border-radius: 12px;
+                    padding: 16px;
+                }}
+            """)
+            card_layout = QVBoxLayout(card)
+
+            title_label = QLabel(title)
+            title_label.setStyleSheet(f"font-size: 12px; color: {color}; font-weight: bold;")
+            card_layout.addWidget(title_label)
+
+            value_label = QLabel(default)
+            value_label.setStyleSheet("font-size: 28px; font-weight: bold; color: #E8F0FE;")
+            card_layout.addWidget(value_label)
+
+            self._stat_labels[key] = value_label
+            grid.addWidget(card, i // 2, i % 2)
+
+        layout.addLayout(grid)
+
+        # Quick actions
+        actions_label = QLabel("Quick Actions")
+        actions_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #8BA3C0;")
+        layout.addWidget(actions_label)
+
+        btn_row = QHBoxLayout()
+        quick_actions = [
+            ("🔔 Activate Exam Mode", self._start_exam),
+            ("📤 Push Update", self._push_update),
+            ("👥 Import Roster", self._import_roster),
+            ("📅 Schedule Exam", self._schedule_exam),
+            ("🔄 Refresh All", self._refresh_dashboard),
+        ]
+        for label, handler in quick_actions:
+            btn = QPushButton(label)
+            btn.setStyleSheet("""
+                QPushButton {
+                    background: #162030; color: #E8F0FE;
+                    border: 1px solid #1E3A5F; border-radius: 8px;
+                    padding: 10px 14px; font-size: 12px;
+                }
+                QPushButton:hover { background: #1E3A5F; }
+            """)
+            btn.clicked.connect(handler)
+            btn_row.addWidget(btn)
+        layout.addLayout(btn_row)
+
+        layout.addStretch()
+
+        # Auto-refresh every 30 seconds
+        self._dashboard_timer = QTimer()
+        self._dashboard_timer.timeout.connect(self._refresh_dashboard)
+        self._dashboard_timer.start(30000)
+        QTimer.singleShot(1000, self._refresh_dashboard)
+
+        return widget
+
+    def _refresh_dashboard(self):
+        """Fetch current stats from server and update dashboard"""
+        import urllib.request
+
+        def fetch(endpoint):
+            try:
+                req = urllib.request.Request(
+                    f"http://{self.server_host}:{self.server_port}{endpoint}",
+                    headers={'Authorization': f'Bearer {self.auth_token}'}
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    return json.loads(resp.read())
+            except Exception:
+                return None
+
+        # Update server status
+        health = fetch("/health")
+        if health:
+            self._stat_labels["server_status"].setText("🟢 Online")
+            self._stat_labels["server_status"].setStyleSheet(
+                "font-size: 18px; font-weight: bold; color: #10B981;"
+            )
+        else:
+            self._stat_labels["server_status"].setText("🔴 Offline")
+            self._stat_labels["server_status"].setStyleSheet(
+                "font-size: 18px; font-weight: bold; color: #EF4444;"
+            )
+
+        # Update devices
+        devices = fetch("/devices")
+        if devices:
+            online = len(devices.get("online", []))
+            total = len(devices.get("devices", []))
+            self._stat_labels["connected_machines"].setText(f"{online} / {total}")
+
+        # Update schedules for active exams
+        schedules = fetch("/exam/schedules")
+        if schedules:
+            active = sum(1 for s in schedules.get("schedules", [])
+                         if s.get("status") == "activated")
+            self._stat_labels["active_exams"].setText(str(active))
 
     def _get_realtime_stats(self):
         stats = {}

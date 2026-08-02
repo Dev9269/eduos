@@ -5,6 +5,8 @@ coding help, and cybersecurity learning.
 """
 
 import sys
+import os
+import json
 from pathlib import Path
 _DIR = Path(__file__).parent
 if str(_DIR) not in sys.path:
@@ -42,6 +44,7 @@ MOCK_RESPONSES = {
 class AIAssistantTab(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._load_api_key()
         self._build()
 
     def _build(self):
@@ -98,6 +101,18 @@ class AIAssistantTab(QWidget):
 
         self._current_mode = "explain"
         self._mode_buttons["explain"].setStyleSheet(self._btn_style(True))
+
+        # API key configuration
+        key_row = QHBoxLayout()
+        key_hint = QLabel("🔑 Optional: enable real AI responses with an Anthropic API key")
+        key_hint.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
+        key_row.addWidget(key_hint)
+        key_btn = QPushButton("Configure API Key")
+        key_btn.setStyleSheet(btn_outline())
+        key_btn.clicked.connect(self._configure_api_key)
+        key_row.addWidget(key_btn)
+        key_row.addStretch()
+        content.addLayout(key_row)
 
         # Input area
         input_card = QFrame()
@@ -178,12 +193,88 @@ class AIAssistantTab(QWidget):
             </div>
         """)
 
-        mock_key = self._current_mode
-        responses = MOCK_RESPONSES.get(mock_key, MOCK_RESPONSES["explain"])
-        response = responses[0].replace("{query}", query)
+        response = self.get_response(query, self._current_mode)
 
         from PyQt6.QtCore import QTimer
         QTimer.singleShot(300, lambda: self._display_response(query, response))
+
+    def _load_api_key(self):
+        """Load saved Anthropic API key from config into environment"""
+        config_file = Path.home() / '.eduos' / 'ai_config.json'
+        if config_file.exists():
+            try:
+                config = json.loads(config_file.read_text())
+                if config.get('api_key'):
+                    os.environ['ANTHROPIC_API_KEY'] = config['api_key']
+            except Exception:
+                pass
+
+    def _configure_api_key(self):
+        """Let user configure Anthropic API key"""
+        from PyQt6.QtWidgets import QInputDialog, QLineEdit
+        key, ok = QInputDialog.getText(
+            self, "API Key",
+            "Enter Anthropic API Key (optional — enables real AI responses):",
+            echo=QLineEdit.EchoMode.Password
+        )
+        if ok and key.strip():
+            os.environ["ANTHROPIC_API_KEY"] = key.strip()
+            # Save to config
+            config_file = Path.home() / '.eduos' / 'ai_config.json'
+            config_file.parent.mkdir(exist_ok=True)
+            config_file.write_text(json.dumps({"api_key": key.strip()}))
+            QMessageBox.information(self, "Saved", "API key configured. Real AI responses enabled.")
+
+    def _get_real_ai_response(self, query: str, mode: str) -> str:
+        """Try to get real AI response from Anthropic API"""
+        try:
+            import urllib.request
+
+            api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+            if not api_key:
+                return None  # No key — use mock
+
+            system_prompts = {
+                "explain": "You are an engineering professor. Explain concepts clearly and concisely for undergraduate students.",
+                "notes": "You are a study notes generator. Create well-structured study notes in markdown format.",
+                "practice": "You are an exam question generator. Create practice questions at basic, intermediate, and advanced levels.",
+                "coding": "You are a coding tutor. Help students understand programming concepts and debug their code.",
+                "cyber": "You are a cybersecurity educator. Explain security concepts with emphasis on ethical, authorized practice.",
+            }
+
+            payload = json.dumps({
+                "model": os.environ.get("EDUOS_AI_MODEL", "claude-sonnet-4-6"),
+                "max_tokens": 1024,
+                "system": system_prompts.get(mode, "You are an educational assistant."),
+                "messages": [{"role": "user", "content": query}]
+            }).encode()
+
+            req = urllib.request.Request(
+                "https://api.anthropic.com/v1/messages",
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read())
+                return data["content"][0]["text"]
+
+        except Exception as e:
+            return None  # Fall back to mock
+
+    def get_response(self, query: str, mode: str = "explain") -> str:
+        """Get AI response — real API if available, mock otherwise"""
+        real_response = self._get_real_ai_response(query, mode)
+        if real_response:
+            return real_response
+
+        # Fallback to mock
+        templates = MOCK_RESPONSES.get(mode, MOCK_RESPONSES["explain"])
+        template = templates[0] if templates else "I can help you with that topic."
+        return template.replace("{query}", query)
 
     def _display_response(self, query, response):
         html = f"""

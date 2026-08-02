@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=EduOS Welcome
+Exec=/opt/eduos/Scripts/eduos-welcome.py
+Icon=eduos
+X-KDE-autostart-phase=2
+X-KDE-AutostartEnabled=true
+OnlyShowIn=KDE;

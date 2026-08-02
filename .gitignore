@@ -25,3 +25,13 @@ DemoResults/
 .sass-cache/
 *.local
 Thumbs.db
+
+# Additional ignores
+**/__pycache__/
+.pytest_cache/
+dist/
+*.egg-info/
+.env
+*.db
+*.sqlite3
+phase8_progress.txt

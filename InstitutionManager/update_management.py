@@ -3,6 +3,7 @@ EduOS Institution Manager — Update Management Tab
 """
 
 import sys
+import json
 from pathlib import Path
 _DIR = Path(__file__).parent
 if str(_DIR) not in sys.path:
@@ -71,6 +72,7 @@ class UpdateManagementTab(QWidget):
         bar = ActionBar("Available Updates")
         bar.add_button("Check for Updates", "🔄", self._check_updates)
         bar.add_button("Install All", "📥", self._install_all, btn_success())
+        bar.add_button("Push Update", "📤", self._push_update_dialog)
         content.addWidget(bar)
 
         # Update list
@@ -137,6 +139,79 @@ class UpdateManagementTab(QWidget):
 
     def _check_updates(self):
         QMessageBox.information(self, "Check Updates", "Update check initiated. Scanning repositories...\n\nNo new updates found (all up to date).")
+
+    def _push_update_dialog(self):
+        """Dialog to build and push an update package to the server"""
+        from PyQt6.QtWidgets import QInputDialog, QFileDialog, QMessageBox
+        version, ok1 = QInputDialog.getText(
+            self, "Push Update", "Version (e.g. 1.4.2):", text="1.4.2"
+        )
+        if not ok1 or not version.strip():
+            return
+        description, ok2 = QInputDialog.getText(
+            self, "Push Update", "Description:",
+            text="Security patch and bug fixes"
+        )
+        if not ok2:
+            return
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "Select files to include in update"
+        )
+        if not files:
+            QMessageBox.warning(self, "Push Update", "No files selected.")
+            return
+
+        ok, message = self._push_update_to_server(
+            version.strip(), description.strip(), files
+        )
+        if ok:
+            QMessageBox.information(self, "Push Update", f"Update v{version} pushed.\n\n{message}")
+            log_activity("Update Pushed", f"v{version} to server")
+        else:
+            QMessageBox.critical(self, "Push Update Failed", message)
+
+    def _push_update_to_server(self, version: str, description: str, files: list):
+        """Push update package to server"""
+        import urllib.request, base64
+
+        config_file = Path.home() / '.eduos' / 'admin_settings.json'
+        if config_file.exists():
+            config = json.loads(config_file.read_text())
+        else:
+            config = {'server_host': 'eduos-server.local', 'server_port': 8765, 'auth_token': ''}
+
+        server_host = config.get('server_host', 'eduos-server.local')
+        server_port = config.get('server_port', 8765)
+        token = config.get('auth_token', '')
+
+        files_payload = []
+        for fpath in files:
+            try:
+                content = base64.b64encode(Path(fpath).read_bytes()).decode()
+                files_payload.append({'path': Path(fpath).name, 'content_b64': content})
+            except Exception as e:
+                return False, f"Cannot read {fpath}: {e}"
+
+        payload = json.dumps({
+            'version': version,
+            'description': description,
+            'files': files_payload
+        }).encode()
+
+        try:
+            req = urllib.request.Request(
+                f"http://{server_host}:{server_port}/update/push",
+                data=payload,
+                headers={
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {token}'
+                }
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read())
+            return True, f"Pushed to {len(result.get('recipients', {}))} machines"
+        except Exception as e:
+            return False, str(e)
 
     def _install_all(self):
         QMessageBox.information(self, "Install All", "Queuing all available updates for installation...\n\nUpdates will be installed in sequence. Estimated time: 5 minutes.")

@@ -1,116 +1,109 @@
 #!/usr/bin/env python3
-"""EduOS Welcome - First-run experience for new users"""
+"""EduOS Welcome — First-run experience shown on first login"""
 
 import sys, os
-from PyQt6.QtWidgets import (
-    QApplication, QWizard, QWizardPage, QVBoxLayout, QLabel,
-    QPushButton, QCheckBox, QTextEdit
-)
-from PyQt6.QtGui import QFont, QPixmap, QPalette, QColor
-from PyQt6.QtCore import Qt, QSize
+from pathlib import Path
 
-WELCOME_FLAG = os.path.expanduser("~/.eduos-welcome-done")
-
-class WelcomePage(QWizardPage):
-    def __init__(self):
-        super().__init__()
-        self.setTitle("Welcome to EduOS")
-        layout = QVBoxLayout(self)
-        layout.setSpacing(20)
-        
-        title = QLabel("🎓 EduOS")
-        title.setStyleSheet("font-size: 48px; font-weight: bold; color: #2563eb;")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(title)
-        
-        subtitle = QLabel("Educational Operating System")
-        subtitle.setStyleSheet("font-size: 20px; color: #64748b;")
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(subtitle)
-        
-        desc = QLabel(
-            "EduOS is an educational operating system designed for engineering\n"
-            "colleges and universities. It provides a complete campus computing\n"
-            "ecosystem for learning, examinations, development, cybersecurity, and administration."
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet("font-size: 14px; color: #475569; padding: 20px;")
-        desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(desc)
-
-        # Engine attribution
-        credit = QLabel("Desktop environment powered by KDE Plasma 6")
-        credit.setStyleSheet("font-size: 11px; color: #adb5bd; padding: 4px;")
-        credit.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(credit)
-
-
-class ModulesPage(QWizardPage):
-    def __init__(self):
-        super().__init__()
-        self.setTitle("EduOS Modules")
-        layout = QVBoxLayout(self)
-        modules = [
-            ("📚 Learn Hub", "Study materials, assignments, notes, and schedules"),
-            ("📝 Exam Mode", "Secure examination environment with timer and encrypted storage"),
-            ("⚙ Admin Center", "Centralized campus and lab management"),
-            ("🔧 Dev Suite", "Complete engineering programming environment"),
-            ("🛡️ Cyber Lab", "Isolated cybersecurity practice laboratories"),
-        ]
-        for title, desc in modules:
-            ml = QLabel(f"<b>{title}</b><br><span style='color: #666;'>{desc}</span>")
-            ml.setWordWrap(True)
-            ml.setStyleSheet("padding: 12px; background: #f8fafc; border-radius: 8px; margin: 4px;")
-            layout.addWidget(ml)
-
-
-class QuickStartPage(QWizardPage):
-    def __init__(self):
-        super().__init__()
-        self.setTitle("Quick Start")
-        layout = QVBoxLayout(self)
-        tips = QTextEdit()
-        tips.setReadOnly(True)
-        tips.setStyleSheet("font-size: 13px; border: none; background: transparent;")
-        tips.setHtml("""
-        <h3>Getting Started with EduOS</h3>
-        <ul>
-        <li><b>Applications Menu</b> → Bottom left corner (Windows-style)</li>
-        <li><b>Learn Hub</b> → Access at <a href="http://localhost:5050">http://localhost:5050</a></li>
-        <li><b>Exam Mode</b> → Launch from applications menu or terminal: <code>eduos-exam</code></li>
-        <li><b>Admin Center</b> → Launch from applications menu or terminal: <code>eduos-admin</code></li>
-        <li><b>Dev Suite</b> → Launch from applications menu or terminal: <code>eduos-devsuite</code></li>
-        <li><b>Cyber Lab</b> → Launch from applications menu or terminal: <code>eduos-cyberlab</code></li>
-        <li><b>System Info</b> → Terminal: <code>eduos-info</code></li>
-        </ul>
-        """)
-        layout.addWidget(tips)
-
+WELCOME_FLAG = Path.home() / ".eduos-welcome-done"
 
 def main():
+    # Only show once
+    if WELCOME_FLAG.exists():
+        sys.exit(0)
+
+    try:
+        from PyQt6.QtWidgets import (
+            QApplication, QWizard, QWizardPage, QVBoxLayout,
+            QLabel, QCheckBox, QPushButton
+        )
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtGui import QFont
+    except ImportError:
+        # PyQt6 not available — mark as done and exit
+        WELCOME_FLAG.touch()
+        sys.exit(0)
+
     app = QApplication(sys.argv)
-    
-    if os.path.exists(WELCOME_FLAG):
-        print("Welcome already shown")
-        return
-    
+    app.setApplicationName("EduOS Welcome")
+
     wizard = QWizard()
     wizard.setWindowTitle("Welcome to EduOS")
-    wizard.setMinimumSize(600, 500)
+    wizard.setFixedSize(700, 500)
+    wizard.setWizardStyle(QWizard.WizardStyle.ModernStyle)
     wizard.setStyleSheet("""
-        QWizard { background: white; }
-        QWizardPage { background: white; }
+        QWizard { background: #0A1628; color: #E8F0FE; }
+        QWizard QLabel { color: #E8F0FE; }
+        QPushButton {
+            background: #4A9EFF; color: white;
+            border-radius: 6px; padding: 8px 20px;
+            font-weight: bold;
+        }
+        QPushButton:hover { background: #3B82F6; }
     """)
-    
-    wizard.addPage(WelcomePage())
-    wizard.addPage(ModulesPage())
-    wizard.addPage(QuickStartPage())
-    
-    if wizard.exec() == QWizard.DialogCode.Accepted:
-        with open(WELCOME_FLAG, "w") as f:
-            f.write("done")
-        print("Welcome completed")
 
+    # Page 1: Welcome
+    page1 = QWizardPage()
+    page1.setTitle("Welcome to EduOS")
+    layout1 = QVBoxLayout(page1)
+    title = QLabel("🎓 EduOS")
+    title.setStyleSheet("font-size: 56px; font-weight: bold; color: #4A9EFF;")
+    title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    layout1.addWidget(title)
+    sub = QLabel("Engineering Education Platform\nPowered by FreeBSD")
+    sub.setStyleSheet("font-size: 16px; color: #8BA3C0;")
+    sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    layout1.addWidget(sub)
+    creator = QLabel("Created by Jainam Maru — Parul University")
+    creator.setStyleSheet("font-size: 12px; color: #4A7A9B;")
+    creator.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    layout1.addWidget(creator)
+    wizard.addPage(page1)
+
+    # Page 2: Features overview
+    page2 = QWizardPage()
+    page2.setTitle("What's Included")
+    layout2 = QVBoxLayout(page2)
+    features = [
+        ("📝", "Exam Mode", "Secure, tamper-resistant examination environment"),
+        ("📚", "Learn Hub", "Course materials, assignments, and study resources"),
+        ("💻", "Dev Suite", "Pre-configured Python, Java, C++, and more"),
+        ("🔐", "Cyber Lab", "Isolated cybersecurity practice environments"),
+        ("🏫", "Admin Center", "Centralized campus management (admin only)"),
+    ]
+    for icon, name, desc in features:
+        row = QLabel(f"{icon}  <b>{name}</b> — {desc}")
+        row.setStyleSheet("font-size: 13px; color: #C8D8E8; margin: 4px 0;")
+        row.setTextFormat(Qt.TextFormat.RichText)
+        layout2.addWidget(row)
+    wizard.addPage(page2)
+
+    # Page 3: Quick start
+    page3 = QWizardPage()
+    page3.setTitle("You're Ready!")
+    layout3 = QVBoxLayout(page3)
+    ready_text = QLabel(
+        "Your EduOS environment is fully configured.\n\n"
+        "• For exams: wait for your instructor to activate Exam Mode\n"
+        "• For learning: open Learn Hub from the taskbar\n"
+        "• For coding: open Dev Suite to launch your IDE\n\n"
+        "Need help? Ask your lab administrator."
+    )
+    ready_text.setStyleSheet("font-size: 13px; color: #C8D8E8; line-height: 1.6;")
+    ready_text.setWordWrap(True)
+    layout3.addWidget(ready_text)
+
+    dont_show = QCheckBox("Don't show this again")
+    dont_show.setStyleSheet("color: #8BA3C0; font-size: 12px;")
+    dont_show.setChecked(True)
+    layout3.addWidget(dont_show)
+    wizard.addPage(page3)
+
+    wizard.finished.connect(lambda result: (
+        WELCOME_FLAG.touch() if dont_show.isChecked() else None
+    ))
+
+    wizard.show()
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()
