@@ -1,6 +1,15 @@
 import sqlite3
 import os
 
+try:
+    import bcrypt
+    _BCRYPT_AVAILABLE = True
+except ImportError:
+    bcrypt = None
+    _BCRYPT_AVAILABLE = False
+    import warnings
+    warnings.warn("bcrypt not installed — password hashing disabled")
+
 DB_PATH = "/var/lib/edos/server.db"
 
 
@@ -63,16 +72,21 @@ class Database:
         except sqlite3.OperationalError:
             pass  # Column already exists
         # Seed admin user if none exist
-        import bcrypt
         existing = self.query("SELECT COUNT(*) as n FROM users")
         if existing and existing[0]["n"] == 0:
-            default_hash = bcrypt.hashpw(b"EduOS@Admin2025!", bcrypt.gensalt()).decode()
+            if _BCRYPT_AVAILABLE:
+                default_hash = bcrypt.hashpw(
+                    b"EduOS@Admin2025!", bcrypt.gensalt()
+                ).decode()
+            else:
+                default_hash = ""  # bcrypt not available — no default hash
             self.execute(
                 "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
                 ("admin", default_hash, "admin"),
             )
-            print("[EduOS] Default admin user created: admin / EduOS@Admin2025!")
-            print("[EduOS] CHANGE THIS PASSWORD IMMEDIATELY.")
+            if _BCRYPT_AVAILABLE:
+                print("[EduOS] Default admin user created: admin / EduOS@Admin2025!")
+                print("[EduOS] CHANGE THIS PASSWORD IMMEDIATELY.")
         self.conn.commit()
 
     def query(self, sql, params=None):

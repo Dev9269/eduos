@@ -1,13 +1,27 @@
 #!/usr/bin/env python3
+"""EduOS Security Daemon — enforces local security policies on student machines"""
 import syslog
 import time
 import json
 import subprocess
+import shlex
+import platform
+from pathlib import Path
 
-POLICY_FILE = "/etc/edos/security-policy.json"
+CONFIG_FILE = Path("/etc/eduos/agent.conf")
+LOCAL_CONFIG = Path.home() / ".eduos" / "agent.conf"
+POLICY_FILE = Path("/etc/eduos/security-policy.json")
 CHECK_INTERVAL = 120
 
-import shlex
+
+def load_config():
+    for p in [CONFIG_FILE, LOCAL_CONFIG]:
+        if p.exists():
+            try:
+                return json.loads(p.read_text())
+            except Exception:
+                continue
+    return {"server_url": "ws://eduos-server.local:8765", "token": ""}
 
 
 def check_policies():
@@ -38,8 +52,24 @@ def check_policies():
 def main():
     syslog.openlog("edos-security", syslog.LOG_PID, syslog.LOG_DAEMON)
     syslog.syslog(syslog.LOG_INFO, "EduOS Security Daemon started")
+
+    config = load_config()
+    syslog.syslog(
+        syslog.LOG_DEBUG,
+        f"EduOS Security Daemon: configured for {config.get('server_url', 'unknown')}",
+    )
+
+    fail_count = 0
     while True:
-        check_policies()
+        try:
+            check_policies()
+            fail_count = 0
+        except Exception as e:
+            fail_count += 1
+            wait = min(600, CHECK_INTERVAL * (2 ** min(fail_count, 5)))
+            syslog.syslog(syslog.LOG_WARNING, f"Security check failed ({fail_count}): {e}")
+            time.sleep(wait)
+            continue
         time.sleep(CHECK_INTERVAL)
 
 

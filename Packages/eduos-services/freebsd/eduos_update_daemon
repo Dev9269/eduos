@@ -1,0 +1,33 @@
+#!/bin/sh
+# PROVIDE: eduos_update_daemon
+# REQUIRE: NETWORKING eduos_agent
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+name="eduos_update_daemon"
+rcvar="eduos_update_daemon_enable"
+command="/usr/local/bin/python3.11"
+command_args="/opt/eduos/Packages/eduos-services/usr/lib/edos/services/update-daemon.py"
+pidfile="/var/run/${name}.pid"
+logfile="/var/log/eduos-update-daemon.log"
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+
+eduos_update_daemon_start() {
+    /usr/sbin/daemon -p "$pidfile" -o "$logfile" -r \
+        ${command} ${command_args}
+    echo "EduOS Update Daemon started"
+}
+
+eduos_update_daemon_stop() {
+    if [ -f "$pidfile" ]; then
+        kill $(cat "$pidfile") 2>/dev/null || true
+        rm -f "$pidfile"
+    fi
+    echo "EduOS Update Daemon stopped"
+}
+
+load_rc_config $name
+: ${eduos_update_daemon_enable:=YES}
+run_rc_command "$1"

@@ -4,21 +4,21 @@
 set -e
 
 DATE=$(date +%Y%m%d)
-PKG_DIR="/home/jainam/EduOS/PresentationPackage-$DATE"
+PKG_DIR="/opt/eduos/PresentationPackage-$DATE"
 mkdir -p "$PKG_DIR"
 
 echo "Creating presentation package at $PKG_DIR ..."
 
 # 1. Slides
-cp "/home/jainam/EduOS/Documentation/EduOS_Presentation.pptx" "$PKG_DIR/"
+cp "/opt/eduos/Documentation/EduOS_Presentation.pptx" "$PKG_DIR/"
 echo "  Slides: EduOS_Presentation.pptx"
 
 # 2. Demo Script
-cp "/home/jainam/EduOS/Documentation/DEMO_SCRIPT.md" "$PKG_DIR/"
+cp "/opt/eduos/Documentation/DEMO_SCRIPT.md" "$PKG_DIR/"
 echo "  Demo Script: DEMO_SCRIPT.md"
 
 # 3. Funding Pitch
-cp "/home/jainam/EduOS/Documentation/FUNDING_PITCH.md" "$PKG_DIR/"
+cp "/opt/eduos/Documentation/FUNDING_PITCH.md" "$PKG_DIR/"
 echo "  Funding Pitch: FUNDING_PITCH.md"
 
 # 4. One-pager summary
@@ -31,7 +31,7 @@ cat > "$PKG_DIR/EduOS_OnePager.md" << 'ONEPAGER'
 - Zero license cost (100% open source)
 - LearnHub LMS, Exam Portal, Dev Suite, Cyber Lab, Admin Center
 - Full-screen exam lockdown with encrypted submissions
-- Docker-based cyber security lab environments
+- Podman/Docker-based cyber security lab environments
 - Windows 11 desktop layout — zero learning curve
 
 **Tech:** Debian 13 → KDE Plasma 6 → Python 3.13 → PyQt6 → Flask → Docker
@@ -47,12 +47,12 @@ ONEPAGER
 echo "  One-Pager: EduOS_OnePager.md"
 
 # 5. ISO checksum
-sha256sum "/home/jainam/EduOS/Packages/live-build/output/eduos-20260618-amd64.iso" > "$PKG_DIR/ISO_CHECKSUM.txt" 2>/dev/null || echo "  WARNING: ISO not found at expected path" > "$PKG_DIR/ISO_CHECKSUM.txt"
+sha256sum "/opt/eduos/Packages/live-build/output/eduos-20260618-amd64.iso" > "$PKG_DIR/ISO_CHECKSUM.txt" 2>/dev/null || echo "  WARNING: ISO not found at expected path" > "$PKG_DIR/ISO_CHECKSUM.txt"
 echo "  ISO Checksum: ISO_CHECKSUM.txt"
 
 # 6. Build instructions
-cp "/home/jainam/EduOS/Packages/live-build/build-eduos-iso.sh" "$PKG_DIR/" 2>/dev/null || true
-cp "/home/jainam/EduOS/README.md" "$PKG_DIR/" 2>/dev/null || true
+cp "/opt/eduos/Packages/live-build/build-eduos-iso.sh" "$PKG_DIR/" 2>/dev/null || true
+cp "/opt/eduos/README.md" "$PKG_DIR/" 2>/dev/null || true
 echo "  Build Script + README included"
 
 # 7. Presenter checklist
@@ -68,9 +68,9 @@ cat > "$PKG_DIR/PRESENTER_CHECKLIST.md" << 'CHECKLIST'
 - [ ] VirtualBox 7+ installed
 - [ ] VM boots and login works (student / generated password)
 - [ ] Internet connected (Wi-Fi bridge mode for Docker pulls)
-- [ ] Docker is running: `sudo systemctl status docker`
+- [ ] Container runtime (Podman/Docker) is running: `service podman status (FreeBSD) or systemctl status podman (Linux)`
 - [ ] Python deps installed: PyQt6, flask, cryptography, reportlab
-- [ ] Juice Shop image pre-pulled: `sudo docker pull bkimminich/juice-shop`
+- [ ] Juice Shop image pre-pulled: `podman pull bkimminich/juice-shop`
 - [ ] All demo credentials work: DEMO001 / EDUOS2026
 - [ ] Apps launch without errors: LearnHub, Dev Suite, Cyber Lab, Demo Exam
 - [ ] Watermark visible top-right

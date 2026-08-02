@@ -1,0 +1,33 @@
+#!/bin/sh
+# PROVIDE: eduos_sync_daemon
+# REQUIRE: NETWORKING eduos_agent
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+name="eduos_sync_daemon"
+rcvar="eduos_sync_daemon_enable"
+command="/usr/local/bin/python3.11"
+command_args="/opt/eduos/Packages/eduos-services/usr/lib/edos/services/sync-daemon.py"
+pidfile="/var/run/${name}.pid"
+logfile="/var/log/eduos-sync-daemon.log"
+
+start_cmd="${name}_start"
+stop_cmd="${name}_stop"
+
+eduos_sync_daemon_start() {
+    /usr/sbin/daemon -p "$pidfile" -o "$logfile" -r \
+        ${command} ${command_args}
+    echo "EduOS Sync Daemon started"
+}
+
+eduos_sync_daemon_stop() {
+    if [ -f "$pidfile" ]; then
+        kill $(cat "$pidfile") 2>/dev/null || true
+        rm -f "$pidfile"
+    fi
+    echo "EduOS Sync Daemon stopped"
+}
+
+load_rc_config $name
+: ${eduos_sync_daemon_enable:=YES}
+run_rc_command "$1"

@@ -11,6 +11,13 @@ from starlette.responses import Response
 from pydantic import BaseModel
 import jwt
 
+try:
+    import bcrypt as _bcrypt
+    _BCRYPT_OK = True
+except ImportError:
+    _bcrypt = None
+    _BCRYPT_OK = False
+
 from database import Database
 from models import User
 
@@ -136,7 +143,11 @@ async def health():
 
 @app.post("/api/auth/login")
 async def login(req: LoginRequest):
-    import bcrypt
+    if not _BCRYPT_OK:
+        raise HTTPException(
+            status_code=503,
+            detail="Server misconfigured: bcrypt not installed",
+        )
     rows = db.query(
         "SELECT * FROM users WHERE username = ? AND active = 1", (req.username,)
     )
@@ -146,7 +157,7 @@ async def login(req: LoginRequest):
     stored_hash = row["password_hash"] if "password_hash" in row.keys() else ""
     if not stored_hash:
         raise HTTPException(status_code=401, detail="Account not properly configured")
-    if not bcrypt.checkpw(req.password.encode(), stored_hash.encode()):
+    if not _bcrypt.checkpw(req.password.encode(), stored_hash.encode()):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = make_token(row["id"], row["username"], row["role"])
     return {
@@ -158,12 +169,16 @@ async def login(req: LoginRequest):
 
 @app.post("/api/auth/register")
 async def register(req: UserCreate):
-    import bcrypt
+    if not _BCRYPT_OK:
+        raise HTTPException(
+            status_code=503,
+            detail="Server misconfigured: bcrypt not installed",
+        )
     if not req.password or len(req.password) < 6:
         raise HTTPException(
             status_code=400, detail="Password must be at least 6 characters"
         )
-    password_hash = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt()).decode()
+    password_hash = _bcrypt.hashpw(req.password.encode(), _bcrypt.gensalt()).decode()
     try:
         user_id = db.execute(
             "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",

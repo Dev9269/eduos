@@ -25,7 +25,8 @@ class DockerManager:
             raise RuntimeError(
                 "No container runtime found.\n"
                 "FreeBSD: pkg install podman\n"
-                "Linux: apt-get install docker.io"
+                "Linux (Debian/Ubuntu): apt-get install podman-docker\n"
+                "Linux (Fedora/RHEL): dnf install podman"
             )
         cmd = [self.runtime] + list(args)
         result = subprocess.run(cmd, capture_output=capture, text=True, timeout=timeout)

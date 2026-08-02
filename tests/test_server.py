@@ -35,6 +35,9 @@ def test_health_endpoint():
 def _load_package_server():
     """Load Packages/eduos-server api_server via importlib (dir has hyphens)."""
     import importlib.util
+    # Package database.py reads EDOS_DB_PATH — mirror the test DB path into it
+    # BEFORE importing so the lifespan hook uses the isolated test DB.
+    os.environ.setdefault("EDOS_DB_PATH", os.environ.get("EDUOS_DB_PATH", ""))
     pkg_dir = Path('Packages/eduos-server/usr/lib/edos/server')
     sys.path.insert(0, str(pkg_dir))
     spec = importlib.util.spec_from_file_location(
