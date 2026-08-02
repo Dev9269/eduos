@@ -1,5 +1,54 @@
 # EduOS Changelog
 
+## 2026-08-03 — Phase 8: Security hardening, FreeBSD migration, test expansion
+
+### Security
+- Fixed critical auth bypass: `api_server.py` register/login now use bcrypt
+- Protected all admin API endpoints with JWT auth dependencies
+- Added `test_security.py` with 9 security regression tests
+- Sandboxed `coding_engine.py`: process limits, memory cap, output cap
+
+### FreeBSD Migration
+- README, LICENSE, CONTRIBUTING, DEVELOPMENT all updated for FreeBSD
+- `install-eduos.sh` rewritten — removed hardcoded developer username
+- `build.sh` no longer calls `dpkg-buildpackage` or `apt-get`
+- `docker_manager.py` (DevSuite) auto-detects Podman/Docker
+- Removed `__pycache__` from git tracking
+
+### Features
+- Admin Center: home dashboard with live server stats
+- ExamMode: PDF result slip generation (fpdf2 + text fallback)
+- LearnHub: server sync pulls courses from EduOS server
+- `Scripts/eduos-welcome.py` integrated with FreeBSD firstboot
+- `Scripts/freebsd-pkg-cache.sh` for fully offline campus deployment
+
+### Tests
+- 51 total tests (was 26)
+- Added: test_coding_engine.py, test_security.py (9 tests each)
+
+---
+
+## 2026-07-15 — Phase 7: Roster validation, CyberLab FreeBSD, E2E tests
+
+### Features
+- ExamMode validates student ID against server roster before exam entry
+- CyberLab: auto-detects Podman/Docker; added FreeBSD Jail lab type
+- Offline Python wheels bundled in ISO for first-boot without internet
+- Admin panel: CSV roster import, Update history with Rollback button
+- 10 end-to-end tests covering full exam lifecycle
+
+---
+
+## 2026-07-01 — Phase 6: Exam scheduling, student roster, rate limiting
+
+### Features
+- Server: exam scheduling with auto-activation (threading.Timer)
+- Student roster: validate IDs before exam entry
+- Update rollback: backup files before overwriting
+- Rate limiting (slowapi) on submission endpoint
+
+---
+
 ## 2026-06-15 — Phase 3: EduOS Experience & Demo Exam Mode
 
 ### Part 1 — EduOS Interface Transformation
@@ -13,14 +62,14 @@
 - Verified 24 panel applets providing full Windows-11 parity (clock, volume, battery, network, notifications, clipboard, etc.)
 
 #### EduOS Desktop Watermark
-- **Created**: `/home/jainam/EduOS/Branding/scripts/eduos-watermark.py`
+- **Created**: `Branding/scripts/eduos-watermark.py`
 - PyQt6 frameless overlay widget, always-on-bottom, semi-transparent
 - Displays "EduOS – Engineering Education Edition" (title) + "Developed by Jainam H. Maru" (subtitle)
 - Dark pill background with blue accent bar, positioned at bottom-right
 - Opacity: ~45% text, ~50% background — visible but unobtrusive
 - Re-positions on screen resolution changes (5s update timer)
 - **Autostart**: Desktop entry at `/usr/share/applications/eduos-watermark.desktop`
-  - Installed for all users: jainam, student, exam, admin
+  - Installed for all users: student, exam, admin
   - Added to `/etc/skel/.config/autostart/` for future users
   - Uses `X-KDE-autostart-phase=2` for reliable Plasma integration
 

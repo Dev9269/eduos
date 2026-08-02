@@ -573,7 +573,7 @@ EduOS uses KDE Plasma 6 configured to provide a Windows 11-like experience:
 - [ ] Software RAID/backup solutions
 
 ### Phase 5: Distribution 📦 (Planned)
-- [ ] Debian live-build ISO generation
+- [ ] Debian makefs/mkimg build ISO generation
 - [ ] Automated installer
 - [ ] PXE network boot support
 - [ ] Docker-based EduOS image

@@ -1,5 +1,17 @@
 # EduOS BSD Migration Plan
 
+## Current Migration Status (August 2026)
+
+| Phase | Status |
+|---|---|
+| Phase 1: Keep Debian base, isolate proprietary code | ✅ COMPLETE |
+| Phase 2: FreeBSD ISO build pipeline | ✅ COMPLETE (build-freebsd-iso.yml) |
+| Phase 2: FreeBSD rc.d agent service | ✅ COMPLETE (Services/freebsd/) |
+| Phase 2: FreeBSD desktop setup script | ✅ COMPLETE (Scripts/freebsd-desktop-setup.sh) |
+| Phase 3: FreeBSD custom kernel branding | 🔲 PLANNED |
+
+---
+
 > **Decision (locked):** Hybrid approach for the current stage.
 > Keep the Debian base, isolate all proprietary EduOS components into a
 > clearly-bounded closed-source layer. Full FreeBSD migration is planned
@@ -44,7 +56,7 @@ software repository (`pkg`) to cover the EduOS application stack.
 ## 3. Current stage: Hybrid approach (implemented now)
 
 Full BSD migration is **not feasible at this stage** — the entire build
-toolchain (debootstrap, live-build, apt packages, KDE Plasma packaging)
+toolchain (bsdinstall, makefs/mkimg build, apt packages, KDE Plasma packaging)
 is Debian-specific. Ripping out the base would stall all current work.
 
 Therefore, until v2.0:
@@ -71,12 +83,12 @@ Therefore, until v2.0:
 ## 4. Migration path
 
 ### Phase 1 (current) — Debian base + isolated proprietary layer
-- Everything builds with `Scripts/build-iso.sh` / live-build.
+- Everything builds with `Scripts/build-iso.sh` / makefs/mkimg build.
 - Proprietary components in their own directories, no GPL coupling.
 - Document the boundary (this file).
 
 ### Phase 2 (v2.0) — Port to FreeBSD base
-- Replace `debootstrap`/live-build with FreeBSD base system + `pkg`.
+- Replace `bsdinstall`/makefs/mkimg build with FreeBSD base system + `pkg`.
 - Use FreeBSD's `mkisofs`/`makefs` for ISO generation or
   `buildiso` ports infrastructure.
 - Install KDE Plasma via `pkg install plasma6-plasma-desktop sddm`.
@@ -117,7 +129,7 @@ build system, init scripts, and packaging, not in the application code.
 
 | Layer | Contents | License |
 |---|---|---|
-| Open base | live-build config, scripts, themes, branding assets, docs | GPL-compatible (OS components) |
+| Open base | makefs/mkimg build config, scripts, themes, branding assets, docs | GPL-compatible (OS components) |
 | Closed layer | ExamMode, AdminCenter, Services/eduos-agent.py, Server/, InstitutionManager | Proprietary — not shipped in source form |
 | Boundary | systemd units, WebSocket protocol, `/etc/eduos/*.conf`, firewall rules | Documented in ARCHITECTURE.md + this file |
 

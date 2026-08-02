@@ -65,10 +65,10 @@
 
 | Requirement | Status |
 |-------------|--------|
-| live-build installed | ✅ |
+| makefs/mkimg build installed | ✅ |
 | Package manifest | ✅ Created at `Packages/package-manifest.txt` |
 | Branding assets | ✅ Logo, wallpaper, SDDM, Plymouth |
-| Build script | ✅ `Packages/live-build/build-eduos-iso.sh` |
+| Build script | ✅ `Packages/makefs/mkimg build/build-eduos-iso.sh` |
 | Disk space | ❌ Blocked — 2.1 GB free, needs 5-8 GB |
 
 **Recommendation**: The ISO build script is ready but blocked by disk space. Either:

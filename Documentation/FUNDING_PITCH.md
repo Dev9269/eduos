@@ -17,7 +17,7 @@
 
 ## The Solution: EduOS
 
-EduOS is a Debian 13 Trixie-based Linux distribution that ships **pre-configured** with everything an engineering lab needs:
+EduOS is a FreeBSD 14.2-based Linux distribution that ships **pre-configured** with everything an engineering lab needs:
 
 - **Zero license cost** — 100% open source
 - **One-command ISO build** — `sudo ./build-eduos-iso.sh` produces a bootable USB/DVD in ~45 minutes
@@ -40,7 +40,7 @@ EduOS is a Debian 13 Trixie-based Linux distribution that ships **pre-configured
 
 | Feature | Detail |
 |---------|--------|
-| Base OS | Debian 13 Trixie, KDE Plasma 6 |
+| Base OS | FreeBSD 14.2, KDE Plasma 6 |
 | Security | Exam lockdown, Fernet/PBKDF2 encryption (480k iterations), SSH hardening |
 | Desktop | Windows 11-style layout, glassmorphism SDDM theme |
 | Portability | Single hybrid ISO (BIOS + UEFI) |
@@ -76,5 +76,5 @@ EduOS is a Debian 13 Trixie-based Linux distribution that ships **pre-configured
 
 **Contact:** Jainam H. Maru  
 **Repository:** `/home/jainam/EduOS`  
-**ISO:** `Packages/live-build/output/eduos-20260618-amd64.iso`  
+**ISO:** `Packages/makefs/mkimg build/output/eduos-20260618-amd64.iso`  
 **Tech Stack:** Debian 13 → KDE Plasma 6 → Python 3.13 → Flask → PyQt6 → Docker

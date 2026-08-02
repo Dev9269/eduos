@@ -110,6 +110,29 @@ def _is_linux() -> bool:
     return platform.system() == 'Linux'
 
 
+def _send_desktop_notification(title: str, message: str) -> str:
+    """Show a desktop notification. Tries notify-send, then kdialog,
+    then a plain print fallback. Returns which method was used."""
+    try:
+        subprocess.run(
+            ['notify-send', '--expire-time=10000', title, message],
+            check=False
+        )
+        return 'notify-send'
+    except FileNotFoundError:
+        pass
+    try:
+        subprocess.run(
+            ['kdialog', '--title', title, '--passivepopup', message, '10'],
+            check=False
+        )
+        return 'kdialog'
+    except FileNotFoundError:
+        pass
+    log.info(f"[desktop notification] {title}: {message}")
+    return 'log'
+
+
 async def handle_command(command: dict) -> dict:
     """Execute a command from the admin server"""
     cmd = command.get('action', '')
@@ -173,6 +196,26 @@ async def handle_command(command: dict) -> dict:
     elif cmd == 'shutdown':
         subprocess.run(['shutdown', '-p', 'now'], check=False)
         return {'status': 'shutting_down'}
+
+    elif cmd == 'notify':
+        """Show a desktop notification.
+        command: {"title": "...", "message": "..."}"""
+        title = command.get('title', 'EduOS')
+        message = command.get('message', '')
+        method = _send_desktop_notification(title, message)
+        return {'status': 'notification_sent', 'method': method}
+
+    elif cmd == 'exam_warning':
+        """Warn a student that their exam is about to start/end."""
+        mins = command.get('minutes', 5)
+        exam = command.get('exam', 'the exam')
+        title = 'EduOS Exam Warning'
+        message = (
+            f"{exam} starts in {mins} minute{'s' if mins != 1 else ''}. "
+            "Please be ready and do not leave this machine."
+        )
+        method = _send_desktop_notification(title, message)
+        return {'status': 'exam_warning_sent', 'method': method}
 
     elif cmd == 'get_status':
         import psutil
@@ -386,6 +429,28 @@ async def handle_command(command: dict) -> dict:
     return {'status': 'unknown_command', 'cmd': cmd}
 
 
+async def health_reporter(ws):
+    """Report CPU/RAM/disk health to the server every 60 seconds."""
+    try:
+        import psutil
+    except ImportError:
+        log.warning("psutil unavailable — health reporting disabled")
+        return
+    while True:
+        try:
+            await ws.send(json.dumps({
+                'type': 'health_report',
+                'hostname': platform.node(),
+                'cpu_percent': psutil.cpu_percent(interval=1),
+                'ram_percent': psutil.virtual_memory().percent,
+                'disk_percent': psutil.disk_usage('/').percent,
+            }))
+        except Exception as e:
+            log.warning(f"Health report failed: {e}")
+            return
+        await asyncio.sleep(60)
+
+
 async def agent_loop():
     config = load_config()
     server_url = config['server_url']
@@ -409,6 +474,9 @@ async def agent_loop():
                     'mac': get_mac_address(),
                 }))
 
+                # Health reporting task
+                reporter = asyncio.create_task(health_reporter(ws))
+
                 # Listen for commands
                 async for message in ws:
                     try:
@@ -419,6 +487,8 @@ async def agent_loop():
                         log.error(f"Command error: {e}")
                         await ws.send(json.dumps({'status': 'error',
                                                   'message': str(e)}))
+
+                reporter.cancel()
 
         except Exception as e:
             log.warning(f"Connection lost: {e}. Retrying in 10s...")

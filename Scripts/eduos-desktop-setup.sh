@@ -15,7 +15,7 @@ plasma-apply-colorscheme EduOS 2>/dev/null || echo "  ⚠ Could not apply color 
 
 # 2. Set wallpaper
 echo "  → Setting EduOS wallpaper..."
-WALLPAPER="/home/jainam/EduOS/Branding/wallpaper/eduos-wallpaper.png"
+WALLPAPER="/opt/eduos/Branding/wallpaper/eduos-wallpaper.png"
 if [ -f "$WALLPAPER" ]; then
   plasma-apply-wallpaperimage "$WALLPAPER" 2>/dev/null || \
   kwriteconfig6 --file ~/.config/plasma-org.kde.plasma.desktop-appletsrc \

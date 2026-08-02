@@ -115,3 +115,48 @@ def test_admin_can_list_users_after_login():
         r = client.get("/api/users", headers={'Authorization': f'Bearer {token}'})
         assert r.status_code == 200
         assert r.json()['total'] >= 1
+
+
+def get_eduos_client():
+    """Fresh TestClient against the repo's Server/eduos_server.py app."""
+    import jwt as pyjwt
+    from datetime import datetime, timedelta
+    os.environ['EDUOS_DB_PATH'] = str(
+        Path(tempfile.mkdtemp()) / 'notify_test.db'
+    )
+    from fastapi.testclient import TestClient
+    from Server.eduos_server import app, init_db
+    init_db()
+    return TestClient(app)
+
+
+def make_admin_token():
+    import jwt as pyjwt
+    from datetime import datetime, timedelta
+    from Server.eduos_server import load_or_generate_secret
+    return pyjwt.encode(
+        {'role': 'admin', 'exp': datetime.utcnow() + timedelta(hours=1)},
+        load_or_generate_secret(), algorithm='HS256'
+    )
+
+
+def test_notify_requires_auth():
+    """Broadcast notification without a token must be rejected"""
+    client = get_eduos_client()
+    r = client.post("/notify/all", json={
+        'title': 'Test', 'message': 'hello'
+    })
+    assert r.status_code in [401, 403]
+
+
+def test_notify_all_broadcasts_to_zero_agents():
+    """Authenticated broadcast with no connected agents succeeds with 0 recipients"""
+    client = get_eduos_client()
+    token = make_admin_token()
+    r = client.post("/notify/all", json={
+        'title': 'Lunch', 'message': 'Lunch break in 5 minutes'
+    }, headers={'Authorization': f'Bearer {token}'})
+    assert r.status_code == 200
+    body = r.json()
+    assert body['status'] == 'broadcast_sent'
+    assert body['recipients'] == 0

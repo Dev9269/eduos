@@ -1,3 +1,28 @@
+# EduOS Security Audit — Status Update
+
+**Original audit:** July 2026
+**Status update:** August 2026 (Phase 8)
+
+## Fix Status
+
+| Issue | Severity | Status |
+|---|---|---|
+| 1.1 Password never stored in register | P1-Critical | ✅ FIXED (Phase 8 — bcrypt) |
+| 1.2 Login never verifies password | P1-Critical | ✅ FIXED (Phase 8 — bcrypt.checkpw) |
+| 1.3 /api/users unprotected | P1-Critical | ✅ FIXED (Phase 8 — require_admin) |
+| 1.4 /api/submissions unprotected | P1-Critical | ✅ FIXED (Phase 8 — require_auth) |
+| exam-daemon hardcoded URL | P1-Critical | ✅ FIXED (Phase 9 — uses local server) |
+| Exam Mode no keyboard blocking | P2-High | ⚠ PARTIAL (UI blocks, not kernel) |
+| No rate limiting | P2-High | ✅ FIXED (Phase 6 — slowapi) |
+| Hardcoded server IP in agent | P2-High | ✅ FIXED (Phase 3 — mDNS discovery) |
+| SQLite unencrypted | P3-Medium | ⚠ OPEN — planned Phase 10 |
+
+---
+
+*(Original audit content follows)*
+
+---
+
 # EduOS — Complete Security & Code Audit
 
 **Auditor**: Senior Linux Systems Engineer & Security Architect  

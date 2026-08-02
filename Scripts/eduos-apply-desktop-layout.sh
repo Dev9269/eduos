@@ -7,7 +7,7 @@
 
 set -e
 
-EDUOS_DIR="/home/jainam/EduOS"
+EDUOS_DIR="/opt/eduos"
 LAYOUT_SCRIPT="$EDUOS_DIR/Scripts/eduos-desktop-layout.py"
 WALLPAPER_SRC="$EDUOS_DIR/Branding/wallpaper/eduos-wallpaper.png"
 WALLPAPER_DST="/usr/share/wallpapers/eduos-wallpaper.png"
@@ -56,11 +56,11 @@ apply_for_user() {
     fi
 
     # Copy the reference Mac layout from jainam, then adjust wallpaper path
-    REFERENCE="/home/jainam/.config/plasma-org.kde.plasma.desktop-appletsrc"
+    REFERENCE="/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc"
     TEMP_FILE="/tmp/eduos-layout-$username.tmp"
     if [ -f "$REFERENCE" ]; then
         # Use a temp file to avoid reading/writing same file (bash truncation issue)
-        sed "s|Image=file:///home/jainam/EduOS/Branding/wallpaper/eduos-wallpaper.png|Image=file://${WALLPAPER_DST}|g; s|Image=file:///usr/share/wallpapers/eduos-wallpaper.png|Image=file://${WALLPAPER_DST}|g" \
+        sed "s|Image=file:///opt/eduos/Branding/wallpaper/eduos-wallpaper.png|Image=file://${WALLPAPER_DST}|g; s|Image=file:///usr/share/wallpapers/eduos-wallpaper.png|Image=file://${WALLPAPER_DST}|g" \
             "$REFERENCE" > "$TEMP_FILE"
         cp "$TEMP_FILE" "$user_home/.config/plasma-org.kde.plasma.desktop-appletsrc"
         rm -f "$TEMP_FILE"
@@ -129,20 +129,20 @@ setup_skel() {
     mkdir -p /etc/skel/.config
 
     # Copy the reference Mac layout from jainam (avoid $HOME - it's /root when sudo)
-    REFERENCE="/home/jainam/.config/plasma-org.kde.plasma.desktop-appletsrc"
+    REFERENCE="/etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc"
     if [ -f "$REFERENCE" ]; then
-        sed "s|Image=file:///home/jainam/EduOS/Branding/wallpaper/eduos-wallpaper.png|Image=file://${WALLPAPER_DST}|g; s|Image=file:///usr/share/wallpapers/eduos-wallpaper.png|Image=file://${WALLPAPER_DST}|g" \
+        sed "s|Image=file:///opt/eduos/Branding/wallpaper/eduos-wallpaper.png|Image=file://${WALLPAPER_DST}|g; s|Image=file:///usr/share/wallpapers/eduos-wallpaper.png|Image=file://${WALLPAPER_DST}|g" \
             "$REFERENCE" > /etc/skel/.config/plasma-org.kde.plasma.desktop-appletsrc
     fi
 
     # Copy KWin settings from jainam
-    if [ -f "/home/jainam/.config/kwinrc" ]; then
-        cp "/home/jainam/.config/kwinrc" /etc/skel/.config/kwinrc
+    if [ -f "/etc/skel/.config/kwinrc" ]; then
+        cp "/etc/skel/.config/kwinrc" /etc/skel/.config/kwinrc
     fi
 
     # Copy kdeglobals from jainam
-    if [ -f "/home/jainam/.config/kdeglobals" ]; then
-        cp "/home/jainam/.config/kdeglobals" /etc/skel/.config/kdeglobals
+    if [ -f "/etc/skel/.config/kdeglobals" ]; then
+        cp "/etc/skel/.config/kdeglobals" /etc/skel/.config/kdeglobals
     fi
 
     # Create local color-schemes directory

@@ -53,8 +53,8 @@
 
 | Ignored path | Size | Reason |
 |-------------|------|--------|
-| `Packages/live-build/work/` | 9.4 GB | Live-build chroot + cache (Debian packages) |
-| `Packages/live-build/output/*.iso` | 2.3 GB | Build artifact |
+| `Packages/makefs/mkimg build/work/` | 9.4 GB | Live-build chroot + cache (Debian packages) |
+| `Packages/makefs/mkimg build/output/*.iso` | 2.3 GB | Build artifact |
 | `Backups/` | 63 MB | User backup data |
 | `__pycache__/` (all dirs) | ~500 KB | Python bytecode |
 | `*.bak` files | ~100 KB | Editor backups |
@@ -106,7 +106,7 @@ All 9 modules verified. **No missing modules.**
 | `__pycache__/` | ✅ Ignored | All covered by `__pycache__/` pattern |
 | `*.pyc`, `*.pyo` | ✅ Ignored | Covered by `*.py[cod]` |
 | `*.bak` files | ✅ Ignored | 3 `.bak` files on disk; all ignored |
-| `Packages/live-build/work/` | ✅ Ignored | 9.4 GB chroot; properly excluded |
+| `Packages/makefs/mkimg build/work/` | ✅ Ignored | 9.4 GB chroot; properly excluded |
 | `*.iso` | ✅ Ignored | 2.3 GB ISO; excluded by `*.iso` |
 | `ExamMode/results/` | ✅ Ignored | Runtime exam results |
 | `ExamMode/data/` | ✅ Ignored | Runtime data |
@@ -170,7 +170,7 @@ EduOS/
 ├── LearnHub/               # 1 file — Flask LMS portal
 │   └── learnhub_app.py
 ├── Packages/               # 5 files — ISO build system
-│   ├── live-build/
+│   ├── makefs/mkimg build/
 │   │   ├── build-eduos-iso.sh
 │   │   ├── BUILD_PROCEDURE.md
 │   │   ├── packages-lock.txt
@@ -196,7 +196,7 @@ EduOS/
 | **Ignored build artifacts** | 11.7 GB (work/ + ISO + Backups) |
 | **Tracked files** | 52 files |
 | **Ignored files** | 311,201 files |
-| **Largest tracked file** | `Packages/live-build/packages-full-lock.txt` (210 KB) |
+| **Largest tracked file** | `Packages/makefs/mkimg build/packages-full-lock.txt` (210 KB) |
 | **Only binary tracked** | `Branding/wallpaper/eduos-wallpaper.png` (127 KB) |
 | **Total push size** | ~500 KB (source only) |
 

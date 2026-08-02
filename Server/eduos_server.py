@@ -70,6 +70,48 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 # Connected agents: {hostname: websocket}
 connected_agents: Dict[str, WebSocket] = {}
 
+# Active health alerts: {hostname: {"metric": ..., "value": ..., "since": ...}}
+active_alerts: Dict[str, dict] = {}
+
+# Health thresholds (percent)
+ALERT_CPU = 80.0
+ALERT_RAM = 80.0
+ALERT_DISK = 90.0
+
+
+def record_health_report(hostname: str, cpu: float, ram: float, disk: float):
+    """Store a health report and update/auto-resolve alerts."""
+    now = datetime.now().isoformat()
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute(
+        "INSERT INTO health_metrics (hostname, cpu_percent, ram_percent, disk_percent, reported_at) VALUES (?,?,?,?,?)",
+        (hostname, cpu, ram, disk, now)
+    )
+    conn.commit()
+    conn.close()
+
+    problems = []
+    if cpu > ALERT_CPU:
+        problems.append(("cpu", cpu))
+    if ram > ALERT_RAM:
+        problems.append(("ram", ram))
+    if disk > ALERT_DISK:
+        problems.append(("disk", disk))
+
+    if problems:
+        metric, value = max(problems, key=lambda p: p[1])
+        active_alerts[hostname] = {
+            "metric": metric, "value": value,
+            "since": now, "cpu": cpu, "ram": ram, "disk": disk,
+        }
+    else:
+        # Auto-resolve: metrics back under threshold
+        if hostname in active_alerts:
+            log.info(f"Health alert auto-resolved for {hostname}")
+            del active_alerts[hostname]
+
+    return active_alerts.get(hostname)
+
 # Active schedule timers: {exam_schedule_id: threading.Timer}
 _schedule_timers: Dict[int, threading.Timer] = {}
 # Event loop captured when the server starts; timer threads hop onto it
@@ -151,6 +193,14 @@ def init_db():
         course TEXT,
         status TEXT DEFAULT "active",
         added_at TEXT
+    )''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS health_metrics (
+        id INTEGER PRIMARY KEY,
+        hostname TEXT,
+        cpu_percent REAL,
+        ram_percent REAL,
+        disk_percent REAL,
+        reported_at TEXT
     )''')
     conn.commit()
     conn.close()
@@ -562,6 +612,43 @@ async def send_command(hostname: str, command: dict,
     return {"status": "sent"}
 
 
+@app.post("/notify/{hostname}")
+async def send_notification(hostname: str, payload: dict,
+                            user=Depends(verify_token)):
+    """Send a desktop notification to one agent, or all when
+    hostname == 'all'.  payload: {"title": ..., "message": ...}"""
+    title = str(payload.get("title", "EduOS"))
+    message = str(payload.get("message", ""))
+    if not message.strip():
+        raise HTTPException(status_code=400,
+                            detail="message is required")
+
+    if hostname == "all":
+        results = {}
+        for host, ws in connected_agents.items():
+            try:
+                await ws.send_text(json.dumps({
+                    "action": "notify",
+                    "title": title,
+                    "message": message,
+                }))
+                results[host] = "sent"
+            except Exception:
+                results[host] = "failed"
+        return {"status": "broadcast_sent", "recipients": len(results),
+                "results": results}
+
+    if hostname not in connected_agents:
+        raise HTTPException(status_code=404,
+                            detail=f"{hostname} not connected")
+    await connected_agents[hostname].send_text(json.dumps({
+        "action": "notify",
+        "title": title,
+        "message": message,
+    }))
+    return {"status": "sent", "hostname": hostname}
+
+
 @app.post("/exam/push")
 async def push_exam(exam_data: dict, user=Depends(verify_token)):
     """Push exam to all connected agents"""
@@ -828,6 +915,55 @@ async def health(request: Request):
     return {"status": "ok", "time": datetime.now().isoformat()}
 
 
+@app.post("/health/report")
+async def health_report(payload: dict, user=Depends(verify_token)):
+    """HTTP endpoint for agents to report health metrics."""
+    hostname = str(payload.get("hostname", ""))
+    if not hostname:
+        raise HTTPException(status_code=400, detail="hostname is required")
+    alert = record_health_report(
+        hostname,
+        float(payload.get("cpu_percent", 0)),
+        float(payload.get("ram_percent", 0)),
+        float(payload.get("disk_percent", 0)),
+    )
+    return {"status": "recorded", "alert": alert is not None}
+
+
+@app.get("/health/metrics/{hostname}")
+async def health_metrics(hostname: str, user=Depends(verify_token)):
+    """Latest health metrics for a single host."""
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute(
+        "SELECT cpu_percent, ram_percent, disk_percent, reported_at "
+        "FROM health_metrics WHERE hostname=? ORDER BY id DESC LIMIT 20",
+        (hostname,)
+    ).fetchall()
+    conn.close()
+    return {
+        "hostname": hostname,
+        "metrics": [
+            {"cpu_percent": r[0], "ram_percent": r[1],
+             "disk_percent": r[2], "reported_at": r[3]}
+            for r in rows
+        ],
+    }
+
+
+@app.get("/health/alerts")
+async def health_alerts(user=Depends(verify_token)):
+    """All currently-active health alerts (auto-resolved when metrics
+    drop back under threshold)."""
+    return {
+        "count": len(active_alerts),
+        "thresholds": {"cpu": ALERT_CPU, "ram": ALERT_RAM, "disk": ALERT_DISK},
+        "alerts": [
+            {"hostname": h, **a}
+            for h, a in sorted(active_alerts.items())
+        ],
+    }
+
+
 @app.websocket("/ws/agent")
 async def agent_websocket(websocket: WebSocket):
     await websocket.accept()
@@ -853,6 +989,17 @@ async def agent_websocket(websocket: WebSocket):
         # Keep connection alive
         async for message in websocket.iter_text():
             log.info(f"[{hostname}] {message}")
+            try:
+                data = json.loads(message)
+                if data.get('type') == 'health_report' and hostname:
+                    record_health_report(
+                        hostname,
+                        float(data.get('cpu_percent', 0)),
+                        float(data.get('ram_percent', 0)),
+                        float(data.get('disk_percent', 0)),
+                    )
+            except Exception as e:
+                log.error(f"Message handling error: {e}")
 
     except Exception as e:
         log.error(f"Agent connection error: {e}")

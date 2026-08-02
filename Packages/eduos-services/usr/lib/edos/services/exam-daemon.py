@@ -67,6 +67,7 @@ def main():
     syslog.syslog(syslog.LOG_INFO, "EduOS Exam Daemon started")
 
     exam_was_active = False
+    fail_count = 0
 
     while True:
         try:
@@ -86,10 +87,15 @@ def main():
                 deactivate_exam()
                 exam_was_active = False
 
+            fail_count = 0
+
         except Exception as e:
             syslog.syslog(syslog.LOG_ERR, f"EduOS Exam Daemon error: {e}")
+            fail_count += 1
 
-        time.sleep(POLL_INTERVAL)
+        # Bounded exponential backoff: double the wait on each failure,
+        # capped at 300s so a long outage never hammers the network.
+        time.sleep(min(300, POLL_INTERVAL * (2 ** min(fail_count, 5))))
 
 
 if __name__ == "__main__":

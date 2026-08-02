@@ -408,6 +408,7 @@ class AdminCenterWindow(QMainWindow):
             ("active_exams", "📝 Active Exams", "0", "#10B981"),
             ("pending_submissions", "📬 Pending Submissions", "0", "#F59E0B"),
             ("server_status", "🌐 Server", "Checking...", "#8B5CF6"),
+            ("health_alerts", "⚠ Health Alerts", "0", "#DC2626"),
         ]
 
         for i, (key, title, default, color) in enumerate(stats):
@@ -446,6 +447,7 @@ class AdminCenterWindow(QMainWindow):
             ("📤 Push Update", self._push_update),
             ("👥 Import Roster", self._import_roster),
             ("📅 Schedule Exam", self._schedule_exam),
+            ("🚨 View Health Alerts", self._view_health_alerts),
             ("🔄 Refresh All", self._refresh_dashboard),
         ]
         for label, handler in quick_actions:
@@ -513,6 +515,47 @@ class AdminCenterWindow(QMainWindow):
             active = sum(1 for s in schedules.get("schedules", [])
                          if s.get("status") == "activated")
             self._stat_labels["active_exams"].setText(str(active))
+
+        # Update health alerts
+        alerts = fetch("/health/alerts")
+        if alerts is not None:
+            count = alerts.get("count", 0)
+            self._stat_labels["health_alerts"].setText(str(count))
+            color = "#EF4444" if count else "#10B981"
+            self._stat_labels["health_alerts"].setStyleSheet(
+                f"font-size: 28px; font-weight: bold; color: {color};")
+
+    def _view_health_alerts(self):
+        """Show current health alerts from the server."""
+        import urllib.request
+
+        try:
+            req = urllib.request.Request(
+                f"http://{self.server_host}:{self.server_port}/health/alerts",
+                headers={'Authorization': f'Bearer {self.auth_token}'}
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read())
+        except Exception as exc:
+            QMessageBox.warning(self, "Server Unreachable", str(exc))
+            return
+
+        alerts = data.get("alerts", [])
+        if not alerts:
+            QMessageBox.information(self, "Health Alerts", "No active health alerts. All systems nominal.")
+            return
+
+        lines = []
+        for a in alerts:
+            host = a.get("hostname", "?")
+            metric = a.get("metric", "?")
+            value = a.get("value", 0)
+            lines.append(
+                f"⚠ {host}: {metric.upper()} at {value:.0f}% "
+                f"(since {a.get('since', '?')})")
+        QMessageBox.warning(
+            self, f"Health Alerts ({len(alerts)})",
+            "\n".join(lines))
 
     def _get_realtime_stats(self):
         stats = {}
@@ -629,6 +672,7 @@ class AdminCenterWindow(QMainWindow):
             ("🔒 Lock Selected", "#dc2626", self._lock_selected),
             ("🔓 Unlock", "#16a34a", self._unlock_selected),
             ("📢 Send Message", "#7c3aed", self._send_message),
+            ("🔔 Broadcast Notification", "#0d9488", self._broadcast_notification),
             ("🖥 Remote SSH", "#2563eb", self._remote_ssh),
         ]
         for text, color, handler in btn_configs:
@@ -746,6 +790,54 @@ class AdminCenterWindow(QMainWindow):
             msg = msg_input.toPlainText().strip()
             if msg:
                 QMessageBox.information(self, "Sent", f"Message broadcast to {host}:\n{msg}")
+
+    def _broadcast_notification(self):
+        """Send a desktop notification to all connected lab machines."""
+        import urllib.request
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Broadcast Notification")
+        dlg.setModal(True)
+        layout = QVBoxLayout(dlg)
+        title_input = QLineEdit()
+        title_input.setPlaceholderText("e.g. Lunch Break")
+        msg_input = QTextEdit()
+        msg_input.setPlaceholderText("Notification message shown on every lab machine...")
+        msg_input.setFixedHeight(120)
+        layout.addWidget(QLabel("Title:"))
+        layout.addWidget(title_input)
+        layout.addWidget(QLabel("Message:"))
+        layout.addWidget(msg_input)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        layout.addWidget(buttons)
+
+        def do_send():
+            title = title_input.text().strip() or "EduOS"
+            msg = msg_input.toPlainText().strip()
+            if not msg:
+                QMessageBox.warning(dlg, "Empty Message", "Message is required.")
+                return
+            payload = json.dumps({"title": title, "message": msg}).encode()
+            try:
+                req = urllib.request.Request(
+                    f"http://{self.server_host}:{self.server_port}/notify/all",
+                    data=payload,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Authorization': f'Bearer {self.auth_token}'
+                    }
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    result = json.loads(resp.read())
+                QMessageBox.information(
+                    dlg, "Broadcast Sent",
+                    f"Notification delivered to {result.get('recipients', 0)} machine(s).")
+            except Exception as exc:
+                QMessageBox.warning(dlg, "Broadcast Failed", str(exc))
+
+        buttons.accepted.connect(do_send)
+        buttons.rejected.connect(dlg.reject)
+        dlg.exec()
 
     def _remote_ssh(self):
         row = self.systems_table.currentRow()
@@ -1345,6 +1437,7 @@ class AdminCenterWindow(QMainWindow):
             ("■ Stop All Exams", "#dc2626", self._stop_exams),
             ("⏸ Pause All", "#f59e0b", self._pause_exams),
             ("⏰ Schedule Exam", "#0d9488", self._schedule_exam),
+            ("📝 Question Builder", "#9333ea", self._build_exam_questions),
             ("📋 View Active Exams", "#2563eb", self._view_active_exams),
             ("👁 Live Monitor", "#0891b2", self._open_exam_monitor),
             ("📥 View Submissions", "#7c3aed", self._view_submissions),
@@ -1365,6 +1458,100 @@ class AdminCenterWindow(QMainWindow):
         layout.addLayout(exam_actions)
 
         return tab
+
+    def _build_exam_questions(self):
+        """Open the question builder — construct MCQ questions and save
+        them as a JSON list for use in exams."""
+        from PyQt6.QtWidgets import QFileDialog
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Exam Question Builder")
+        dlg.setMinimumSize(640, 520)
+        layout = QVBoxLayout(dlg)
+
+        form = QFormLayout()
+        self._qb_question = QLineEdit()
+        self._qb_question.setPlaceholderText("e.g. What does 2 + 2 equal?")
+        self._qb_options = []
+        for label in ("A", "B", "C", "D"):
+            opt = QLineEdit()
+            opt.setPlaceholderText(f"Option {label}")
+            self._qb_options.append(opt)
+            form.addRow(f"Option {label}:", opt)
+        self._qb_answer = QComboBox()
+        self._qb_answer.addItems(["A", "B", "C", "D"])
+        form.addRow("Question:", self._qb_question)
+        form.addRow("Correct Answer:", self._qb_answer)
+        layout.addLayout(form)
+
+        add_btn = QPushButton("+ Add Question")
+        add_btn.setStyleSheet(glass_button_style())
+        add_btn.clicked.connect(self._qb_add_question)
+        layout.addWidget(add_btn)
+
+        self._qb_list = QListWidget()
+        layout.addWidget(self._qb_list)
+
+        def save_json():
+            questions = self._qb_collect_questions()
+            if not questions:
+                QMessageBox.warning(dlg, "No Questions", "Add at least one question first.")
+                return
+            fname, _ = QFileDialog.getSaveFileName(
+                dlg, "Save Questions", "exam_questions.json",
+                "JSON Files (*.json)")
+            if not fname:
+                return
+            with open(fname, "w", encoding="utf-8") as fh:
+                json.dump({"questions": questions}, fh, indent=2)
+            QMessageBox.information(
+                dlg, "Saved",
+                f"Saved {len(questions)} questions to:\n{fname}")
+
+        save_btn = QPushButton("💾 Save Questions JSON")
+        save_btn.setStyleSheet(glass_success_button_style())
+        save_btn.clicked.connect(save_json)
+        layout.addWidget(save_btn)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(dlg.accept)
+        layout.addWidget(buttons)
+        dlg.exec()
+
+    def _qb_collect_questions(self):
+        questions = []
+        for i in range(self._qb_list.count()):
+            item = self._qb_list.item(i)
+            data = item.data(Qt.ItemDataRole.UserRole)
+            if data:
+                questions.append(data)
+        return questions
+
+    def _qb_add_question(self):
+        qtext = self._qb_question.text().strip()
+        options = [o.text().strip() for o in self._qb_options]
+        answer = self._qb_answer.currentText()
+        if not qtext:
+            QMessageBox.warning(self, "Missing Text", "Question text is required.")
+            return
+        if any(not o for o in options):
+            QMessageBox.warning(self, "Missing Options", "All four options are required.")
+            return
+        if len(set(options)) < 2:
+            QMessageBox.warning(self, "Duplicate Options", "Options must be distinct.")
+            return
+        question = {
+            "question": qtext,
+            "options": options,
+            "correct": answer,
+        }
+        self._qb_list.addItem(f"[{answer}] {qtext}")
+        self._qb_list.item(self._qb_list.count() - 1).setData(
+            Qt.ItemDataRole.UserRole, question)
+        self._qb_question.clear()
+        for o in self._qb_options:
+            o.clear()
+        self._qb_answer.setCurrentIndex(0)
 
     def _start_exam(self):
         QMessageBox.information(

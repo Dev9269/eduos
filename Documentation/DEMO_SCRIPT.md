@@ -3,7 +3,7 @@
 **Duration:** 10–12 minutes  
 **Presenter:** Jainam H. Maru  
 **Credentials:** DEMO001 / EDUOS2026  
-**VM:** Debian 13 Trixie + KDE Plasma 6, VirtualBox
+**VM:** FreeBSD 14.2 + KDE Plasma 6, VirtualBox
 
 ---
 

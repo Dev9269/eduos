@@ -1,2 +1,2 @@
 #!/bin/bash
-exec /usr/bin/python3 /home/jainam/EduOS/CyberLab/cyberlab.py
+exec /usr/bin/python3 /opt/eduos/CyberLab/cyberlab.py

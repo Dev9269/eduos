@@ -1,11 +1,15 @@
+import json
+import os
 import sys
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+from pathlib import Path
+
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QPushButton, QLabel, QStackedWidget,
                              QListWidget, QGroupBox, QCheckBox, QSlider,
                              QComboBox, QLineEdit, QSpinBox, QFormLayout,
                              QStatusBar, QMessageBox, QFileDialog, QTabWidget)
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
 
 DARK_STYLE = """
 QMainWindow, QWidget { background-color: #1a1a2e; color: #e0e0e0; }
@@ -53,6 +57,7 @@ class SettingsWindow(QMainWindow):
         self.setWindowTitle("EduOS Settings")
         self.resize(900, 650)
         self.setStyleSheet(DARK_STYLE)
+        self.agent_conf = Path.home() / ".eduos" / "agent.conf"
         self.init_ui()
 
     def init_ui(self):
@@ -62,13 +67,14 @@ class SettingsWindow(QMainWindow):
 
         nav = QListWidget()
         nav.setMaximumWidth(200)
-        nav.addItems(["Appearance", "System", "Network", "Privacy", "About"])
+        nav.addItems(["Appearance", "System", "Network", "Server", "Privacy", "About"])
         nav.currentRowChanged.connect(self.on_nav_change)
 
         self.stack = QStackedWidget()
         self.stack.addWidget(self.create_appearance_panel())
         self.stack.addWidget(self.create_system_panel())
         self.stack.addWidget(self.create_network_panel())
+        self.stack.addWidget(self.create_server_panel())
         self.stack.addWidget(self.create_privacy_panel())
         self.stack.addWidget(self.create_about_panel())
 
@@ -81,8 +87,79 @@ class SettingsWindow(QMainWindow):
 
     def on_nav_change(self, index):
         self.stack.setCurrentIndex(index)
-        panels = ["Appearance", "System", "Network", "Privacy", "About"]
+        panels = ["Appearance", "System", "Network", "Server", "Privacy", "About"]
         self.status.showMessage(f"Settings: {panels[index]}")
+
+    def load_agent_config(self):
+        try:
+            if self.agent_conf.exists():
+                return json.loads(self.agent_conf.read_text())
+        except Exception:
+            pass
+        return {}
+
+    def save_agent_config(self, data):
+        self.agent_conf.parent.mkdir(parents=True, exist_ok=True)
+        self.agent_conf.write_text(json.dumps(data, indent=2))
+        self.status.showMessage("Server settings saved")
+
+    def create_server_panel(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        g1 = QGroupBox("EduOS Server Connection")
+        g1_layout = QFormLayout(g1)
+        self.server_url = QLineEdit()
+        self.server_url.setPlaceholderText("ws://eduos-server.local:8765")
+        self.server_token = QLineEdit()
+        self.server_token.setPlaceholderText("agent token (leave blank if not set)")
+        self.server_token.setEchoMode(QLineEdit.EchoMode.Password)
+        g1_layout.addRow("Server URL:", self.server_url)
+        g1_layout.addRow("Token:", self.server_token)
+        layout.addWidget(g1)
+
+        cfg = self.load_agent_config()
+        if cfg.get("server_url"):
+            self.server_url.setText(cfg["server_url"])
+        if cfg.get("token"):
+            self.server_token.setText(cfg["token"])
+
+        g2 = QGroupBox("Diagnostics")
+        g2_layout = QVBoxLayout(g2)
+        self.sync_btn = QPushButton("Save and Test Connection")
+        self.sync_btn.clicked.connect(self.test_connection)
+        g2_layout.addWidget(self.sync_btn)
+        layout.addWidget(g2)
+        layout.addStretch()
+        apply_btn = QPushButton("Apply Server Settings")
+        apply_btn.setStyleSheet("background-color: #27ae60;")
+        apply_btn.clicked.connect(self.save_server_settings)
+        layout.addWidget(apply_btn)
+        return tab
+
+    def save_server_settings(self):
+        data = self.load_agent_config()
+        data["server_url"] = self.server_url.text().strip()
+        data["token"] = self.server_token.text().strip()
+        self.save_agent_config(data)
+
+    def test_connection(self):
+        self.save_server_settings()
+        url = self.server_url.text().strip()
+        if url.startswith("ws://"):
+            http_url = url.replace("ws://", "http://")
+        elif url.startswith("wss://"):
+            http_url = url.replace("wss://", "https://")
+        else:
+            http_url = url
+        http_url = http_url.rstrip("/") + "/health"
+        try:
+            import urllib.request
+            with urllib.request.urlopen(http_url, timeout=5) as resp:
+                body = resp.read().decode("utf-8", "replace")
+            self.status.showMessage(f"Server reachable: {body[:80]}")
+        except Exception as exc:
+            QMessageBox.warning(self, "Connection Failed",
+                                f"Could not reach {http_url}\n{exc}")
 
     def create_appearance_panel(self):
         tab = QWidget()
@@ -239,9 +316,9 @@ class SettingsWindow(QMainWindow):
             "<p>Built for modern education</p>"
             "<hr style='border-color: #0f3460;'>"
             "<p><b>Version:</b> 3.0.0</p>"
-            "<p><b>Build:</b> 2026-01-01</p>"
-            "<p><b>Platform:</b> Debian 12</p>"
-            "<p><b>Kernel:</b> Linux 6.x</p>"
+            "<p><b>Build:</b> 2026-08-01</p>"
+            "<p><b>Platform:</b> FreeBSD 14.2</p>"
+            "<p><b>Kernel:</b> FreeBSD 14.2-RELEASE</p>"
             "<hr style='border-color: #0f3460;'>"
             "<p>EduOS Team &lt;team@edos.edu&gt;</p>"
         )
