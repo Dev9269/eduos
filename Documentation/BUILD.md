@@ -8,10 +8,10 @@
 
 1. [Prerequisites](#prerequisites)
 2. [Build Environment Setup](#build-environment-setup)
-3. [Dependencies](#dependencies)
-4. [Clone Repository](#clone-repository)
-5. [Build ISO Using live-build](#build-iso-using-live-build)
-6. [Build Individual .deb Packages](#build-individual-deb-packages)
+3. [Repository Structure](#repository-structure)
+4. [Validate the Build](#validate-the-build)
+5. [Build the FreeBSD ISO](#build-the-freebsd-iso)
+6. [Build Packages Manually](#build-packages-manually)
 7. [Customize the Build](#customize-the-build)
 8. [Build Output](#build-output)
 9. [Troubleshooting](#troubleshooting)
@@ -24,7 +24,7 @@
 
 | Component | Requirement |
 |-----------|-------------|
-| **Operating System** | Debian 13 "Trixie" (recommended) or Debian 12 "Bookworm" |
+| **Operating System** | FreeBSD 14.x (recommended) or Linux x86_64 |
 | **Disk Space** | 20 GB free (40 GB recommended) |
 | **RAM** | 4 GB (8 GB recommended) |
 | **CPU** | 2+ cores (4+ recommended) |
@@ -35,294 +35,192 @@
 
 - `bash` (>= 5.2)
 - `git` (>= 2.40)
-- `live-build` (>= 202408)
-- `debootstrap` (>= 1.0.134)
-- `dpkg-dev` (>= 1.22)
-- `fakeroot` (>= 1.35)
+- `python3` (>= 3.11) with `pytest` and `pyyaml`
 - `xorriso` (>= 1.5.6)
-- `gpg` (>= 2.2)
+- `curl` / `wget`
+- `qemu-system-x86` (optional — for boot verification)
+
+On FreeBSD, install the toolchain with:
+
+```sh
+pkg install -y bash git python311 py311-pip py311-pytest xorriso curl qemu
+```
+
+On Linux (for running the GitHub Actions build locally):
+
+```sh
+sudo apt install -y xorriso qemu-system-x86 curl wget python3 python3-pip
+```
 
 ---
 
 ## Build Environment Setup
 
-### 1. Ensure You Are on Debian 13
+EduOS is built on **FreeBSD 14.x**. The base system is assembled from the
+official FreeBSD `base.txz` and `kernel.txz` release archives, then layered
+with the EduOS modules in `Packages/` and the first-boot configuration in
+`Services/freebsd/`.
 
-```bash
-cat /etc/debian_version
-# Expected: 13.0 or higher
+There are two supported build paths:
+
+| Path | When to use |
+|------|-------------|
+| **GitHub Actions** (recommended) | Reproducible CI build; produces the ISO artifact automatically |
+| **`Scripts/build.sh`** (local) | Quick local validation + package staging |
+
+---
+
+## Repository Structure
+
 ```
-
-### 2. Install Base Build Dependencies
-
-```bash
-sudo apt update
-sudo apt upgrade -y
-sudo apt install -y \
-    git \
-    live-build \
-    debootstrap \
-    dpkg-dev \
-    fakeroot \
-    xorriso \
-    gnupg2 \
-    curl \
-    wget \
-    ca-certificates
+eduos/
+├── Scripts/
+│   ├── build.sh              # Master build orchestrator (validate + package)
+│   ├── build-iso.sh          # ISO build entrypoint (points at CI workflow)
+│   ├── install-eduos.sh      # Runtime installer (FreeBSD rc.d / Linux systemd)
+│   ├── freebsd-pkg-cache.sh  # Offline package cache builder
+│   └── eduos-welcome.py      # First-login welcome wizard
+├── Packages/
+│   ├── freebsd-packages.txt  # pkg(8) manifest for the base system
+│   ├── eduos-server/         # Server modules (usr/lib/edos/server/)
+│   ├── eduos-exam/           # ExamMode modules (usr/lib/edos/apps/exam/)
+│   ├── eduos-devsuite/       # DevSuite modules (usr/lib/edos/apps/devsuite/)
+│   └── ...                   # One directory per installable module
+├── Services/
+│   └── freebsd/              # rc.d service scripts + FreeBSD installer
+│       ├── eduos_agent       # Agent service (rc.d)
+│       ├── eduos_exam        # Exam daemon (rc.d)
+│       └── install-agent-freebsd.sh
+├── Server/                   # Central EduOS server (FastAPI)
+├── AdminCenter/              # Administrator console
+├── ExamMode/                 # Exam proctoring application
+├── LearnHub/                 # Learning management web app
+├── CyberLab/                 # Cyber-lab environments
+├── DevSuite/                 # Development suite
+├── InstitutionManager/       # Institution management
+├── EcosystemDashboard/       # Ecosystem monitoring
+├── Branding/                 # EduOS branding assets
+├── Themes/                   # Desktop themes
+├── Tests/                    # Test suites
+└── .github/workflows/
+    ├── build-freebsd-iso.yml # ISO build workflow (FreeBSD 14.x)
+    └── ci.yml                # Lint + test + FreeBSD package validation
 ```
 
 ---
 
-## Dependencies
+## Validate the Build
 
-### Build Dependencies
-
-Run the following to install all build dependencies:
+Run the full validation suite locally before building:
 
 ```bash
-sudo apt install -y \
-    # live-build system
-    live-build \
-    debootstrap \
-    squashfs-tools \
-    isolinux \
-    syslinux-utils \
-    # Package building
-    build-essential \
-    devscripts \
-    debhelper \
-    dh-python \
-    python3-all \
-    python3-setuptools \
-    python3-stdeb \
-    # Python packages
-    python3 \
-    python3-pip \
-    python3-venv \
-    python3-aiohttp \
-    python3-psutil \
-    python3-systemd \
-    python3-django \
-    python3-djangorestframework \
-    python3-psycopg2 \
-    python3-redis \
-    python3-docker \
-    python3-apt \
-    python3-jupyter \
-    # Security
-    openssl \
-    gnupg2 \
-    apparmor-profiles \
-    wireguard-tools \
-    iptables \
-    # Dev tools
-    gcc \
-    g++ \
-    make \
-    nodejs \
-    npm \
-    openjdk-17-jdk \
-    rustc \
-    cargo \
-    # Desktop
-    plasma-desktop \
-    plasma-workspace \
-    sddm \
-    plymouth \
-    plymouth-themes \
-    # Other
-    docker-ce \
-    docker-compose \
-    chromium \
-    git
+make validate
 ```
+
+This runs, in order:
+
+1. The pytest suite (`pytest tests/ -q`) — all tests must pass
+2. `py_compile` over every Python file in the repository
+3. YAML validation of `.github/workflows/*.yml`
+4. Shell syntax checks on `Scripts/*.sh` and `Services/freebsd/*`
+5. FreeBSD package-list validation (`Packages/freebsd-packages.txt`)
+
+You can run individual checks with `make test`, `make lint`, and
+`make clean`.
 
 ---
 
-## Clone Repository
+## Build the FreeBSD ISO
+
+### Quick Build (recommended)
+
+The ISO is built by the **Build EduOS FreeBSD ISO** workflow on GitHub
+Actions (`build-freebsd-iso.yml`). To trigger it:
 
 ```bash
-git clone https://github.com/edos/edos.git
-cd edos
+gh workflow run build-freebsd-iso.yml
 ```
 
-### Repository Structure
+The workflow runs on `ubuntu-24.04` and:
 
+1. Downloads the FreeBSD 14.x base + kernel (`base.txz`, `kernel.txz`)
+2. Extracts them into a `rootfs/`
+3. Copies the EduOS modules (`AdminCenter`, `CyberLab`, `DevSuite`,
+   `ExamMode`, `LearnHub`, `Scripts`, `Branding`, `Themes`, `Server`,
+   `Services`) into `/opt/eduos`
+4. Writes runtime config: `rc.conf` (hostname, dhcp, firstboot + agent
+   rc.d entries), `boot/loader.conf`, `etc/fstab`, `etc/eduos/agent.conf`
+5. Stages first-boot rc.d scripts: `eduos_firstboot` (pkg install
+   python311 + pip packages) and `eduos_adduser` (creates the `student`
+   user), plus the welcome autostart entry
+6. Bundles an offline pip wheel cache into `/opt/eduos-packages/` with a
+   matching `install-offline.sh`
+7. Assembles the ISO with `xorriso` (mkisofs mode) and uploads it as a
+   build artifact (`eduos-freebsd.iso`, 30-day retention)
+
+### Local Build
+
+The local entrypoint is `Scripts/build-iso.sh`:
+
+```bash
+bash Scripts/build-iso.sh
 ```
-edos/
-├── scripts/
-│   ├── build.sh              # Master build script
-│   ├── build-iso.sh          # ISO build using live-build
-│   ├── build-packages.sh     # Build all .deb packages
-│   ├── build-package.sh      # Build individual .deb package
-│   └── clean.sh              # Clean build artifacts
-├── config/
-│   ├── live-build/           # live-build configuration
-│   │   ├── auto/             # Auto-config scripts
-│   │   ├── hooks/            # Custom hooks (live-build)
-│   │   ├── includes.binary/  # Binary stage includes
-│   │   └── includes.chroot/  # Chroot stage includes
-│   ├── packages/             # Package configurations
-│   ├── branding/             # EduOS branding assets
-│   └── secureboot/           # Secure Boot certificates
-├── packages/                 # Source code for .deb packages
-│   ├── edos-core/
-│   ├── edos-security/
-│   ├── edos-daemon/
-│   ├── edos-admin-service/
-│   ├── edos-exam-service/
-│   ├── edos-update-service/
-│   ├── edos-learn-hub/
-│   ├── edos-cyber-lab/
-│   ├── edos-dev-suite/
-│   └── edos-ui-theme/
-├── debian/                   # Debian packaging metadata
-├── documentation/            # Project documentation
-├── tests/                    # Test suites
-└── CHANGELOG.md
+
+It performs local validation, then prints the instructions for triggering
+the ISO build on GitHub Actions. The full local pipeline is:
+
+```bash
+bash Scripts/build.sh
 ```
+
+which runs the tests, compiles all modules, stages the package tree into
+`dist/`, and then either triggers the CI ISO build or prints the manual
+instructions.
 
 ---
 
-## Build ISO Using live-build
+## Build Packages Manually
 
-### Quick Build
+EduOS modules ship as FreeBSD-friendly directory trees under `Packages/`.
+Each package follows the layout:
 
-The fastest way to build the complete ISO:
+```
+Packages/eduos-<module>/
+└── usr/lib/edos/apps/<module>/   # Python modules installed to the system
+```
+
+Staging a module for distribution:
 
 ```bash
-bash scripts/build.sh
+bash Scripts/build.sh            # stages all modules into dist/
+ls dist/                         # staged package trees
 ```
 
-This single command runs the entire build pipeline:
-1. Builds all .deb packages
-2. Configures live-build
-3. Generates the ISO
+There is no `dpkg-buildpackage` equivalent — FreeBSD modules are plain
+directory installs. On the target machine, the module trees are copied
+into `/usr/local/lib/edos/` (or `/usr/lib/edos/` on the ISO rootfs) and
+enabled through the rc.d services in `Services/freebsd/`.
 
-### Step-by-Step ISO Build
-
-If you prefer to run each stage manually:
-
-#### 1. Configure live-build
+### Build a Single Module
 
 ```bash
-cd config/live-build
-
-lb config \
-    --distribution trixie \
-    --debian-installer false \
-    --archive-areas "main contrib non-free non-free-firmware" \
-    --bootappend-live "boot=live components quiet splash" \
-    --iso-application "EduOS v3.0" \
-    --iso-preparer "EduOS Team" \
-    --iso-publisher "EduOS" \
-    --iso-volume "EduOS v3.0" \
-    --memtest none \
-    --binary-images iso-hybrid \
-    --syslinux-timeout 10
+python3 -m compileall -q Packages/eduos-server/
 ```
 
-#### 2. Add Package Lists
+### Package Manifest
 
-Create package list files under `config/package-lists/`:
+The complete list of FreeBSD `pkg(8)` packages installed on the base
+system lives in `Packages/freebsd-packages.txt`. The first-boot script
+installs the core runtime packages:
 
-```bash
-# config/package-lists/edos-core.list.chroot
-edos-core
-edos-security
-edos-daemon
-edos-admin-service
-edos-exam-service
-edos-update-service
-edos-learn-hub
-edos-cyber-lab
-edos-dev-suite
-edos-ui-theme
+```sh
+pkg install -y python311 py311-pip git curl wget bash nano
+pip3.11 install --quiet cryptography fastapi uvicorn pyjwt websockets psutil
 ```
 
-#### 3. Include EduOS Packages
-
-Copy built .deb packages to `config/packages.chroot/`:
-
-```bash
-mkdir -p config/packages.chroot
-cp ../../packages/*/dist/*.deb config/packages.chroot/
-```
-
-#### 4. Add Custom Hooks
-
-Place hooks in `config/hooks/`:
-
-```bash
-# config/hooks/99-edos-setup.hook.chroot
-#!/bin/bash
-
-# Enable EduOS services
-systemctl enable edos-daemon
-systemctl enable edos-exam-daemon
-systemctl enable edos-update-daemon
-systemctl enable edos-sync-daemon
-
-# Set default display manager
-/usr/sbin/dmctl set-default sddm
-
-# Configure EduOS branding
-cp /usr/share/edos/branding/plymouth/ /usr/share/plymouth/themes/ -r
-plymouth-set-default-theme edos
-
-# Set EduOS wallpaper
-cp /usr/share/edos/branding/wallpaper.jpg \
-    /usr/share/wallpapers/EduOS/contents/images/
-```
-
-#### 5. Build the ISO
-
-```bash
-cd config/live-build
-sudo lb build 2>&1 | tee build.log
-```
-
-The output ISO will be at `config/live-build/live-image-amd64.hybrid.iso`.
-
----
-
-## Build Individual .deb Packages
-
-### Build All Packages
-
-```bash
-bash scripts/build-packages.sh
-```
-
-### Build a Single Package
-
-```bash
-bash scripts/build-package.sh <package-name>
-```
-
-Example:
-
-```bash
-bash scripts/build-package.sh edos-daemon
-```
-
-### Package Build Output
-
-Each built package is placed in its respective `dist/` directory:
-
-```
-packages/edos-core/dist/edos-core_3.0.0_all.deb
-packages/edos-daemon/dist/edos-daemon_3.0.0_all.deb
-packages/edos-security/dist/edos-security_3.0.0_all.deb
-...
-```
-
-### Manual Package Build (Using dpkg-buildpackage)
-
-```bash
-cd packages/edos-daemon
-dpkg-buildpackage -us -uc -b
-```
+For offline installation, `Scripts/freebsd-pkg-cache.sh` fetches the
+package and wheel caches and generates an `install-offline.sh` that works
+without internet access.
 
 ---
 
@@ -330,54 +228,39 @@ dpkg-buildpackage -us -uc -b
 
 ### Adding Custom Software
 
-1. Add the package name to the appropriate list in `config/package-lists/`
-2. If needed, create a hook in `config/hooks/` for post-install configuration
+1. Add the package name to `Packages/freebsd-packages.txt`
+2. For first-boot installs, add the package to the `pkg install` line in
+   the `eduos_firstboot` rc.d script in `build-freebsd-iso.yml`
+3. For Python modules, add the wheel to the offline cache in
+   `Scripts/freebsd-pkg-cache.sh` (or to the `pip download` list in the
+   workflow's "Bundle Python packages offline cache" step)
 
 ### Modifying Branding
 
+Branding assets live in `Branding/`:
+
 ```
-config/branding/
-├── grub/
-│   ├── grub-background.png     # GRUB boot screen background
-│   └── grub-theme.txt          # GRUB theme configuration
-├── plymouth/
-│   ├── logo.png                # Plymouth boot splash logo
-│   ├── progress-bar.png        # Boot progress bar
-│   └── edos.script             # Plymouth animation script
-├── sddm/
-│   ├── sddm-theme.tar.gz       # SDDM login theme
-│   └── sddm.conf               # SDDM configuration
+Branding/
+├── autostart/
+│   └── eduos-welcome.desktop   # First-login welcome autostart entry
 ├── wallpaper.jpg               # Default desktop wallpaper
 ├── logo.svg                    # EduOS logo (vector)
 └── icon.png                    # Application icon
 ```
 
-### Changing Default Applications
+The welcome wizard (`Scripts/eduos-welcome.py`) is staged for the
+`student` user during first boot via the desktop entry above.
 
-Edit `config/includes.chroot/usr/share/edos/defaults/`:
+### Changing First-Boot Behavior
 
-```
-defaults/
-├── applications.json           # Default app associations
-├── bookmarks.html              # Default browser bookmarks
-├── plasma-settings.tar.gz      # KDE Plasma configuration
-└── sddm.conf                   # Login manager settings
-```
+First-boot behavior is defined by the rc.d scripts generated in
+`build-freebsd-iso.yml`:
 
-### Secure Boot Configuration
+- `rootfs/etc/rc.d/eduos_firstboot` — package + service installation
+- `rootfs/etc/rc.d/eduos_adduser` — `student` user creation
 
-```bash
-# Generate Secure Boot certificates
-scripts/generate-secureboot-certs.sh
-
-# Place certificates
-config/secureboot/
-├── DB.key                      # Signature key
-├── DB.crt                      # Signature certificate
-├── KEK.key                     # Key Exchange Key
-├── KEK.crt                     # Key Exchange Key certificate
-└── PK.key                      # Platform Key
-```
+Both are `KEYWORD: firstboot` scripts — they run once, disable
+themselves, and remove themselves from `/etc/rc.d/` on completion.
 
 ---
 
@@ -386,13 +269,12 @@ config/secureboot/
 After a successful build, the following artifacts are produced:
 
 ```
-edos/
-├── build/
-│   └── EduOS-v3.0.iso          # Bootable hybrid ISO (~4 GB)
-├── packages/
-│   └── <package>/
-│       └── dist/
-│           └── <package>.deb    # Individual .deb packages
+eduos/
+├── dist/                        # Staged module packages
+│   ├── eduos-server/
+│   ├── eduos-exam/
+│   └── ...
+├── eduos-freebsd.iso            # Bootable FreeBSD ISO (~4 GB, CI artifact)
 └── build.log                    # Build log
 ```
 
@@ -400,82 +282,89 @@ edos/
 
 ```bash
 # Verify ISO checksum
-sha256sum build/EduOS-v3.0.iso
+sha256sum eduos-freebsd.iso
 
-# Verify GPG signature
-gpg --verify build/EduOS-v3.0.iso.sig build/EduOS-v3.0.iso
+# Verify ISO contents
+xorriso -as mkisofs -indev eduos-freebsd.iso -find . -name loader.conf
+```
+
+### Boot Test with QEMU
+
+```bash
+# Download the artifact from GitHub Actions, then:
+qemu-system-x86_64 \
+  -m 4096 \
+  -cdrom eduos-freebsd.iso \
+  -boot d \
+  -accel kvm \
+  -netdev user,id=n1 -device e1000,netdev=n1
 ```
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+### CI workflow fails at "Download FreeBSD base"
 
-#### `live-build` fails with "No such file or directory"
+The FreeBSD release URLs change per release. Verify the current stable
+release at https://download.freebsd.org/releases/amd64/ and update
+`FREEBSD_VERSION` in `build-freebsd-iso.yml`.
 
-Ensure all required tools are installed:
+### Local tests fail
 
-```bash
-sudo apt install --reinstall live-build debootstrap
-```
-
-#### Package build fails with unmet dependencies
-
-Install missing build dependencies:
+Run the suite verbosely and check the module under test:
 
 ```bash
-sudo apt build-dep ./packages/<package-name>
+pytest tests/ -v --tb=short
 ```
 
-#### ISO build fails due to disk space
+The suite covers the server API (auth, rate limiting, SQL injection),
+the coding engine sandbox, and the LearnHub sync flow.
 
-Check available space and clean build artifacts:
+### `xorriso` not found
+
+Install it:
+
+```sh
+pkg install -y xorriso        # FreeBSD
+sudo apt install xorriso      # Linux
+```
+
+### First boot fails at `pkg update`
+
+The first-boot script uses `ASSUME_ALWAYS_YES=YES` and tolerates failures
+(`|| true`) so the boot continues. For offline environments, generate the
+package cache first:
 
 ```bash
-bash scripts/clean.sh
-df -h
+bash Scripts/freebsd-pkg-cache.sh
 ```
 
-#### GPG signing fails
+and copy the resulting cache into `rootfs/opt/eduos-packages/` before the
+ISO build step.
 
-Ensure your GPG key is set up:
-
-```bash
-gpg --list-keys
-# If no key exists, generate one:
-gpg --full-generate-key
-```
-
-#### Network timeouts during build
-
-Use a local mirror:
-
-```bash
-lb config --mirror-bootstrap "http://deb.debian.org/debian/" \
-          --mirror-chroot "http://deb.debian.org/debian/" \
-          --mirror-binary "http://deb.debian.org/debian/"
-```
-
-#### QEMU test fails to boot
+### QEMU test fails to boot
 
 Enable KVM for better performance:
 
 ```bash
-sudo apt install qemu-system-x86 qemu-kvm
-sudo kvm -m 4096 -cdrom build/EduOS-v3.0.iso -accel kvm
+sudo apt install qemu-system-x86 qemu-kvm    # Linux
+sudo kvm -m 4096 -cdrom eduos-freebsd.iso -accel kvm
 ```
 
-### Build Logs
+---
 
-Build logs are written to `build.log` in the project root. For detailed debugging:
+## Build Logs
+
+Build logs are written to `build.log` in the project root. For detailed
+debugging:
 
 ```bash
-# ISO build debug
-sudo lb build --debug 2>&1 | tee build-debug.log
+# Local validation log
+bash Scripts/build.sh 2>&1 | tee build.log
 
-# Package build debug
-bash scripts/build-package.sh --debug <package-name>
+# CI run log
+gh run view --log
 ```
 
 ### Clean Build
@@ -483,14 +372,15 @@ bash scripts/build-package.sh --debug <package-name>
 To perform a completely clean build:
 
 ```bash
-bash scripts/clean.sh          # Clean build artifacts
-rm -rf config/live-build/      # Reset live-build configuration
-git checkout -- config/        # Restore default configuration
+make clean        # Remove dist/, build/, __pycache__ and .pytest_cache
+git status        # Verify only expected files are left
 ```
+
+---
 
 ### Support
 
-- **Documentation**: Refer to the `documentation/` directory
+- **Documentation**: Refer to the `Documentation/` directory
 - **Issues**: https://github.com/edos/edos/issues
 - **Discussions**: https://github.com/edos/edos/discussions
 

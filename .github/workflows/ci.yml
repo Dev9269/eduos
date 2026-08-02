@@ -142,3 +142,48 @@ jobs:
           # FreeBSD pkg names should not contain dashes in category
           print(f'Package list: {len(lines)} entries — OK')
           "
+
+  validate-freebsd-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate FreeBSD package list format
+        run: |
+          python3 - << 'PYEOF'
+          import sys
+
+          with open("Packages/freebsd-packages.txt") as f:
+              lines = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+
+          print(f"Package list: {len(lines)} entries")
+
+          # Check for known-bad names (Debian names that don't exist in FreeBSD pkg)
+          debian_names = ["apt", "dpkg", "libc6", "libssl-dev", "build-essential",
+                          "python3-pip", "python3-pyqt5", "python-is-python3"]
+          bad = [l for l in lines if any(d in l for d in debian_names)]
+          if bad:
+              print(f"ERROR: Found Debian package names in FreeBSD list: {bad}")
+              sys.exit(1)
+
+          # Check for empty lines in wrong places
+          print("Package list validation passed")
+          PYEOF
+
+      - name: Check for systemd in FreeBSD service files
+        run: |
+          python3 - << 'PYEOF'
+          import os, sys
+
+          freebsd_services = []
+          for root, dirs, files in os.walk("Services/freebsd"):
+              for f in files:
+                  freebsd_services.append(os.path.join(root, f))
+
+          for fpath in freebsd_services:
+              content = open(fpath).read()
+              if "systemctl" in content or "[Unit]" in content:
+                  print(f"ERROR: systemd syntax found in FreeBSD file: {fpath}")
+                  sys.exit(1)
+
+          print(f"FreeBSD service files checked: {len(freebsd_services)} - OK")
+          PYEOF

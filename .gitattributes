@@ -1,0 +1,6 @@
+# EduOS line-ending policy
+* text=auto
+# Shell scripts (FreeBSD /bin/sh + CI) must always be LF.
+*.sh text eol=lf
+Scripts/*.sh text eol=lf
+Services/freebsd/* text eol=lf

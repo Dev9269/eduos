@@ -90,8 +90,8 @@ EduOS v3.0 is built on a modern three-tier architecture that separates concerns 
 │  └──────────────────────┘  └──────────────────────┘  └──────────────────┘  │
 │                                                                              │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                     Debian 13 "Trixie" (Base)                       │   │
-│  │  Linux Kernel 6.12 | systemd 256 | NetworkManager | PulseAudio    │   │
+│  │                    FreeBSD 14.x (Base)                                │   │
+│  │  FreeBSD 14.x kernel | rc.d init | devd | sndio                     │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                              │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
@@ -128,14 +128,14 @@ The EduOS boot process ensures system integrity from power-on to login screen.
          │
          ▼
 ┌──────────────────┐
-│   Linux Kernel   │  Kernel verifies signed modules before loading
-│    (v6.12)       │  initramfs decrypts root FS (if FDE enabled)
+│  │  FreeBSD Kernel   │  Kernel verifies signed modules before loading
+│    (v14.x)      │  initramfs decrypts root FS (if FDE enabled)
 └────────┬─────────┘
          │
          ▼
 ┌──────────────────┐
-│      systemd     │  PID 1 — starts target units
-│    (init v256)   │
+│        rc.d      │  PID 1 — runs rc.conf services
+│      (init)      │
 └────────┬─────────┘
          │
     ┌────┴──────────────┬──────────────────┐
@@ -175,7 +175,7 @@ The EduOS boot process ensures system integrity from power-on to login screen.
 | UEFI | Bootloader signature invalid | Fallback to recovery partition |
 | GRUB | Kernel signature mismatch | Boot previous kernel version |
 | Kernel | Module load failure | Emergency shell |
-| systemd | Service dependency failure | Automatic restart (3 attempts) |
+| rc.d | Service dependency failure | Automatic restart (3 attempts) |
 | SDDM | Display manager crash | VT switch to fallback |
 
 ---
@@ -208,7 +208,7 @@ EduOS employs a defense-in-depth strategy across all layers.
 │  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────────┐  │
 │  │ RBAC Enforcement │  │ Audit Logging    │  │ Service Isolation        │  │
 │  │                  │  │                  │  │                          │  │
-│  │ • Policy         │  │ • Tamper-evident │  │ • systemd sandboxing     │  │
+│  │ • Policy         │  │ • Tamper-evident   │  │ • Capsicum sandboxing    │  │
 │  │   Decision Point │  │ • Remote logging │  │ • Private /tmp           │  │
 │  │ • Policy         │  │ • Real-time      │  │ • Capability dropping    │  │
 │  │   Administration │  │   alerts         │  │ • Network namespace      │  │
@@ -323,7 +323,7 @@ EduOS ensures end-to-end security for exam data from creation to result submissi
 │  └─────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                   edos-exam-daemon (systemd service)                │   │
+│  │                   edos-exam-daemon (rc.d service)                  │   │
 │  │  • Monitors for policy violations (new processes, USB, etc.)       │   │
 │  │  • Enforces network lockdown (allowlist only: exam server)         │   │
 │  │  • Captures periodic screenshots for proctoring                    │   │
@@ -689,46 +689,45 @@ WHERE ea.status = 'reviewed';
 
 ## Component Relationships
 
-### Systemd Service Dependency Graph
+### rc.d Service Dependency Graph
 
 ```
                     ┌──────────────────┐
-                    │  network.target  │
+                    │    NETWORKING    │
                     └────────┬─────────┘
                              │
               ┌──────────────┼──────────────────┐
               │              │                   │
               ▼              ▼                   ▼
 ┌────────────────────┐ ┌────────────────────┐ ┌────────────────────────────┐
-│  postgresql.service│ │  redis.service     │ │  edos-daemon.service       │
+│  postgresql        │ │  redis             │ │  eduos_agent               │
 │  (database)        │ │  (cache/sessions)  │ │  (core daemon)             │
 └────────┬───────────┘ └────────┬───────────┘ │                            │
          │                      │              │  • RBAC enforcement       │
-         │                      │              │  • Policy engine         │
+         │                      │              │  • Policy engine          │
          │                      │              │  • Audit logging          │
-         │                      │              │  • Device registration    │
-         └──────────┬───────────┘              │  • Local sync             │
-                    │                          └────────┬───────────────────┘
-                    ▼                                   │
+         └──────────┬───────────┘              │  • Device registration    │
+                    │                          │  • Local sync             │
+                    ▼                          └────────┬───────────────────┘
 ┌──────────────────────────────┐                        │
-│  edos-admin.service          │                        │
+│  eduos_admin                 │                        │
 │  (Admin API server)          │                        │
 │                              │                        │
 │  Requires: postgresql,       │                        │
-│  edos-daemon                 │                        │
+│  eduos_agent                 │                        │
 └──────────────────────────────┘                        │
-                                                         │
+                                                          │
                     ┌────────────────────────────────────┘
                     │              │              │
                     ▼              ▼              ▼
 ┌───────────────────┐ ┌─────────────────┐ ┌──────────────────────┐
-│ edos-exam-daemon  │ │ edos-update-    │ │ edos-sync-daemon     │
-│ (Exam lockdown)   │ │ daemon          │ │ (Institution sync)   │
-│                   │ │ (Update mgmt)   │ │                      │
-│ Requires:         │ │                 │ │ Requires:            │
-│ edos-daemon,      │ │ Requires:       │ │ edos-daemon, network │
-│ network-online    │ │ edos-daemon,    │ └──────────────────────┘
-│                   │ │ network-online  │
+│ eduos_exam        │ │ eduos_update    │ │ eduos_sync           │
+│ (Exam lockdown)   │ │ (Update mgmt)   │ │ (Institution sync)   │
+│                   │ │                 │ │                      │
+│ Requires:         │ │ Requires:       │ │ Requires:            │
+│ eduos_agent,      │ │ eduos_agent,    │ │ eduos_agent, network │
+│ network           │ │ network         │ └──────────────────────┘
+│                   │ │                 │
 └───────────────────┘ └─────────────────┘
 ```
 
@@ -741,46 +740,45 @@ WHERE ea.status = 'reviewed';
 
 edos-core
   ├── edos-security
-  │     ├── openssl (>= 3.2)
-  │     ├── gnupg2
-  │     └── apparmor-profiles
+  │     ├── openssl (base)
+  │     ├── gnupg (pkg)
+  │     └── mac_bsdextended (base)
   ├── edos-daemon
-  │     ├── python3 (>= 3.12)
-  │     ├── python3-systemd
-  │     ├── python3-psutil
-  │     └── python3-aiohttp
+  │     ├── python311 (>= 3.11)
+  │     ├── py311-psutil
+  │     └── py311-aiohttp
   ├── edos-admin-service
-  │     ├── python3-django
-  │     ├── python3-djangorestframework
-  │     ├── python3-psycopg2
-  │     └── python3-redis
+  │     ├── py311-django
+  │     ├── py311-djangorestframework
+  │     ├── py311-psycopg2
+  │     └── redis (pkg)
   ├── edos-exam-service
   │     ├── chromium (>= 120)
-  │     ├── iptables
+  │     ├── pf (base)
   │     └── wireguard-tools
   ├── edos-update-service
-  │     ├── apt
-  │     ├── dpkg
-  │     └── python3-apt
+  │     ├── freebsd-update (base)
+  │     ├── pkg (base)
+  │     └── py311-requests
   ├── edos-learn-hub
-  │     ├── python3-django
-  │     └── python3-jupyter
+  │     ├── py311-django
+  │     └── py311-jupyterlab
   ├── edos-cyber-lab
-  │     ├── docker-ce
-  │     ├── docker-compose
-  │     └── python3-docker
+  │     ├── podman
+  │     ├── podman-compose
+  │     └── py311-podman
   ├── edos-dev-suite
-  │     ├── gcc (>= 13)
-  │     ├── python3 (>= 3.12)
-  │     ├── nodejs (>= 20)
-  │     ├── openjdk-17-jdk
-  │     ├── rustc
+  │     ├── gcc13 (>= 13)
+  │     ├── python311 (>= 3.11)
+  │     ├── node (>= 20)
+  │     ├── openjdk17
+  │     ├── rust
   │     └── git
   └── edos-ui-theme
-        ├── plasma-desktop
-        ├── plasma-workspace
+        ├── plasma6-plasma-desktop
+        ├── plasma6-workspace
         ├── sddm
-        └── plymouth
+        └── rc.d init (base)
 ```
 
 ---
@@ -789,9 +787,9 @@ edos-core
 
 | Decision | Rationale |
 |----------|-----------|
-| Debian 13 over Ubuntu | Stability, no Canonical dependencies, pure upstream |
+| FreeBSD 14.x over Linux | BSD license, stable release cadence, native rc.d integration |
 | KDE Plasma 6 over GNOME | Lower resource usage, modern UI, better Wayland support |
-| systemd services vs containers | Simpler architecture, native integration, lower overhead |
+| rc.d services vs containers | Simpler architecture, native integration, lower overhead |
 | PostgreSQL over MySQL | Better JSON support, audit capabilities, replication |
 | JWT sessions over server sessions | Stateless, scalable, works across load-balanced deployments |
 | GPG-signed updates over HTTPS-only | Offline verification, chain-of-trust, non-repudiation |
