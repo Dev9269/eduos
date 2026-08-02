@@ -6,36 +6,71 @@
 [![Stars](https://img.shields.io/github/stars/Dev9269/eduos?style=flat-square&logo=github&color=gold)](https://github.com/Dev9269/eduos)
 [![Forks](https://img.shields.io/github/forks/Dev9269/eduos?style=flat-square&logo=github&color=blue)](https://github.com/Dev9269/eduos/forks)
 [![Last Commit](https://img.shields.io/github/last-commit/Dev9269/eduos?style=flat-square&color=blueviolet)](https://github.com/Dev9269/eduos/commits/main)
-[![License](https://img.shields.io/github/license/Dev9269/eduos?style=flat-square&color=brightgreen)](LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen?style=flat-square)](https://github.com/Dev9269/eduos/pulls)
-[![Debian](https://img.shields.io/badge/Debian-13%20Trixie-A81D33?style=flat-square&logo=debian&logoColor=white)](https://debian.org)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=flat-square)](LICENSE)
+[![FreeBSD](https://img.shields.io/badge/FreeBSD-14.x-AB2B28?style=flat-square&logo=freebsd&logoColor=white)](https://freebsd.org)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![Tests](https://img.shields.io/badge/Tests-40%20passing-brightgreen?style=flat-square)](tests/)
 
-Debian-based educational OS for engineering colleges — integrating learning, secure exams, dev tools, cyber labs, and campus administration. **Migrating to FreeBSD.**
+**EduOS** is a Unix/FreeBSD-based educational operating system for Indian
+engineering colleges — integrating secure exams, learning tools, dev
+environments, cyber labs, and centralized campus administration.
 
-**Created by** [Jainam Maru](https://github.com/Dev9269)
+**Created by** [Jainam Maru](https://github.com/Dev9269) — B.Tech Cybersecurity, Parul University
 
 </div>
 
 ---
 
-## Platform
+## Why FreeBSD?
 
-EduOS is built on **FreeBSD** — a Unix operating system with a BSD
-license that allows EduOS to be distributed as a proprietary product.
-Unlike Linux (which requires GPL source disclosure), FreeBSD enables
-EduOS to keep its exam security, admin management, and agent systems
-as closed-source components.
+EduOS is built on **FreeBSD 14.x** — not Linux. This is a deliberate
+architectural decision:
 
-This is the same approach used by:
-- Apple macOS (Darwin/BSD base)
-- Sony PlayStation OS (FreeBSD base)
-- Nintendo Switch OS (FreeBSD base)
+| Factor | Linux (GPL v2) | FreeBSD (BSD License) |
+|---|---|---|
+| Source disclosure | **Required** if distributed | **Not required** |
+| Proprietary layers | Cannot be closed | Can be fully closed |
+| Used by | Android, most servers | macOS, PlayStation, Nintendo Switch |
 
-### Current Build Status
-- **v1.x (current):** Debian-based build for development and testing
-- **v2.0 (target):** FreeBSD 14.x base with full KDE Plasma desktop
-- **v3.0 (future):** Custom FreeBSD-derived kernel with EduOS branding
+EduOS's exam security engine, admin management system, and agent
+protocol are **proprietary components** that require a BSD license base.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│            Admin Laptop (2-5 devices)               │
+│         PyQt6 Admin Panel + Server Token            │
+└────────────────────┬────────────────────────────────┘
+                     │ WebSocket (campus LAN)
+                     ▼
+┌─────────────────────────────────────────────────────┐
+│          EduOS Server (gaming laptop)               │
+│    FastAPI + SQLite + JWT Auth + Scheduler          │
+└────────────────────┬────────────────────────────────┘
+                     │ WebSocket (campus LAN)
+                     ▼
+┌─────────────────────────────────────────────────────┐
+│          Student PCs (EduOS FreeBSD)                │
+│   Agent Daemon + Exam Mode + Learn Hub + CyberLab  │
+└─────────────────────────────────────────────────────┘
+```
+
+## Modules
+
+| Module | Description | Status |
+|---|---|---|
+| 🖥 **AdminCenter** | Centralized device management, exam control | ✅ Active |
+| 📝 **ExamMode** | Secure lockdown exam environment | ✅ Active |
+| 📚 **LearnHub** | Student learning portal (Flask) | ✅ Active |
+| 💻 **DevSuite** | Programming tools launcher | ✅ Active |
+| 🔐 **CyberLab** | Isolated cybersecurity practice | ✅ Active |
+| 🏫 **InstitutionManager** | Multi-institution admin dashboard | ✅ Active |
+| 🌐 **EcosystemDashboard** | System-wide analytics | ✅ Active |
+| 🤖 **Server** | FastAPI backend with JWT auth | ✅ Active |
+| 👁 **Agent** | FreeBSD rc.d daemon on student PCs | ✅ Active |
 
 ---
 
@@ -55,32 +90,27 @@ This is the same approach used by:
 
 ## 📥 Installation
 
-EduOS is a Debian-based operating system. To install on bare metal or a VM:
+### On FreeBSD 14.x (Target Platform)
+```sh
+# 1. Clone repo
+git clone https://github.com/Dev9269/eduos.git /opt/eduos
 
-### Requirements
+# 2. Run desktop setup
+sh /opt/eduos/Scripts/freebsd-desktop-setup.sh
 
-- **CPU:** 64-bit (x86_64), dual-core minimum
-- **RAM:** 4 GB minimum (8 GB recommended)
-- **Disk:** 20 GB minimum (40 GB recommended)
-- **Boot:** USB or DVD for installation media
+# 3. Start the server (on admin laptop)
+bash /opt/eduos/Server/start-server.sh
 
-### Quick Install
-
-```bash
-# Download the latest EduOS ISO from the releases page
-# Boot from the ISO and follow the installer prompts
-# Or run the installation script on an existing Debian 13 system:
-sudo bash Scripts/install-eduos.sh
+# 4. Generate admin token
+python3 /opt/eduos/Server/generate-admin-token.py
 ```
 
-### Docker (for individual modules)
-
-Some EduOS modules can also run in Docker:
-
+### For Development (any OS)
 ```bash
-# Learn Hub (Flask)
-cd LearnHub && docker compose up -d
-# Access at http://localhost:5050
+git clone https://github.com/Dev9269/eduos.git
+cd eduos
+pip install -r requirements.txt
+pytest tests/ -v
 ```
 
 ---
@@ -103,7 +133,6 @@ eduos-hardening  # Apply system hardening
 
 | User | Password | Role |
 |------|----------|------|
-| `jainam` | *(personal)* | Administrator / Developer |
 | `student` | *(random, written to `/etc/eduos/credentials.conf`)* | Daily learning |
 | `exam` | *(random, written to `/etc/eduos/credentials.conf`)* | Restricted examinations |
 | `admin` | *(set during installation)* | Lab administration |
@@ -149,7 +178,7 @@ eduos-hardening  # Apply system hardening
 ├── .github/           # CI + ISO build workflows
 ├── CHANGELOG.md       # Complete build history
 ├── EDUOS_WHITEPAPER.md # Full system documentation
-├── LICENSE            # MIT License
+├── LICENSE            # Dual license (BSD open + proprietary)
 └── README.md          # This file
 ```
 
@@ -182,10 +211,14 @@ Wireshark, Nmap, Burp Suite, OWASP Juice Shop, SQLmap, John the Ripper, Hydra, A
 
 ## 📜 License
 
-MIT License — Copyright (c) 2026 Jainam Maru
+EduOS uses a **dual-license structure**: open components under the BSD
+2-Clause license, and proprietary components (ExamMode, AdminCenter,
+Server, Services, InstitutionManager, CyberLab, LearnHub, DevSuite,
+EcosystemDashboard) with all rights reserved.
 
-Use freely for educational purposes. See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+See [LICENSE](LICENSE) for details. Contributions are welcome — see
+[CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
-*Built with ❤️ on Debian 13 Trixie · KDE Plasma 6*
+*Built with ❤️ on FreeBSD 14.x · KDE Plasma 6*

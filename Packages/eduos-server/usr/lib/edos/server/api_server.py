@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
@@ -89,7 +89,7 @@ class SubmissionCreate(BaseModel):
 
 def make_token(user_id: int, username: str, role: str) -> str:
     payload = {
-        "sub": user_id,
+        "sub": str(user_id),
         "username": username,
         "role": role,
         "exp": datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES),
@@ -112,6 +112,19 @@ def get_user_from_header(authorization: str = "") -> dict:
     return decode_token(authorization[7:])
 
 
+def require_auth(authorization: str = Header(default="")):
+    """Dependency — validates Bearer token on protected routes"""
+    return get_user_from_header(authorization)
+
+
+def require_admin(authorization: str = Header(default="")):
+    """Dependency — requires admin role"""
+    user = get_user_from_header(authorization)
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+    return user
+
+
 @app.get("/api/health")
 async def health():
     return {
@@ -123,10 +136,18 @@ async def health():
 
 @app.post("/api/auth/login")
 async def login(req: LoginRequest):
-    rows = db.query("SELECT * FROM users WHERE username = ?", (req.username,))
+    import bcrypt
+    rows = db.query(
+        "SELECT * FROM users WHERE username = ? AND active = 1", (req.username,)
+    )
     if not rows:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     row = rows[0]
+    stored_hash = row["password_hash"] if "password_hash" in row.keys() else ""
+    if not stored_hash:
+        raise HTTPException(status_code=401, detail="Account not properly configured")
+    if not bcrypt.checkpw(req.password.encode(), stored_hash.encode()):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     token = make_token(row["id"], row["username"], row["role"])
     return {
         "access_token": token,
@@ -137,9 +158,16 @@ async def login(req: LoginRequest):
 
 @app.post("/api/auth/register")
 async def register(req: UserCreate):
+    import bcrypt
+    if not req.password or len(req.password) < 6:
+        raise HTTPException(
+            status_code=400, detail="Password must be at least 6 characters"
+        )
+    password_hash = bcrypt.hashpw(req.password.encode(), bcrypt.gensalt()).decode()
     try:
         user_id = db.execute(
-            "INSERT INTO users (username, role) VALUES (?, ?)", (req.username, req.role)
+            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+            (req.username, password_hash, req.role),
         )
         token = make_token(user_id, req.username, req.role)
         return {
@@ -152,13 +180,13 @@ async def register(req: UserCreate):
 
 
 @app.get("/api/users")
-async def list_users():
+async def list_users(user=Depends(require_admin)):
     rows = db.query("SELECT * FROM users ORDER BY id")
     return {"users": [User.from_row(r).to_dict() for r in rows], "total": len(rows)}
 
 
 @app.get("/api/users/{user_id}")
-async def get_user(user_id: int):
+async def get_user(user_id: int, user=Depends(require_admin)):
     rows = db.query("SELECT * FROM users WHERE id = ?", (user_id,))
     if not rows:
         raise HTTPException(status_code=404, detail="User not found")
@@ -166,13 +194,13 @@ async def get_user(user_id: int):
 
 
 @app.get("/api/courses")
-async def list_courses():
+async def list_courses(user=Depends(require_auth)):
     rows = db.query("SELECT * FROM courses ORDER BY id")
     return {"courses": [dict(r) for r in rows], "total": len(rows)}
 
 
 @app.post("/api/courses")
-async def create_course(course: CourseCreate):
+async def create_course(course: CourseCreate, user=Depends(require_admin)):
     cid = db.execute(
         "INSERT INTO courses (name, description, code) VALUES (?, ?, ?)",
         (course.name, course.description, course.code),
@@ -181,7 +209,7 @@ async def create_course(course: CourseCreate):
 
 
 @app.get("/api/exams")
-async def list_exams():
+async def list_exams(user=Depends(require_auth)):
     rows = db.query("SELECT * FROM exams ORDER BY id")
     exams = []
     for r in rows:
@@ -192,7 +220,7 @@ async def list_exams():
 
 
 @app.post("/api/exams")
-async def create_exam(exam: ExamCreate):
+async def create_exam(exam: ExamCreate, user=Depends(require_admin)):
     eid = db.execute(
         "INSERT INTO exams (name, course_id, duration_min, questions) VALUES (?, ?, ?, ?)",
         (exam.name, exam.course_id, exam.duration_min, json.dumps(exam.questions)),
@@ -201,7 +229,7 @@ async def create_exam(exam: ExamCreate):
 
 
 @app.get("/api/exams/{exam_id}")
-async def get_exam(exam_id: int):
+async def get_exam(exam_id: int, user=Depends(require_auth)):
     rows = db.query("SELECT * FROM exams WHERE id = ?", (exam_id,))
     if not rows:
         raise HTTPException(status_code=404, detail="Exam not found")
@@ -211,7 +239,7 @@ async def get_exam(exam_id: int):
 
 
 @app.post("/api/submissions")
-async def create_submission(sub: SubmissionCreate):
+async def create_submission(sub: SubmissionCreate, user=Depends(require_auth)):
     sid = db.execute(
         "INSERT INTO submissions (exam_id, user_id, answers) VALUES (?, ?, ?)",
         (sub.exam_id, sub.user_id, json.dumps(sub.answers)),
@@ -220,7 +248,7 @@ async def create_submission(sub: SubmissionCreate):
 
 
 @app.get("/api/submissions")
-async def list_submissions():
+async def list_submissions(user=Depends(require_auth)):
     rows = db.query("SELECT * FROM submissions ORDER BY id")
     subs = []
     for r in rows:
@@ -231,5 +259,5 @@ async def list_submissions():
 
 
 @app.post("/api/sync")
-async def sync():
+async def sync(user=Depends(require_auth)):
     return {"status": "synced", "timestamp": datetime.utcnow().isoformat()}

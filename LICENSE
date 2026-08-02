@@ -1,21 +1,36 @@
-MIT License
+EduOS License
 
-Copyright (c) 2026 Jainam
+Copyright (c) 2025-2026 Jainam Maru (Dev9269)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This repository contains two types of components:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. OPEN COMPONENTS (BSD 2-Clause License):
+   The following directories are available under BSD 2-Clause:
+   - Branding/
+   - Themes/
+   - Scripts/ (setup and build scripts only)
+   - Documentation/
+   - Packages/ (package manifests only)
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+   BSD 2-Clause License applies to the above:
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions are met:
+   1. Redistributions of source code must retain the above copyright notice.
+   2. Redistributions in binary form must reproduce the above copyright notice.
+
+2. PROPRIETARY COMPONENTS (All Rights Reserved):
+   The following directories are PROPRIETARY and may NOT be copied,
+   distributed, modified, or used without explicit written permission:
+   - ExamMode/
+   - AdminCenter/
+   - Server/
+   - Services/
+   - InstitutionManager/
+   - CyberLab/
+   - LearnHub/
+   - DevSuite/
+   - EcosystemDashboard/
+
+   All rights reserved. Unauthorized use prohibited.
+
+For licensing inquiries: github.com/Dev9269

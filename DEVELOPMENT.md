@@ -11,9 +11,28 @@ cd eduos
 pip install -r requirements.txt
 
 # Run individual modules
-python LearnHub/app.py        # Learning portal (Flask)
-python ExamMode/main.py       # Exam application (PyQt6)
-python AdminCenter/main.py    # Admin console (PyQt6)
+python LearnHub/learnhub_app.py    # Learning portal (Flask, port 5050)
+python ExamMode/exam_app.py        # Exam application (PyQt6)
+python AdminCenter/eduos_admin.py  # Admin console (PyQt6)
+```
+
+## Running on FreeBSD
+
+EduOS targets FreeBSD 14.x. The agent runs as an rc.d service:
+
+```sh
+# Enable and start the agent on a student PC
+sudo cp Services/freebsd/eduos_agent /usr/local/etc/rc.d/eduos_agent
+sudo chmod +x /usr/local/etc/rc.d/eduos_agent
+sudo sysrc eduos_agent_enable=YES
+sudo service eduos_agent start
+
+# Check status / stop
+sudo service eduos_agent status
+sudo service eduos_agent stop
+
+# Server on the admin laptop (no rc.d needed — run via script)
+bash Server/start-server.sh
 ```
 
 ## Project Structure
@@ -24,15 +43,16 @@ python AdminCenter/main.py    # Admin console (PyQt6)
 | `ExamMode/` | Secure exam app | PyQt6 + Cryptography |
 | `AdminCenter/` | Administration console | PyQt6 |
 | `DevSuite/` | Dev environment launcher | PyQt6 |
-| `CyberLab/` | Security lab manager | PyQt6 + Docker |
-| `Scripts/` | System tools | Bash |
+| `CyberLab/` | Security lab manager | PyQt6 + Podman/Docker |
+| `Scripts/` | System tools | Shell |
 | `Branding/` | Logo, wallpaper, themes | Assets |
+| `Packages/` | FreeBSD pkg manifests | FreeBSD pkg |
 
 ## Code Style
 
 - Python: PEP 8, type hints encouraged
 - PyQt6: Follow existing glass UI design patterns
-- Bash: Use shellcheck-validated constructs
+- Shell: Use `sh`-validated constructs (FreeBSD `/bin/sh`)
 
 ## Building
 
@@ -43,11 +63,14 @@ make test
 # Lint code
 make lint
 
-# Build system ISO
-sudo make build-iso
+# Validate YAML, shell, and Python syntax
+make validate
 
-# Apply hardening
-sudo make hardening
+# Create distribution package
+make build
+
+# Trigger FreeBSD ISO build via GitHub Actions
+make build-freebsd-iso
 ```
 
 See the [Makefile](Makefile) for all available targets.

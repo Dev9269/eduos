@@ -21,6 +21,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL DEFAULT '',
                 role TEXT DEFAULT 'student',
                 active INTEGER DEFAULT 1,
                 created TEXT DEFAULT CURRENT_TIMESTAMP
@@ -53,6 +54,25 @@ class Database:
                 FOREIGN KEY(user_id) REFERENCES users(id)
             );
         """)
+        # Migration: add password_hash to pre-existing users tables
+        try:
+            cursor.execute(
+                "ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''"
+            )
+            self.conn.commit()
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        # Seed admin user if none exist
+        import bcrypt
+        existing = self.query("SELECT COUNT(*) as n FROM users")
+        if existing and existing[0]["n"] == 0:
+            default_hash = bcrypt.hashpw(b"EduOS@Admin2025!", bcrypt.gensalt()).decode()
+            self.execute(
+                "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+                ("admin", default_hash, "admin"),
+            )
+            print("[EduOS] Default admin user created: admin / EduOS@Admin2025!")
+            print("[EduOS] CHANGE THIS PASSWORD IMMEDIATELY.")
         self.conn.commit()
 
     def query(self, sql, params=None):

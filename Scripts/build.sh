@@ -1,67 +1,60 @@
-#!/bin/bash
-# EduOS ISO Builder - local build (not WSL-specific)
+#!/bin/sh
+# EduOS Build Script v2.0 — FreeBSD and Linux compatible
 set -e
+
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PACKAGES_DIR="$PROJECT_DIR/packages"
-BUILD_DIR="$PROJECT_DIR/build"
-ISO_DIR="$PROJECT_DIR/iso"
-LOG_FILE="$PROJECT_DIR/build.log"
+OS=$(uname -s)
 
-echo "=== EduOS v3.0 ISO Builder ==="
-echo "Project: $PROJECT_DIR"
-echo "Build: $BUILD_DIR"
-date
+echo "╔══════════════════════════════════════════╗"
+echo "║     EduOS Build System v2.0          ║"
+echo "╚══════════════════════════════════════════╝"
+echo "OS: $OS | Project: $PROJECT_DIR"
+echo ""
 
-echo "[1/5] Building all packages..."
-cd "$PACKAGES_DIR"
-for pkg in eduos-*/; do
-    pkg_name="${pkg%/}"
-    if [ -f "$pkg_name/debian/control" ]; then
-        echo "  $pkg_name..."
-        cd "$PACKAGES_DIR/$pkg_name"
-        dpkg-buildpackage -b -uc -us 2>&1 | tail -3
-        cd "$PACKAGES_DIR"
-    fi
+# Step 1: Run tests
+echo "[1/4] Running test suite..."
+cd "$PROJECT_DIR"
+python3 -m pytest tests/ -v --tb=short 2>&1 | tail -10
+echo ""
+
+# Step 2: Syntax check all Python files
+echo "[2/4] Syntax checking Python files..."
+ERRORS=0
+find "$PROJECT_DIR" -name "*.py" -not -path "*/__pycache__/*" \
+  -not -path "*/\.*" | while read -r pyfile; do
+  if ! python3 -m py_compile "$pyfile" 2>/dev/null; then
+    echo "  SYNTAX ERROR: $pyfile"
+    ERRORS=$((ERRORS + 1))
+  fi
+done
+echo "  Python syntax check complete"
+echo ""
+
+# Step 3: Package EduOS files
+echo "[3/4] Creating EduOS distribution package..."
+DIST_DIR="$PROJECT_DIR/dist/eduos-$(date +%Y%m%d)"
+mkdir -p "$DIST_DIR"
+
+# Copy application modules
+for module in AdminCenter ExamMode LearnHub DevSuite CyberLab \
+              InstitutionManager EcosystemDashboard Server Services \
+              Scripts Branding Themes design_system.py requirements.txt; do
+  if [ -e "$PROJECT_DIR/$module" ]; then
+    cp -r "$PROJECT_DIR/$module" "$DIST_DIR/"
+  fi
 done
 
-echo "[2/5] Staging packages..."
-mkdir -p "$BUILD_DIR/config/packages.chroot"
-cp -v "$PACKAGES_DIR/"*.deb "$BUILD_DIR/config/packages.chroot/" 2>/dev/null || true
+echo "  Distribution package: $DIST_DIR"
+echo ""
 
-echo "[3/5] Configuring live-build..."
-cd "$BUILD_DIR"
-lb clean 2>/dev/null || true
-lb config \
-    --distribution trixie \
-    --architectures amd64 \
-    --linux-flavours amd64 \
-    --debian-installer false \
-    --bootappend-live "boot=live components quiet splash username=edos" \
-    --bootloaders grub-efi \
-    --archive-areas "main contrib non-free non-free-firmware" \
-    --updates true \
-    --security true \
-    --backports true \
-    --iso-application "EduOS" \
-    --iso-preparer "EduOS Team" \
-    --iso-publisher "EduOS" \
-    --iso-volume "EduOS v3.0" \
-    --firmware-binary true \
-    --firmware-chroot true \
-    --memtest none
-
-echo "[4/5] Building ISO..."
-lb build 2>&1 | tee "$LOG_FILE"
-
-echo "[5/5] Collecting output..."
-mkdir -p "$ISO_DIR"
-cp -v "$BUILD_DIR/live-image-amd64.hybrid.iso" "$ISO_DIR/EduOS-v3.0.iso" 2>/dev/null || \
-cp -v "$BUILD_DIR/live-image-amd64.iso" "$ISO_DIR/EduOS-v3.0.iso" 2>/dev/null || true
-
-if [ -f "$ISO_DIR/EduOS-v3.0.iso" ]; then
-    echo "SUCCESS: ISO built at $ISO_DIR/EduOS-v3.0.iso"
-    ls -lh "$ISO_DIR/EduOS-v3.0.iso"
+# Step 4: Trigger GitHub Actions ISO build (if on CI)
+echo "[4/4] ISO build..."
+if [ -n "$GITHUB_ACTIONS" ]; then
+  echo "  Running on GitHub Actions — ISO build via build-freebsd-iso.yml"
 else
-    echo "ERROR: ISO not found. Check build.log"
-    exit 1
+  echo "  Local build: push to GitHub to trigger ISO build"
+  echo "  Or run: gh workflow run build-freebsd-iso.yml"
 fi
+
+echo ""
+echo "Build complete. Distribution: dist/"

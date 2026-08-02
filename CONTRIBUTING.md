@@ -17,15 +17,14 @@ Be respectful, inclusive, and constructive. Harassment or disruptive behavior wi
 
 ## Development Setup
 
-EduOS is a Debian-based educational OS. For local development of the Python components:
+EduOS targets FreeBSD 14.x. For local development of Python components
+(works on any OS):
 
 ```bash
-# Clone the repo
 git clone https://github.com/Dev9269/eduos.git
 cd eduos
-
-# Install Python dependencies
 pip install -r requirements.txt
+pytest tests/ -v  # All tests should pass
 ```
 
 ## Code Style
@@ -46,17 +45,20 @@ pip install -r requirements.txt
 
 ## Project Structure
 
-| Directory       | Purpose                          |
-|-----------------|----------------------------------|
-| `AdminCenter/`  | Administration console (PyQt6)   |
-| `Branding/`     | Logo, wallpaper, themes          |
-| `CyberLab/`     | Security lab manager (PyQt6)     |
-| `DevSuite/`     | Dev environment launcher (PyQt6) |
-| `ExamMode/`     | Secure exam app (PyQt6)          |
-| `InstitutionManager/` | Campus admin tools (PyQt6)  |
-| `LearnHub/`     | Learning portal (Flask)          |
-| `packages/`     | Debian package build files       |
-| `scripts/`      | System tools and launchers       |
+| Directory | Contents |
+|---|---|
+| `AdminCenter/` | PyQt6 admin panel desktop app |
+| `ExamMode/` | Secure exam application |
+| `LearnHub/` | Flask student portal |
+| `DevSuite/` | Dev tools launcher |
+| `CyberLab/` | Containerized security labs |
+| `InstitutionManager/` | Multi-institution management |
+| `Server/` | FastAPI backend server |
+| `Services/` | Agent daemon (Linux + FreeBSD) |
+| `Scripts/` | Build and setup scripts |
+| `Packages/` | FreeBSD pkg manifests + legacy Debian packages |
+| `Branding/` | Themes, wallpapers, SDDM login |
+| `tests/` | pytest test suite (40 tests) |
 
 ## Reporting Issues
 
