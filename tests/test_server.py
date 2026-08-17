@@ -1,4 +1,4 @@
-import os
+﻿import os
 import tempfile
 from pathlib import Path
 import sys
@@ -35,7 +35,7 @@ def test_health_endpoint():
 def _load_package_server():
     """Load Packages/eduos-server api_server via importlib (dir has hyphens)."""
     import importlib.util
-    # Package database.py reads EDOS_DB_PATH — mirror the test DB path into it
+    # Package database.py reads EDOS_DB_PATH â€” mirror the test DB path into it
     # BEFORE importing so the lifespan hook uses the isolated test DB.
     os.environ.setdefault("EDOS_DB_PATH", os.environ.get("EDUOS_DB_PATH", ""))
     pkg_dir = Path('Packages/eduos-server/usr/lib/edos/server')
@@ -84,7 +84,7 @@ def test_submissions_endpoint_requires_auth():
 def test_student_cannot_access_admin_endpoints():
     """Student token on /api/users must be 403 (admin only)."""
     import jwt as pyjwt
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
     from fastapi.testclient import TestClient
     api_server = _load_package_server()
     os.environ['EDUOS_DB_PATH'] = str(
@@ -92,7 +92,7 @@ def test_student_cannot_access_admin_endpoints():
     )
     token = pyjwt.encode(
         {'sub': '2', 'username': 'stu', 'role': 'student',
-         'exp': datetime.utcnow() + timedelta(hours=1)},
+         'exp': datetime.now(UTC) + timedelta(hours=1)},
         api_server.SECRET_KEY, algorithm='HS256'
     )
     with TestClient(api_server.app) as client:
@@ -120,7 +120,7 @@ def test_admin_can_list_users_after_login():
 def get_eduos_client():
     """Fresh TestClient against the repo's Server/eduos_server.py app."""
     import jwt as pyjwt
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
     os.environ['EDUOS_DB_PATH'] = str(
         Path(tempfile.mkdtemp()) / 'notify_test.db'
     )
@@ -132,10 +132,10 @@ def get_eduos_client():
 
 def make_admin_token():
     import jwt as pyjwt
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
     from Server.eduos_server import load_or_generate_secret
     return pyjwt.encode(
-        {'role': 'admin', 'exp': datetime.utcnow() + timedelta(hours=1)},
+        {'role': 'admin', 'exp': datetime.now(UTC) + timedelta(hours=1)},
         load_or_generate_secret(), algorithm='HS256'
     )
 

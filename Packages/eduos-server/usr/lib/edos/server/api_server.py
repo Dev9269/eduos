@@ -1,7 +1,7 @@
-import json
+﻿import json
 import os
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Depends, Header
@@ -99,7 +99,7 @@ def make_token(user_id: int, username: str, role: str) -> str:
         "sub": str(user_id),
         "username": username,
         "role": role,
-        "exp": datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES),
+        "exp": datetime.now(UTC) + timedelta(minutes=TOKEN_EXPIRE_MINUTES),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -120,12 +120,12 @@ def get_user_from_header(authorization: str = "") -> dict:
 
 
 def require_auth(authorization: str = Header(default="")):
-    """Dependency — validates Bearer token on protected routes"""
+    """Dependency â€” validates Bearer token on protected routes"""
     return get_user_from_header(authorization)
 
 
 def require_admin(authorization: str = Header(default="")):
-    """Dependency — requires admin role"""
+    """Dependency â€” requires admin role"""
     user = get_user_from_header(authorization)
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin role required")
@@ -137,7 +137,7 @@ async def health():
     return {
         "status": "ok",
         "version": "3.0.0",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -275,4 +275,4 @@ async def list_submissions(user=Depends(require_auth)):
 
 @app.post("/api/sync")
 async def sync(user=Depends(require_auth)):
-    return {"status": "synced", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "synced", "timestamp": datetime.now(UTC).isoformat()}
