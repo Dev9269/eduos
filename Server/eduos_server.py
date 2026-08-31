@@ -322,6 +322,19 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
+def require_admin(user: dict = Depends(verify_token)):
+    """Like verify_token but refuses anything except an admin token.
+
+    Several endpoints (remote command, exam scheduling, update push and
+    rollback, bulk roster edits) act on every connected machine, so they must
+    be admin-only. Without this gate any validly-signed student token could
+    send commands to all agents.
+    """
+    if (user or {}).get('role') != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
 @app.get("/exam/schedules")
 async def list_schedules(user=Depends(verify_token)):
     """List all scheduled exams with their status."""
@@ -339,7 +352,7 @@ async def list_schedules(user=Depends(verify_token)):
 
 
 @app.post("/exam/schedule")
-async def schedule_exam(schedule: dict, user=Depends(verify_token)):
+async def schedule_exam(schedule: dict, user=Depends(require_admin)):
     """Schedule an exam to be pushed automatically at a future time.
     schedule: {"name": "Midterm 1", "scheduled_at": "2025-06-01T09:00:00",
                "exam": {...exam data...}}
@@ -411,7 +424,7 @@ async def schedule_exam(schedule: dict, user=Depends(verify_token)):
 
 
 @app.delete("/exam/schedule/{schedule_id}")
-async def cancel_schedule(schedule_id: int, user=Depends(verify_token)):
+async def cancel_schedule(schedule_id: int, user=Depends(require_admin)):
     """Cancel a scheduled exam that hasn't started yet."""
     timer = _schedule_timers.pop(schedule_id, None)
     if timer:
@@ -504,7 +517,7 @@ async def roster_remove(student_id: str, user=Depends(verify_token)):
 
 
 @app.post("/roster/bulk")
-async def roster_bulk(payload: dict, user=Depends(verify_token)):
+async def roster_bulk(payload: dict, user=Depends(require_admin)):
     """Bulk-add students to the roster.
     payload: {"students": [{"student_id": "...", "name": "...", ...}]}
     """
@@ -594,7 +607,7 @@ async def list_devices(user=Depends(verify_token)):
 
 @app.post("/command/{hostname}")
 async def send_command(hostname: str, command: dict,
-                       user=Depends(verify_token)):
+                       user=Depends(require_admin)):
     if hostname == "all":
         results = {}
         for host, ws in connected_agents.items():
@@ -614,7 +627,7 @@ async def send_command(hostname: str, command: dict,
 
 @app.post("/notify/{hostname}")
 async def send_notification(hostname: str, payload: dict,
-                            user=Depends(verify_token)):
+                            user=Depends(require_admin)):
     """Send a desktop notification to one agent, or all when
     hostname == 'all'.  payload: {"title": ..., "message": ...}"""
     title = str(payload.get("title", "EduOS"))
@@ -650,7 +663,7 @@ async def send_notification(hostname: str, payload: dict,
 
 
 @app.post("/exam/push")
-async def push_exam(exam_data: dict, user=Depends(verify_token)):
+async def push_exam(exam_data: dict, user=Depends(require_admin)):
     """Push exam to all connected agents"""
     conn = sqlite3.connect(DB_PATH)
     conn.execute(
@@ -778,7 +791,7 @@ async def export_submissions(exam_id: int, user=Depends(verify_token)):
 
 
 @app.post("/update/push")
-async def push_update(update_data: dict, user=Depends(verify_token)):
+async def push_update(update_data: dict, user=Depends(require_admin)):
     """
     Push a software update to all connected student PCs.
     update_data: {
@@ -854,7 +867,7 @@ async def update_history(user=Depends(verify_token)):
 
 @app.post("/update/rollback/{hostname}")
 async def rollback_update(hostname: str, rollback_data: dict = None,
-                          user=Depends(verify_token)):
+                          user=Depends(require_admin)):
     """Ask an agent (or all) to roll back to the previous version.
     rollback_data: {"version": "1.2.3"} to roll back to a specific
     version, or empty for the latest backup."""

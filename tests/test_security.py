@@ -167,3 +167,35 @@ def test_update_rollback_nonexistent_version():
                     headers={'Authorization': f'Bearer {token}'})
     # Should either return 404 or send rollback command (if PC is connected it would fail)
     assert r.status_code in [200, 404, 400]
+
+
+def test_student_token_rejected_on_admin_endpoints():
+    """A valid but non-admin token must not reach machine-wide operations.
+
+    /command, /notify, /exam/schedule, /exam/push, /roster/bulk, /update/push
+    and /update/rollback all act on every connected agent, so they must be
+    admin-only. A student token is still a valid JWT, so it must be refused
+    with 403 rather than being accepted (the pre-fix behaviour).
+    """
+    client = get_client()
+    student = make_token(role='student')
+    h = {'Authorization': f'Bearer {student}'}
+    for path, payload in [
+        ('/command/PC-1', {'action': 'lock_screen'}),
+        ('/notify/PC-1', {'title': 'x', 'message': 'hello'}),
+        ('/exam/push', {'name': 'M', 'questions': [{'q': '?', 'options': ['a'], 'answer': 0}]}),
+        ('/roster/bulk', {'students': [{'id': 'S1', 'name': 'N'}]}),
+        ('/update/rollback/PC-TEST', {'version': '1.0.0'}),
+    ]:
+        r = client.post(path, json=payload, headers=h)
+        assert r.status_code == 403, f"{path} allowed a student token: {r.status_code}"
+
+
+def test_admin_token_reaches_admin_endpoints():
+    """An admin token is not refused on admin-only endpoints."""
+    client = get_client()
+    admin = make_token(role='admin')
+    h = {'Authorization': f'Bearer {admin}'}
+    r = client.post('/notify/PC-MISSING', json={'title': 't', 'message': 'm'}, headers=h)
+    # PC-MISSING is not connected, so expect 404 (proves the admin gate passed).
+    assert r.status_code == 404
