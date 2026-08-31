@@ -12,15 +12,24 @@ from itertools import combinations
 
 def tokenize_code(code: str) -> list:
     """Strip comments, whitespace, variable names → token list"""
-    # Remove single-line comments
-    code = re.sub(r'#.*$', '', code, flags=re.MULTILINE)
-    code = re.sub(r'//.*$', '', code, flags=re.MULTILINE)
-    # Remove strings
-    code = re.sub(r'\".*?\"|\'.*?\'', 'STR', code)
+    # Protect string literals first: a '#' or '//' inside a string is data,
+    # not a comment. Replace each string (single/double/triple-quoted, with
+    # escapes) with a placeholder so the later comment pass can't truncate
+    # it. Without this, 'https://...' was chopped at the '//' and a '#' in a
+    # string was mistaken for a comment.
+    string_re = re.compile(
+        r'(?:\"\"\"[\s\S]*?\"\"\"'
+        r"|'''[\s\S]*?'''"
+        r'|(?:\"|\x27)(?:\\[\s\S]|[^\\])*?(?:\"|\x27))'
+    )
+    protected = string_re.sub('STR', code)
+    # Remove single-line comments (safe now: no string content can be hit).
+    protected = re.sub(r'#.*$', '', protected, flags=re.MULTILINE)
+    protected = re.sub(r'//.*$', '', protected, flags=re.MULTILINE)
     # Remove numbers
-    code = re.sub(r'\b\d+\b', 'NUM', code)
+    protected = re.sub(r'\b\d+\b', 'NUM', protected)
     # Normalize whitespace
-    tokens = re.split(r'\s+', code.strip())
+    tokens = re.split(r'\s+', protected.strip())
     return [t for t in tokens if t]
 
 
